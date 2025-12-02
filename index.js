@@ -98,11 +98,19 @@ function requireManager(req, res, next) {
     return res.render('login', { error_message: 'You do not have permission to view this page.' });
 }
 
+//First, all user go to the landing page
 app.get('/', (req, res) => {
+  res.render('landing', { 
+    
+  });
+});
+
+app.get('/dashboard', (req, res) => {
     if (!req.session.isLoggedIn) {
         return res.render('login', { error_message: null });
     }
-//This needs to be changed!!
+    
+    //This needs to be changed!!
     knex
         .select('*')
         .from('workshops')
@@ -126,6 +134,11 @@ app.get('/', (req, res) => {
                 Username: req.session.username
             });
         });
+});
+
+app.get('/login', (req, res) => {
+   
+    res.render('login', { error_message: res.locals.error_message || null });
 });
 
 
@@ -162,7 +175,7 @@ app.post('/login', async (req, res) => {
         req.session.username = user.username;
         req.session.level = user.level;
 
-        return res.redirect('/');
+        return res.redirect('/dashboard');
 
     } catch (err) {
         console.error('login error', err);
