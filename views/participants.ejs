@@ -50,49 +50,77 @@
         <th>Actions</th>
       </tr>
     </thead>
-    <tbody>
-    <% if (participants && participants.length > 0) { %>
-      <% participants.forEach(function(p) { %>
-        <tr>
-          <td><%= p.Email %></td>
-          <td><%= p.ParticipantFirstName %></td>
-          <td><%= p.ParticipantLastName %></td>
-          <td><%= p.ParticipantDOB %></td>
-          <td><%= p.ParticipantRole %></td>
-          <td><%= p.ParticipantPhone %></td>
-          <td><%= p.ParticipantCity %></td>
-          <td><%= p.ParticipantState %></td>
-          <td><%= p.ParticipantZip %></td>
-          <td><%= p.ParticipantFieldOfInterest %></td>
-          <td>
-            <!-- View page for this participant -->
-            <a href="/participants/<%= p.ParticipantID %>">View</a>
+<tbody>
+  <% if (participants && participants.length > 0) { %>
 
-            <!-- Manager-only actions -->
-            <% if (isManager) { %>
-              |
-              <a href="/participants/<%= p.ParticipantID %>/edit">Edit</a>
-              |
-              <form action="/participants/<%= p.ParticipantID %>/delete" method="post" style="display:inline;">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <button type="submit" onclick="return confirm('Delete this participant?');">
-                  Delete
-                </button>
-              </form>
-            <% } %>
-          </td>
-        </tr>
-      <% }); %>
-    <% } else { %>
+    <% for (let iCount = 0; iCount < participants.length; iCount++) { 
+         let p = participants[iCount];
+    %>
       <tr>
-        <td colspan="11">No participants found.</td>
+        <td><%= p.email %></td>
+        <td><%= p.participantfirstname %></td>
+        <td><%= p.participantlastname %></td>
+        <td><%= p.participantdob %></td>
+        <td><%= p.participantrole %></td>
+        <td><%= p.participantphone %></td>
+        <td><%= p.participantcity %></td>
+        <td><%= p.participantstate %></td>
+        <td><%= p.participantzip %></td>
+        <td><%= p.participantfieldofinterest %></td>
+        <td>
+          <a href="/participants/<%= p.participantid %>">View</a>
+
+          <% if (isAdmin) { %>
+            |
+            <a href="/participants/<%= p.participantid %>/edit">Edit</a>
+            |
+            <form action="/deleteparticipants/<%= p.participantid %>" method="POST" style="display:inline;">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" onclick="return confirm('Delete this participant?');">
+                Delete
+              </button>
+            </form>
+          <% } %>
+                      
+          <details style="margin-top: 4px;">
+            <summary>Quick view</summary>
+            <ul>
+              <li>Email: <%= p.email %></li>.
+              <li>Role: <%= p.participantrole %></li>
+              <li>City/State: <%= p.participantcity %>, <%= p.participantstate %></li>
+              <li>Field of interest: <%= p.participantfieldofinterest %></li>
+            </ul>
+            <p style="margin-top: 4px;">
+              <a href="/participants/<%= p.participantid %>">Open full details →</a>
+            </p>
+          </details>          
+        </td>
       </tr>
     <% } %>
-    </tbody>
+
+  <% } else { %>
+    <tr>
+      <td colspan="11">No participants found.</td>
+    </tr>
+  <% } %>
+</tbody>
+
+  <div style="margin-top: 16px;">
+    <% if (currentPage > 1) { %>
+      <a href="/participants?page=<%= currentPage - 1 %>">Prev</a>
+    <% } %>
+
+    <span>Page <%= currentPage %> of <%= totalPages %></span>
+
+    <% if (currentPage < totalPages) { %>
+      <a href="/participants?page=<%= currentPage + 1 %>">Next</a>
+    <% } %>
+  </div>
+
   </table>
 
   <!-- Manager-only: Add new participant -->
-  <% if (isManager) { %>
+  <% if (isAdmin) { %>
     <p>
       <a href="/participants/add">Add New Participant</a>
     </p>

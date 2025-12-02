@@ -3,3 +3,40 @@
 
 <!-- Show all the events they attended and are registered for, show their earliest and latest registration date, show their average overall survey score?, 
 show all their milestones, show their email, first, and last name, their DOB, Phone, City, State, Zip, Origin, Origin Type, and Field of interest -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Participant Details</title>
+</head>
+<body>
+
+  <h1>Participant Details</h1>
+
+  <p><strong>Email:</strong> <%= participant.email %></p>
+  <p><strong>First Name:</strong> <%= participant.participantfirstname %></p>
+  <p><strong>Last Name:</strong> <%= participant.participantlastname %></p>
+  <p><strong>Date of Birth:</strong> <%= participant.participantdob %></p>
+  <p><strong>Role:</strong> <%= participant.participantrole %></p>
+  <p><strong>Phone:</strong> <%= participant.participantphone %></p>
+  <p><strong>City:</strong> <%= participant.participantcity %></p>
+  <p><strong>State:</strong> <%= participant.participantstate %></p>
+  <p><strong>Zip:</strong> <%= participant.participantzip %></p>
+  <p><strong>Field of Interest:</strong> <%= participant.participantfieldofinterest %></p>
+
+  <!-- Later: add sections for Events, Surveys, Milestones, Donations -->
+
+  <% if (isAdmin) { %>
+    <p>
+      <a href="/participants/<%= participant.participantid %>/edit">Edit</a>
+    </p>
+  <% } %>
+
+  <p>
+    <a href="/participants">Back to participants list</a>
+  </p>
+
+</body>
+</html>
