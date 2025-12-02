@@ -1,4 +1,102 @@
-<!-- Lists all participants. On dropdown of participant show their attended and registered events as well as any corresponding survey results 
+<!-- done, Lists all participants. (step 2 needs to work on.)On dropdown of participant show their attended and registered events as well as any corresponding survey results 
 (show the overall score or NPS bucket, on hover or drop down show every score) -->
 <!-- Include filters for event name and type. Then show only the participants for those things, (keep the dropdown showing their other attended events?) -->
 <!-- for each participant include a link to the view participant page -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Participants</title>
+</head>
+<body>
+
+  <h1>Participants</h1>
+
+  <!-- Error / flash message (optional) -->
+  <% if (typeof error_message !== "undefined" && error_message) { %>
+    <p style="color:red;"><%= error_message %></p>
+  <% } %>
+
+  <!-- Simple filters (event name / type) - logic can be added later -->
+  <form method="get" action="/participants">
+    <label>
+      Event Name:
+      <input type="text" name="eventName" value="<%= typeof eventName !== 'undefined' ? eventName : '' %>">
+    </label>
+    <label>
+      Event Type:
+      <input type="text" name="eventType" value="<%= typeof eventType !== 'undefined' ? eventType : '' %>">
+    </label>
+    <button type="submit">Filter</button>
+  </form>
+
+  <hr>
+
+  <!-- Participants list -->
+  <table border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Date of Birth</th>
+        <th>Role</th>
+        <th>Phone Number</th>
+        <th>City</th>
+        <th>State</th>
+        <th>Zip</th>
+        <th>Field of Interest</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    <% if (participants && participants.length > 0) { %>
+      <% participants.forEach(function(p) { %>
+        <tr>
+          <td><%= p.Email %></td>
+          <td><%= p.ParticipantFirstName %></td>
+          <td><%= p.ParticipantLastName %></td>
+          <td><%= p.ParticipantDOB %></td>
+          <td><%= p.ParticipantRole %></td>
+          <td><%= p.ParticipantPhone %></td>
+          <td><%= p.ParticipantCity %></td>
+          <td><%= p.ParticipantState %></td>
+          <td><%= p.ParticipantZip %></td>
+          <td><%= p.ParticipantFieldOfInterest %></td>
+          <td>
+            <!-- View page for this participant -->
+            <a href="/participants/<%= p.ParticipantID %>">View</a>
+
+            <!-- Manager-only actions -->
+            <% if (isManager) { %>
+              |
+              <a href="/participants/<%= p.ParticipantID %>/edit">Edit</a>
+              |
+              <form action="/participants/<%= p.ParticipantID %>/delete" method="post" style="display:inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" onclick="return confirm('Delete this participant?');">
+                  Delete
+                </button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }); %>
+    <% } else { %>
+      <tr>
+        <td colspan="11">No participants found.</td>
+      </tr>
+    <% } %>
+    </tbody>
+  </table>
+
+  <!-- Manager-only: Add new participant -->
+  <% if (isManager) { %>
+    <p>
+      <a href="/participants/add">Add New Participant</a>
+    </p>
+  <% } %>
+
+</body>
+</html>
