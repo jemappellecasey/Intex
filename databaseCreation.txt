@@ -104,12 +104,11 @@ CREATE TABLE surveys (
     survey_submission_date       timestamp
 );
 
-CREATE TABLE pk_participant_eventdetails_milestone_donation (
-    participant_id   integer NOT NULL REFERENCES participants(participant_id),
-    event_details_id integer NOT NULL REFERENCES event_details(event_details_id),
-    milestone_id     integer NOT NULL REFERENCES milestones(milestone_id),
-    donation_id      integer REFERENCES donations(donation_id),
-    PRIMARY KEY (participant_id, event_details_id, milestone_id)
+CREATE TABLE users (
+    userID      integer PRIMARY KEY,
+    userName   text NOT NULL,
+    password    text NOT NULL,
+    role  text NOT NULL
 );
 
 --------------------------------------------------------
