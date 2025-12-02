@@ -1,4 +1,99 @@
 <!-- After login the user or manager, they will come to check this page and see the
  Participants / Events / Surveys / Milestones / Donations, chart and manager view -->
 
- 
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ella Rises Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <h2>Ella Rises</h2>
+    <nav>
+      <a href="/dashboard" class="active">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations">Donations</a>
+
+      <% if (isManager) { %>
+        <hr>
+        <a href="/participants/add">+ Add Participant</a>
+        <a href="/events/add">+ Add Event</a>
+        <a href="/milestones/add">+ Add Milestone</a>
+      <% } %>
+    </nav>
+  </aside>
+
+  <!-- after embeded the Tableau, here will be explanation -->
+  <main class="main-content">
+
+    <header class="top-header">
+      <h1>Dashboard</h1>
+      <div class="user-info">
+        Welcome, <%= Username %>  
+        <a href="/logout" class="logout-btn">Logout</a>
+      </div>
+    </header>
+
+    <!-- explanation -->
+    <section class="description">
+      <p>
+        This dashboard shows how participants experience the workshops
+        and the long-term impact demonstrated through milestone achievements
+        and STEAM outcomes.
+      </p>
+    </section>
+
+    <!-- Please put the KPI tabeau-->
+    <section class="kpi-section">
+      <div class="kpi-card">
+        <h3>STEAM Major Rate</h3>
+        <div class="kpi-value" id="steamMajorRate">--%</div>
+      </div>
+
+      <div class="kpi-card">
+        <h3>STEAM Job Rate</h3>
+        <div class="kpi-value" id="steamJobRate">--%</div>
+      </div>
+    </section>
+
+    <!-- Graph section（Tableau） -->
+    <section class="chart-section">
+      
+      <!-- Event Satisfaction Chart -->
+      <div class="chart-card">
+        <h3>Event Satisfaction Score</h3>
+        <div class="chart-container">
+          <!-- Tableau picture here -->
+          <canvas id="satisfactionChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Milestone Achievement Chart -->
+      <div class="chart-card">
+        <h3>Milestone Achievement Rate</h3>
+        <div class="chart-container">
+          <!--Tableau iframe here-->
+          <div id="milestoneChartSlot"></div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/dashboard.js"></script>
+
+</body>
+</html>
