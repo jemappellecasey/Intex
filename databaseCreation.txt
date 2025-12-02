@@ -2,119 +2,160 @@
 -- After that, go back to the terminal view and type "psql -U postgres -d 312intex -f 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\importScript.sql'"
 -- YOU WILL NEED TO CHANGE THE FILEPATHS TO MATCH WHERE THEY ARE LOCALLY ON YOUR MACHINE
 
-
-
--- Run this whole script in psql
-
 -- Create database
-CREATE DATABASE "312intex";
+CREATE DATABASE "312intex2";
 
 -- Connect to it
-\c 312intex;
+\c 312intex2;
+
+-- Enable extensions for better data handling (optional but recommended)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 --------------------------------------------------------
 -- Table definitions
 --------------------------------------------------------
 
-CREATE TABLE origin_types (
-    origin_type_pair_id       integer PRIMARY KEY,
-    participant_origin        text NOT NULL,
-    participant_origin_type   text NOT NULL
+CREATE TABLE originTypes (
+    originTypePairId SERIAL PRIMARY KEY,
+    participantOrigin TEXT NOT NULL CHECK (LENGTH(participantOrigin) > 0 AND LENGTH(participantOrigin) <= 255),
+    participantOriginType TEXT NOT NULL CHECK (LENGTH(participantOriginType) > 0 AND LENGTH(participantOriginType) <= 100),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE survey_recommendation_buckets (
-    survey_recommendation_id    integer PRIMARY KEY,
-    survey_recommendation_score integer NOT NULL,
-    survey_nps_bucket           text NOT NULL
+CREATE TABLE surveyRecommendationBuckets (
+    surveyRecommendationId SERIAL PRIMARY KEY,
+    surveyRecommendationScore INTEGER NOT NULL CHECK (surveyRecommendationScore BETWEEN 0 AND 10),
+    surveyNpsBucket TEXT NOT NULL CHECK (surveyNpsBucket IN ('Detractor', 'Passive', 'Promoter'))
 );
 
 CREATE TABLE participants (
-    participant_id                 integer PRIMARY KEY,
-    email                          text NOT NULL,
-    participant_first_name         text NOT NULL,
-    participant_last_name          text NOT NULL,
-    participant_dob                date,
-    participant_role               text NOT NULL,
-    participant_phone              text,
-    participant_city               text,
-    participant_state              text,
-    participant_zip                text,
-    origin_type_pair_id            integer REFERENCES origin_types(origin_type_pair_id),
-    participant_field_of_interest  text,
-    total_donations                numeric
+    participantId SERIAL PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    participantFirstName TEXT NOT NULL CHECK (LENGTH(participantFirstName) BETWEEN 1 AND 50),
+    participantLastName TEXT NOT NULL CHECK (LENGTH(participantLastName) BETWEEN 1 AND 50),
+    participantDob DATE CHECK (participantDob < CURRENT_DATE),
+    participantRole TEXT NOT NULL CHECK (LENGTH(participantRole) > 0 AND LENGTH(participantRole) <= 100),
+    participantPhone TEXT CHECK (LENGTH(participantPhone) <= 20),
+    participantCity TEXT CHECK (LENGTH(participantCity) <= 100),
+    participantState TEXT CHECK (LENGTH(participantState) <= 50),
+    participantZip TEXT CHECK (LENGTH(participantZip) = 5 OR LENGTH(participantZip) = 10), -- US ZIP or ZIP+4
+    originTypePairId INTEGER REFERENCES originTypes(originTypePairId) ON DELETE SET NULL,
+    participantFieldOfInterest TEXT CHECK (LENGTH(participantFieldOfInterest) <= 255),
+    totalDonations NUMERIC(10,2) CHECK (totalDonations >= 0),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE events (
-    event_id                 integer PRIMARY KEY,
-    event_name               text NOT NULL,
-    event_type               text NOT NULL,
-    event_description        text,
-    event_recurrence_pattern text,
-    event_default_capacity   integer
+    eventId SERIAL PRIMARY KEY,
+    eventName TEXT NOT NULL CHECK (LENGTH(eventName) BETWEEN 1 AND 200),
+    eventType TEXT NOT NULL CHECK (LENGTH(eventType) > 0 AND LENGTH(eventType) <= 100),
+    eventDescription TEXT CHECK (LENGTH(eventDescription) <= 1000),
+    eventRecurrencePattern TEXT CHECK (LENGTH(eventRecurrencePattern) <= 100), -- e.g., 'weekly', 'monthly'
+    eventDefaultCapacity INTEGER CHECK (eventDefaultCapacity >= 0 AND eventDefaultCapacity <= 10000),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE event_details (
-    event_details_id           integer PRIMARY KEY,
-    event_id                   integer NOT NULL REFERENCES events(event_id),
-    event_name                 text NOT NULL,
-    event_datetime_start       timestamp NOT NULL,
-    event_location             text,
-    event_datetime_end         timestamp,
-    event_capacity             integer,
-    event_registration_deadline timestamp
+CREATE TABLE eventDetails (
+    eventDetailsId SERIAL PRIMARY KEY,
+    eventId INTEGER NOT NULL REFERENCES events(eventId) ON DELETE CASCADE,
+    eventName TEXT NOT NULL CHECK (LENGTH(eventName) BETWEEN 1 AND 200),
+    eventDatetimeStart TIMESTAMP NOT NULL,
+    eventLocation TEXT CHECK (LENGTH(eventLocation) <= 255),
+    eventDatetimeEnd TIMESTAMP CHECK (eventDatetimeEnd > eventDatetimeStart),
+    eventCapacity INTEGER CHECK (eventCapacity >= 0 AND eventCapacity <= 10000),
+    eventRegistrationDeadline TIMESTAMP CHECK (eventRegistrationDeadline < eventDatetimeStart),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE milestones (
-    milestone_id     integer PRIMARY KEY,
-    participant_id   integer NOT NULL REFERENCES participants(participant_id),
-    milestone_title  text NOT NULL,
-    milestone_date   timestamp
+    milestoneId SERIAL PRIMARY KEY,
+    participantId INTEGER NOT NULL REFERENCES participants(participantId) ON DELETE CASCADE,
+    milestoneTitle TEXT NOT NULL CHECK (LENGTH(milestoneTitle) BETWEEN 1 AND 200),
+    milestoneDate TIMESTAMP NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE donations (
-    donation_id      integer PRIMARY KEY,
-    participant_id   integer NOT NULL REFERENCES participants(participant_id),
-    donation_date    timestamp,
-    donation_amount  numeric NOT NULL
+    donationId SERIAL PRIMARY KEY,
+    participantId INTEGER NOT NULL REFERENCES participants(participantId) ON DELETE CASCADE,
+    donationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    donationAmount NUMERIC(10,2) NOT NULL CHECK (donationAmount > 0),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Trigger to update total_donations on insert/update in donations
+CREATE OR REPLACE FUNCTION updateTotalDonations() RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE participants
+    SET totalDonations = (
+        SELECT COALESCE(SUM(donationAmount), 0)
+        FROM donations
+        WHERE participantId = NEW.participantId
+    )
+    WHERE participantId = NEW.participantId;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER triggerUpdateTotalDonations
+    AFTER INSERT OR UPDATE ON donations
+    FOR EACH ROW EXECUTE FUNCTION updateTotalDonations();
+
 CREATE TABLE registrations (
-    registration_id              integer PRIMARY KEY,
-    participant_id               integer NOT NULL REFERENCES participants(participant_id),
-    event_id                     integer NOT NULL REFERENCES events(event_id),
-    event_datetime_start         timestamp NOT NULL,
-    registration_status          text NOT NULL,
-    registration_check_in_time   timestamp,
-    registration_created_at      timestamp,
-    registration_attendance_flag boolean
+    registrationId SERIAL PRIMARY KEY,
+    participantId INTEGER NOT NULL REFERENCES participants(participantId) ON DELETE CASCADE,
+    eventId INTEGER NOT NULL REFERENCES events(eventId) ON DELETE CASCADE,
+    eventDatetimeStart TIMESTAMP NOT NULL,
+    registrationStatus TEXT NOT NULL DEFAULT 'pending' CHECK (registrationStatus IN ('pending', 'confirmed', 'cancelled', 'attended')),
+    registrationCheckInTime TIMESTAMP,
+    registrationCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    registrationAttendanceFlag BOOLEAN DEFAULT FALSE,
+    UNIQUE(participantId, eventId) -- Prevent duplicate registrations per participant per event
 );
 
 CREATE TABLE surveys (
-    survey_id                    integer PRIMARY KEY,
-    participant_id               integer NOT NULL REFERENCES participants(participant_id),
-    event_id                     integer NOT NULL REFERENCES events(event_id),
-    event_datetime_start         timestamp NOT NULL,
-    survey_satisfaction_score    integer,
-    survey_usefulness_score      integer,
-    survey_instructor_score      integer,
-    survey_recommendation_score  integer,
-    survey_recommendation_id     integer REFERENCES survey_recommendation_buckets(survey_recommendation_id),
-    survey_overall_score         numeric,
-    survey_comments              text,
-    survey_submission_date       timestamp
+    surveyId SERIAL PRIMARY KEY,
+    participantId INTEGER NOT NULL REFERENCES participants(participantId) ON DELETE CASCADE,
+    eventId INTEGER NOT NULL REFERENCES events(eventId) ON DELETE CASCADE,
+    eventDatetimeStart TIMESTAMP NOT NULL,
+    surveySatisfactionScore INTEGER CHECK (surveySatisfactionScore BETWEEN 1 AND 5),
+    surveyUsefulnessScore INTEGER CHECK (surveyUsefulnessScore BETWEEN 1 AND 5),
+    surveyInstructorScore INTEGER CHECK (surveyInstructorScore BETWEEN 1 AND 5),
+    surveyRecommendationScore INTEGER CHECK (surveyRecommendationScore BETWEEN 0 AND 10),
+    surveyRecommendationId INTEGER REFERENCES surveyRecommendationBuckets(surveyRecommendationId) ON DELETE SET NULL,
+    surveyOverallScore NUMERIC(3,2) CHECK (surveyOverallScore BETWEEN 0 AND 5),
+    surveyComments TEXT CHECK (LENGTH(surveyComments) <= 2000),
+    surveySubmissionDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE users (
-    userID      integer PRIMARY KEY,
-    userName   text NOT NULL,
-    password    text NOT NULL,
-    role  text NOT NULL
+    userId SERIAL PRIMARY KEY,
+    userName TEXT NOT NULL UNIQUE CHECK (LENGTH(userName) BETWEEN 3 AND 50),
+    password TEXT NOT NULL CHECK (LENGTH(password) >= 8), -- In production, use hashed passwords
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user', 'moderator')),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Indexes for performance (common sense for relations and queries)
+CREATE INDEX idx_participants_email ON participants(email);
+CREATE INDEX idx_participants_role ON participants(participantRole);
+CREATE INDEX idx_events_type ON events(eventType);
+CREATE INDEX idx_event_details_datetime ON eventDetails(eventDatetimeStart);
+CREATE INDEX idx_donations_participant ON donations(participantId);
+CREATE INDEX idx_registrations_status ON registrations(registrationStatus);
+CREATE INDEX idx_surveys_participant ON surveys(participantId);
+CREATE INDEX idx_users_role ON users(role);
 
 --------------------------------------------------------
 -- Data import (adjust file paths as needed)
 -- Assumes:
 --   CSVs have a header row
 --   Encoded as UTF-8
---   Columns in same order as table definitions
+--   Columns in same order as table definitions (use \copy for import)
+-- Example: \copy originTypes FROM '/path/to/origin_types.csv' WITH (FORMAT csv, HEADER true);
 --------------------------------------------------------
+
