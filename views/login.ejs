@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Log in Page!</title>
+</head>
+<body>
+    <div class="page-card narrow">
+        <div class="login-card">
+            <h3>Login</h3>
+            <p>Please enter your credentials to continue.</p>
+            <% if (error_message && error_message !==''){%>
+                <div id="error_message" name='error_message' class="alert"><%= error_message %></div>
+            <% } %>
+        </div>
+        <form action="/login" method="POST" class="form-card">
+            <!-- This creates the random token to prevent from csrf attacking-->
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div>
+                <label for='username' class='form-label'>Username</label>
+                <input type='text' id='username' name='username' class="form-control" required>
+            </div>
+            <div>
+                <label for='password' class='form-label'>Password</label>
+                <input type='password' id='password' name='password' class="form-control" required>
+            </div>
+            <div>
+                <button type='submit' class="btn">Login</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
