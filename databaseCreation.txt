@@ -1,0 +1,131 @@
+-- Run this whole script in psql
+
+-- Create database
+CREATE DATABASE "312intex";
+
+-- Connect to it
+\c 312intex;
+
+--------------------------------------------------------
+-- Table definitions
+--------------------------------------------------------
+
+CREATE TABLE origin_types (
+    origin_type_pair_id       integer PRIMARY KEY,
+    participant_origin        text NOT NULL,
+    participant_origin_type   text NOT NULL
+);
+
+CREATE TABLE survey_recommendation_buckets (
+    survey_recommendation_id    integer PRIMARY KEY,
+    survey_recommendation_score integer NOT NULL,
+    survey_nps_bucket           text NOT NULL
+);
+
+CREATE TABLE participants (
+    participant_id                 integer PRIMARY KEY,
+    email                          text NOT NULL,
+    participant_first_name         text NOT NULL,
+    participant_last_name          text NOT NULL,
+    participant_dob                date,
+    participant_role               text NOT NULL,
+    participant_phone              text,
+    participant_city               text,
+    participant_state              text,
+    participant_zip                text,
+    origin_type_pair_id            integer REFERENCES origin_types(origin_type_pair_id),
+    participant_field_of_interest  text,
+    total_donations                numeric
+);
+
+CREATE TABLE events (
+    event_id                 integer PRIMARY KEY,
+    event_name               text NOT NULL,
+    event_type               text NOT NULL,
+    event_description        text,
+    event_recurrence_pattern text,
+    event_default_capacity   integer
+);
+
+CREATE TABLE event_details (
+    event_details_id           integer PRIMARY KEY,
+    event_id                   integer NOT NULL REFERENCES events(event_id),
+    event_name                 text NOT NULL,
+    event_datetime_start       timestamp NOT NULL,
+    event_location             text,
+    event_datetime_end         timestamp,
+    event_capacity             integer,
+    event_registration_deadline timestamp
+);
+
+CREATE TABLE milestones (
+    milestone_id     integer PRIMARY KEY,
+    participant_id   integer NOT NULL REFERENCES participants(participant_id),
+    milestone_title  text NOT NULL,
+    milestone_date   timestamp
+);
+
+CREATE TABLE donations (
+    donation_id      integer PRIMARY KEY,
+    participant_id   integer NOT NULL REFERENCES participants(participant_id),
+    donation_date    timestamp,
+    donation_amount  numeric NOT NULL
+);
+
+CREATE TABLE registrations (
+    registration_id              integer PRIMARY KEY,
+    participant_id               integer NOT NULL REFERENCES participants(participant_id),
+    event_id                     integer NOT NULL REFERENCES events(event_id),
+    event_datetime_start         timestamp NOT NULL,
+    registration_status          text NOT NULL,
+    registration_check_in_time   timestamp,
+    registration_created_at      timestamp,
+    registration_attendance_flag boolean
+);
+
+CREATE TABLE surveys (
+    survey_id                    integer PRIMARY KEY,
+    participant_id               integer NOT NULL REFERENCES participants(participant_id),
+    event_id                     integer NOT NULL REFERENCES events(event_id),
+    event_datetime_start         timestamp NOT NULL,
+    survey_satisfaction_score    integer,
+    survey_usefulness_score      integer,
+    survey_instructor_score      integer,
+    survey_recommendation_score  integer,
+    survey_recommendation_id     integer REFERENCES survey_recommendation_buckets(survey_recommendation_id),
+    survey_overall_score         numeric,
+    survey_comments              text,
+    survey_submission_date       timestamp
+);
+
+CREATE TABLE pk_participant_eventdetails_milestone_donation (
+    participant_id   integer NOT NULL REFERENCES participants(participant_id),
+    event_details_id integer NOT NULL REFERENCES event_details(event_details_id),
+    milestone_id     integer NOT NULL REFERENCES milestones(milestone_id),
+    donation_id      integer REFERENCES donations(donation_id),
+    PRIMARY KEY (participant_id, event_details_id, milestone_id)
+);
+
+--------------------------------------------------------
+-- Data import (adjust file paths as needed)
+-- Assumes:
+--   CSVs have a header row
+--   Encoded as UTF-8
+--   Columns in same order as table definitions
+--------------------------------------------------------
+
+-- 1. Lookup / small tables
+\copy origin_types FROM '/path/to/origin_types.csv' WITH (FORMAT csv, HEADER true);
+\copy survey_recommendation_buckets FROM '/path/to/survey_recommendation_buckets.csv' WITH (FORMAT csv, HEADER true);
+
+-- 2. Core entities
+\copy participants FROM '/path/to/participants.csv' WITH (FORMAT csv, HEADER true);
+\copy events       FROM '/path/to/events.csv'       WITH (FORMAT csv, HEADER true);
+\copy event_details FROM '/path/to/event_details.csv' WITH (FORMAT csv, HEADER true);
+
+\copy donations    FROM '/path/to/donations.csv'    WITH (FORMAT csv, HEADER true);
+\copy milestones   FROM '/path/to/milestones.csv'   WITH (FORMAT csv, HEADER true);
+
+-- 3. Activity / junction tables
+\copy registrations FROM '/path/to/registrations.csv' WITH (FORMAT csv, HEADER true);
+\copy surveys       FROM '/path/to/surveys.csv'       WITH (FORMAT csv, HEADER true);
