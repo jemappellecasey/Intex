@@ -41,7 +41,58 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use(helmet());
+//app.use(helmet());
+
+
+// Replace the default helmet() with this configuration
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+
+        // Allow Tableau scripts + inline script required for embed
+        "script-src": [
+          "'self'",
+          "'unsafe-inline'",                     // Required because the Tableau embed uses inline <script>
+          "https://public.tableau.com",
+          "https://public.tableau.com/javascripts/api/"
+        ],
+
+        // Allow embedding Tableau dashboards (iframe/object)
+        "frame-src": [
+          "'self'",
+          "https://public.tableau.com"
+        ],
+
+        // Allow Tableau static images + data: URIs
+        "img-src": [
+          "'self'",
+          "data:",
+          "https://public.tableau.com"
+        ],
+
+        // Allow inline styles required by Tableau embed
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://public.tableau.com"
+        ],
+
+        // Allow Tableau API calls if needed
+        "connect-src": [
+          "'self'",
+          "https://public.tableau.com"
+        ],
+      },
+    },
+
+    // Disable COEP because it breaks external embeds (including Tableau)
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
 
 app.use(
     session({
