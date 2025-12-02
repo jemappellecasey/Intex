@@ -115,7 +115,7 @@ app.get('/dashboard', (req, res) => {
         .select('*')
         .from('workshops')
         .then(workshop => {
-            res.render('index', {
+            res.render('dashboard', {
                 workshop,
                 error_message: '',
                 isManager: req.session.level === 'M',
@@ -127,7 +127,7 @@ app.get('/dashboard', (req, res) => {
         
         .catch(error => {
             console.error('Error loading workshops for dashboard:', error);
-            res.render('index', {
+            res.render('dashboard', {
                 workshop: [],
                 error_message: `Database error: ${error.message}`,
                 isManager: req.session.level === 'M',
