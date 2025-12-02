@@ -1,6 +1,6 @@
 -- INSTRUCTIONS: 
 -- Update the file paths below to match where your CSV files are located
--- Then run: psql -U postgres -f completeSetup.sql
+-- Then run: psql -U postgres -f yourpathto/completeSetup.sql
 
 -- Create database
 CREATE DATABASE "312intex";
