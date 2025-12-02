@@ -3,6 +3,7 @@
     "@dr.pogodin/csurf": "^1.16.6",
     "bcrypt": "^6.0.0",
     "connect-flash": "^0.1.1",
+    "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "express": "^5.2.0",
     "express-session": "^1.18.2",
