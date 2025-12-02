@@ -60,6 +60,8 @@ app.use(
           "https://public.tableau.com/javascripts/api/"
         ],
 
+        "script-src-attr": ["'self'", "'unsafe-inline'"],
+
         // Allow embedding Tableau dashboards (iframe/object)
         "frame-src": [
           "'self'",
@@ -143,7 +145,7 @@ app.use((req, res, next)=> {
 
 //This is security for website if the user are manager or not.
 function requireManager(req, res, next) {
-    if (req.session.isLoggedIn && req.session.role === 'A') {
+    if (req.session.isLoggedIn && req.session.role === 'admin') {
         return next();
     }
     return res.render('login', { error_message: 'You do not have permission to view this page.' });
@@ -220,42 +222,173 @@ app.get('/dashboard', (req, res) => {
         return res.render('login', { error_message: null });
     }
 
+    res.render('dashboard', { 
+        error_message: null,
+        isAdmin: req.session.role === 'admin',
+        Username: req.session.username
+    });
 });
 
-app.get('/participants', (req, res) => {
-    if (!req.session.isLoggedIn) {
-        return res.render('login', { error_message: null });
+
+app.get('/participants', async (req, res) => {
+  if (!req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const pageSize = 50; // 1ページあたり人数
+  const page = parseInt(req.query.page, 10) || 1;
+  const offset = (page - 1) * pageSize;
+
+  try {
+    // Option: ここで eventName / eventType によるフィルタの WHERE も追加できる
+    const participantsQuery = knex('participants')
+      .select('*')
+      .limit(pageSize)
+      .offset(offset);
+
+    const countQuery = knex('participants')
+      .count('* as total');
+
+    const [participants, totalResult] = await Promise.all([participantsQuery, countQuery]);
+
+    const total = parseInt(totalResult[0].total, 10);
+    const totalPages = Math.ceil(total / pageSize);
+
+    res.render('participants', {
+      participants,
+      error_message: '',
+      isAdmin: req.session.role === 'A',
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1
+    });
+  } catch (error) {
+    console.error('Error loading participants:', error);
+    res.render('participants', {
+      participants: [],
+      error_message: `Database error: ${error.message}`,
+      isAdmin: req.session.role === 'A',
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1
+    });
+  }
+});
+
+// View a single participant (details page)
+app.get('/participants/:participantid', async (req, res) => {
+  if (!req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const participantid = req.params.participantid;
+
+  try {
+    const participant = await knex('participants')
+      .where({ participantid })
+      .first();
+
+    if (!participant) {
+      return res.render('participants', {
+        participants: [],
+        error_message: 'Participant not found.',
+        isAdmin: req.session.role === 'admin',
+        Username: req.session.username,
+        currentPage: 1,
+        totalPages: 1
+      });
     }
 
-    knex
-        .select('*')
-        .from('participants')
-        .then(participants => {
-            res.render('participants', {
-                participants,
-                error_message: '',
-                isManager: req.session.role === 'A',
-                Username: req.session.username
+    // Later: join events / surveys / milestones / donations here
 
-            });
-        })
-
-        
-        .catch(error => {
-            console.error('Error loading users for dashboard:', error);
-            res.render('participants', {
-                participants: [],
-                error_message: `Database error: ${error.message}`,
-                isManager: req.session.role === 'A'
-            });
-        });
-
-
+    res.render('veiwParticipant', {
+      participant,
+    });
+  } catch (err) {
+    console.error('Error loading participant details:', err);
+    res.render('participants', {
+      participants: [],
+      error_message: 'Error loading participant details.',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1
+    });
+  }
 });
 
-//app.get('/participants/:id', ...)
-//app.get('/participants/:id/edit', ...)
-//app.post('/participants/:id/delete', ...)
+
+//get the edit pages to edit the participant
+app.get('/participants/:participantid/edit', (req, res) => {
+    const participantid = req.params.participantid;
+
+    knex('participants')
+        .where({ participantid })
+        .first()
+        .then(p => {
+            if (!p) {
+                return res.send("Participant not found.");
+            }
+
+            res.render('participant_edit', {
+                participant: p,
+                csrfToken: req.csrfToken(),
+                isAdmin: req.session.role === 'admin',
+                Username: req.session.username
+            });
+        })
+        .catch(err => {
+            console.error("Error loading participant:", err);
+            res.send("Error loading participant.");
+        });
+});
+//Update the participant information
+app.post('/participants/:participantid/edit', (req, res) => {
+    const participantid = req.params.participantid;
+
+    const updated = {
+        email: req.body.email,
+        participantfirstname: req.body.participantfirstname,
+        participantlastname: req.body.participantlastname,
+        participantdob: req.body.participantdob,
+        participantrole: req.body.participantrole,
+        participantphone: req.body.participantphone,
+        participantcity: req.body.participantcity,
+        participantstate: req.body.participantstate,
+        participantzip: req.body.participantzip,
+        participantfieldofinterest: req.body.participantfieldofinterest
+    };
+
+    knex('participants')
+        .where({ participantid })
+        .update(updated)
+        .then(() => res.redirect('/participants'))
+        .catch(err => {
+            console.error("Error updating participant:", err);
+            res.send("Update error.");
+        });
+});
+
+
+app.post('/deleteparticipants/:participantid', (req, res) => {
+    // Get participant ID from URL parameter
+    const participantid = req.params.participantid;
+
+    knex('participants')
+      // Delete the record matching this participant ID
+      .where('participantid', participantid)
+      .del()
+      .then(() => {
+        // After deleting, redirect back to the participants list
+        res.redirect('/participants');
+      })
+      .catch(err => {
+        // Log any database errors for debugging
+        console.error(err);
+        res.status(500).json({ err });
+      });
+});
+
 
 app.listen(port, () => {
     console.log("The server is listening");

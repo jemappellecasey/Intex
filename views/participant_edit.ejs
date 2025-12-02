@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Participant</title>
+</head>
+<body>
+
+  <h1>Edit Participant</h1>
+
+  <% if (typeof error_message !== "undefined" && error_message) { %>
+    <p style="color:red;"><%= error_message %></p>
+  <% } %>
+
+  <!-- Basic participant edit form -->
+  <form method="post" action="/participants/<%= participant.participantid %>/edit">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <div>
+      <label for="email">Email:</label><br>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        value="<%= participant.email %>"
+        required
+      >
+    </div>
+
+    <div>
+      <label for="participantfirstname">First Name:</label><br>
+      <input
+        type="text"
+        id="participantfirstname"
+        name="participantfirstname"
+        value="<%= participant.participantfirstname %>"
+        required
+      >
+    </div>
+
+    <div>
+      <label for="participantlastname">Last Name:</label><br>
+      <input
+        type="text"
+        id="participantlastname"
+        name="participantlastname"
+        value="<%= participant.participantlastname %>"
+        required
+      >
+    </div>
+
+    <div>
+      <label for="participantdob">Date of Birth:</label><br>
+      <input
+        type="date"
+        id="participantdob"
+        name="participantdob"
+        value="<%= participant.participantdob ? participant.participantdob.toISOString ? participant.participantdob.toISOString().substring(0,10) : participant.participantdob : '' %>"
+      >
+    </div>
+
+    <div>
+      <label for="participantrole">Role:</label><br>
+      <input
+        type="text"
+        id="participantrole"
+        name="participantrole"
+        value="<%= participant.participantrole %>"
+      >
+    </div>
+
+    <div>
+      <label for="participantphone">Phone Number:</label><br>
+      <input
+        type="tel"
+        id="participantphone"
+        name="participantphone"
+        value="<%= participant.participantphone %>"
+      >
+    </div>
+
+    <div>
+      <label for="participantcity">City:</label><br>
+      <input
+        type="text"
+        id="participantcity"
+        name="participantcity"
+        value="<%= participant.participantcity %>"
+      >
+    </div>
+
+    <div>
+      <label for="participantstate">State:</label><br>
+      <input
+        type="text"
+        id="participantstate"
+        name="participantstate"
+        value="<%= participant.participantstate %>"
+      >
+    </div>
+
+    <div>
+      <label for="participantzip">Zip:</label><br>
+      <input
+        type="text"
+        id="participantzip"
+        name="participantzip"
+        value="<%= participant.participantzip %>"
+      >
+    </div>
+
+    <div>
+      <label for="participantfieldofinterest">Field of Interest:</label><br>
+      <input
+        type="text"
+        id="participantfieldofinterest"
+        name="participantfieldofinterest"
+        value="<%= participant.participantfieldofinterest %>"
+      >
+    </div>
+
+    <div style="margin-top: 16px;">
+      <button type="submit">Save</button>
+      <a href="/participants">Cancel</a>
+    </div>
+  </form>
+
+</body>
+</html>
