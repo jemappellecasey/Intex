@@ -29,7 +29,7 @@ const knex = require("knex")({
         host : process.env.DB_HOST || "localhost",
         user : process.env.DB_USER || "postgres",
         password : process.env.DB_PASSWORD || "admin",
-        database : process.env.DB_NAME || "test2",
+        database : process.env.DB_NAME || "312intex",
         port : process.env.DB_PORT || 5432
     }
 });
@@ -143,7 +143,7 @@ app.use((req, res, next)=> {
 
 //This is security for website if the user are manager or not.
 function requireManager(req, res, next) {
-    if (req.session.isLoggedIn && req.session.level === 'M') {
+    if (req.session.isLoggedIn && req.session.role === 'A') {
         return next();
     }
     return res.render('login', { error_message: 'You do not have permission to view this page.' });
@@ -156,36 +156,7 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/dashboard', (req, res) => {
-    if (!req.session.isLoggedIn) {
-        return res.render('login', { error_message: null });
-    }
-    
-    //This needs to be changed!!
-    knex
-        .select('*')
-        .from('workshops')
-        .then(workshop => {
-            res.render('dashboard', {
-                workshop,
-                error_message: '',
-                isManager: req.session.level === 'M',
-                Username: req.session.username
 
-            });
-        })
-
-        
-        .catch(error => {
-            console.error('Error loading workshops for dashboard:', error);
-            res.render('dashboard', {
-                workshop: [],
-                error_message: `Database error: ${error.message}`,
-                isManager: req.session.level === 'M',
-                Username: req.session.username
-            });
-        });
-});
 
 app.get('/login', (req, res) => {
    
@@ -204,7 +175,7 @@ app.post('/login', async (req, res) => {
     try {
         // get the one username
         const user = await knex('users')
-            .select('id', 'username', 'password', 'level')  // 🤪We probably needs to be fixed🤪
+            .select('userid', 'username', 'password', 'role')  
             .where('username', sName)
             .first();
 
@@ -224,7 +195,7 @@ app.post('/login', async (req, res) => {
         // There are going to set the session .
         req.session.isLoggedIn = true;
         req.session.username = user.username;
-        req.session.level = user.level;
+        req.session.role = user.role;
 
         return res.redirect('/dashboard');
 
@@ -243,6 +214,48 @@ app.get("/logout", (req, res) => {
         res.redirect("/");
     });
 });
+
+app.get('/dashboard', (req, res) => {
+    if (!req.session.isLoggedIn) {
+        return res.render('login', { error_message: null });
+    }
+
+});
+
+app.get('/participants', (req, res) => {
+    if (!req.session.isLoggedIn) {
+        return res.render('login', { error_message: null });
+    }
+
+    knex
+        .select('*')
+        .from('participants')
+        .then(participants => {
+            res.render('participants', {
+                participants,
+                error_message: '',
+                isManager: req.session.role === 'A',
+                Username: req.session.username
+
+            });
+        })
+
+        
+        .catch(error => {
+            console.error('Error loading users for dashboard:', error);
+            res.render('participants', {
+                participants: [],
+                error_message: `Database error: ${error.message}`,
+                isManager: req.session.role === 'A'
+            });
+        });
+
+
+});
+
+//app.get('/participants/:id', ...)
+//app.get('/participants/:id/edit', ...)
+//app.post('/participants/:id/delete', ...)
 
 app.listen(port, () => {
     console.log("The server is listening");
