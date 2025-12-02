@@ -1,18 +1,191 @@
 <!-- After login the user or manager, they will come to check this page and see the
  Participants / Events / Surveys / Milestones / Donations, chart and manager view -->
 
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Ella Rises Dashboard</title>
-  <link rel="stylesheet" href="/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f7f8fb;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: #143a5e;
+      color: #e2e8f0;
+      padding: 24px 20px;
+      box-sizing: border-box;
+    }
+    .sidebar h2 {
+      margin: 0 0 16px 0;
+      font-size: 20px;
+      color: #fff;
+    }
+    .sidebar nav a {
+      display: block;
+      padding: 8px 4px;
+      margin-bottom: 4px;
+      text-decoration: none;
+      color: #cbd5f5;
+      font-size: 15px;
+      border-radius: 4px;
+    }
+    .sidebar nav a:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .sidebar nav a.active {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      font-weight: 600;
+    }
+    .sidebar hr {
+      border: none;
+      border-top: 1px solid rgba(226, 232, 240, 0.2);
+      margin: 12px 0;
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      padding: 20px 28px;
+      box-sizing: border-box;
+    }
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .top-header h1 {
+      margin: 0;
+      font-size: 24px;
+      color: #0f172a;
+    }
+    .user-info {
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .logout-btn {
+      margin-left: 10px;
+      font-size: 13px;
+      color: #b91c1c;
+      text-decoration: none;
+    }
+    .logout-btn:hover {
+      text-decoration: underline;
+    }
+
+    .description {
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #4b5563;
+      max-width: 780px;
+    }
+
+    /* KPI Cards */
+    .kpi-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .kpi-card {
+      flex: 1;
+      min-width: 180px;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      padding: 14px 16px;
+      box-sizing: border-box;
+    }
+    .kpi-card h3 {
+      margin: 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .kpi-value {
+      margin-top: 6px;
+      font-size: 24px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    /* Chart / Tableau grid */
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.4fr);
+      gap: 16px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      padding: 14px 16px;
+      box-sizing: border-box;
+    }
+    .card h3 {
+      margin: 0 0 6px 0;
+      font-size: 15px;
+      color: #111827;
+    }
+    .card p {
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    /* Tableau embed container */
+    .tableau-container {
+      width: 100%;
+      height: 420px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      box-sizing: border-box;
+    }
+    .tableau-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        overflow-x: auto;
+      }
+      .sidebar nav a {
+        display: inline-block;
+        margin-right: 10px;
+      }
+      .main { padding: 16px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 
 <body>
 <div class="layout">
 
-  <!-- サイドバー -->
+  <!-- Sidebar navigation -->
   <aside class="sidebar">
     <h2>Ella Rises</h2>
     <nav>
@@ -24,7 +197,7 @@
       <a href="/donations">Donations</a>
 
       <% if (isManager) { %>
-        <hr>
+        <hr />
         <a href="/participants/add">+ Add Participant</a>
         <a href="/events/add">+ Add Event</a>
         <a href="/milestones/add">+ Add Milestone</a>
@@ -32,68 +205,84 @@
     </nav>
   </aside>
 
-  <!-- after embeded the Tableau, here will be explanation -->
-  <main class="main-content">
-
+  <!-- Main content -->
+  <main class="main">
     <header class="top-header">
       <h1>Dashboard</h1>
       <div class="user-info">
-        Welcome, <%= Username %>  
+        Logged in as <strong><%= Username %></strong>
         <a href="/logout" class="logout-btn">Logout</a>
       </div>
     </header>
 
-    <!-- explanation -->
     <section class="description">
-      <p>
-        This dashboard shows how participants experience the workshops
-        and the long-term impact demonstrated through milestone achievements
-        and STEAM outcomes.
-      </p>
+      This dashboard provides insights into event effectiveness, participant
+      experience, milestone achievements, and long-term STEAM outcomes.
     </section>
 
-    <!-- Please put the KPI tabeau-->
-    <section class="kpi-section">
+    <!-- KPI section -->
+    <section class="kpi-row">
       <div class="kpi-card">
         <h3>STEAM Major Rate</h3>
-        <div class="kpi-value" id="steamMajorRate">--%</div>
+        <div class="kpi-value">
+          <%= typeof steamMajorRate !== 'undefined' ? steamMajorRate + '%' : '--%' %>
+        </div>
       </div>
-
       <div class="kpi-card">
         <h3>STEAM Job Rate</h3>
-        <div class="kpi-value" id="steamJobRate">--%</div>
+        <div class="kpi-value">
+          <%= typeof steamJobRate !== 'undefined' ? steamJobRate + '%' : '--%' %>
+        </div>
       </div>
     </section>
 
-    <!-- Graph section（Tableau） -->
-    <section class="chart-section">
-      
-      <!-- Event Satisfaction Chart -->
-      <div class="chart-card">
-        <h3>Event Satisfaction Score</h3>
-        <div class="chart-container">
-          <!-- Tableau picture here -->
-          <canvas id="satisfactionChart"></canvas>
+    <!-- Visualization section -->
+    <section class="grid">
+
+      <!-- Tableau embed -->
+      <div class="card">
+        <h3>Event & Participant Experience (Tableau)</h3>
+        <p>
+          Explore survey scores, event outcomes, and demographic insights
+          using this interactive Tableau dashboard.
+        </p>
+
+        <!-- Tableau iframe -->
+        <div class="tableau-container">
+          <iframe
+            src="<%= tableauUrl || '' %>"
+            title="Ella Rises Tableau Dashboard"
+            allowfullscreen>
+          </iframe>
         </div>
       </div>
 
-      <!-- Milestone Achievement Chart -->
-      <div class="chart-card">
-        <h3>Milestone Achievement Rate</h3>
-        <div class="chart-container">
-          <!--Tableau iframe here-->
-          <div id="milestoneChartSlot"></div>
-        </div>
+      <!-- Additional insights / static image / chart -->
+      <div class="card">
+        <h3>Key Insights & Notes</h3>
+        <p>
+          Use this section to display supporting images, summary charts,
+          or high-level findings from your analysis.
+        </p>
+
+        <% if (typeof extraImageUrl !== 'undefined' && extraImageUrl) { %>
+          <img
+            src="<%= extraImageUrl %>"
+            alt="Insight chart"
+            style="width:100%; border-radius:8px; border:1px solid #e5e7eb;">
+        <% } else { %>
+          <ul>
+            <li>Which events generate the highest satisfaction?</li>
+            <li>Which participant groups achieve the most milestones?</li>
+            <li>Where should Ella Rises focus efforts next?</li>
+          </ul>
+        <% } %>
+
       </div>
 
     </section>
-
   </main>
 
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="/dashboard.js"></script>
-
 </body>
 </html>
