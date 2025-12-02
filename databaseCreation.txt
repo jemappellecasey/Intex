@@ -158,4 +158,3 @@ CREATE INDEX idx_users_role ON users(role);
 --   Columns in same order as table definitions (use \copy for import)
 -- Example: \copy originTypes FROM '/path/to/origin_types.csv' WITH (FORMAT csv, HEADER true);
 --------------------------------------------------------
-
