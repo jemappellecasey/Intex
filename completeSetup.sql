@@ -1,6 +1,6 @@
--- INSTRUCTIONS: Open a terminal and type "psql -U postgres" (you may need to enter your password) then Copy and paste THIS file.    
--- After that, go back to the terminal view and type "psql -U postgres -d 312intex -f 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\importScript.sql'"
--- YOU WILL NEED TO CHANGE THE FILEPATHS TO MATCH WHERE THEY ARE LOCALLY ON YOUR MACHINE
+-- INSTRUCTIONS: 
+-- Update the file paths below to match where your CSV files are located
+-- Then run: psql -U postgres -f completeSetup.sql
 
 -- Create database
 CREATE DATABASE "312intex";
@@ -8,7 +8,7 @@ CREATE DATABASE "312intex";
 -- Connect to it
 \c 312intex;
 
--- Enable extensions for better data handling (optional but recommended)
+-- Enable extensions for better data handling
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 --------------------------------------------------------
@@ -39,7 +39,7 @@ CREATE TABLE participants (
     participantPhone TEXT CHECK (LENGTH(participantPhone) <= 20),
     participantCity TEXT CHECK (LENGTH(participantCity) <= 100),
     participantState TEXT CHECK (LENGTH(participantState) <= 50),
-    participantZip TEXT CHECK (LENGTH(participantZip) = 5 OR LENGTH(participantZip) = 10), -- US ZIP or ZIP+4
+    participantZip TEXT CHECK (LENGTH(participantZip) = 5 OR LENGTH(participantZip) = 10),
     originTypePairId INTEGER REFERENCES originTypes(originTypePairId) ON DELETE SET NULL,
     participantFieldOfInterest TEXT CHECK (LENGTH(participantFieldOfInterest) <= 255),
     totalDonations NUMERIC(10,2) CHECK (totalDonations >= 0),
@@ -52,7 +52,7 @@ CREATE TABLE events (
     eventName TEXT NOT NULL CHECK (LENGTH(eventName) BETWEEN 1 AND 200),
     eventType TEXT NOT NULL CHECK (LENGTH(eventType) > 0 AND LENGTH(eventType) <= 100),
     eventDescription TEXT CHECK (LENGTH(eventDescription) <= 1000),
-    eventRecurrencePattern TEXT CHECK (LENGTH(eventRecurrencePattern) <= 100), -- e.g., 'weekly', 'monthly'
+    eventRecurrencePattern TEXT CHECK (LENGTH(eventRecurrencePattern) <= 100),
     eventDefaultCapacity INTEGER CHECK (eventDefaultCapacity >= 0 AND eventDefaultCapacity <= 10000),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -80,7 +80,7 @@ CREATE TABLE milestones (
 CREATE TABLE donations (
     donationId SERIAL PRIMARY KEY,
     participantId INTEGER NOT NULL REFERENCES participants(participantId) ON DELETE CASCADE,
-    donationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    donationDate TIMESTAMP,
     donationAmount NUMERIC(10,2) NOT NULL CHECK (donationAmount > 0),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -106,13 +106,13 @@ CREATE TRIGGER triggerUpdateTotalDonations
 CREATE TABLE registrations (
     registrationId SERIAL PRIMARY KEY,
     participantId INTEGER NOT NULL REFERENCES participants(participantId) ON DELETE CASCADE,
+    eventDetailsId INTEGER NOT NULL REFERENCES eventDetails(eventDetailsId) ON DELETE CASCADE,
     eventId INTEGER NOT NULL REFERENCES events(eventId) ON DELETE CASCADE,
     eventDatetimeStart TIMESTAMP NOT NULL,
-    registrationStatus TEXT NOT NULL DEFAULT 'pending' CHECK (registrationStatus IN ('pending', 'confirmed', 'cancelled', 'attended')),
+    registrationStatus TEXT NOT NULL DEFAULT 'pending' CHECK (registrationStatus IN ('pending', 'confirmed', 'cancelled', 'attended', 'no-show')),
     registrationCheckInTime TIMESTAMP,
     registrationCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    registrationAttendanceFlag BOOLEAN DEFAULT FALSE,
-    UNIQUE(participantId, eventId) -- Prevent duplicate registrations per participant per event
+    registrationAttendanceFlag BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE surveys (
@@ -134,13 +134,13 @@ CREATE TABLE surveys (
 CREATE TABLE users (
     userId SERIAL PRIMARY KEY,
     userName TEXT NOT NULL UNIQUE CHECK (LENGTH(userName) BETWEEN 3 AND 50),
-    password TEXT NOT NULL CHECK (LENGTH(password) >= 8), -- In production, use hashed passwords
+    password TEXT NOT NULL CHECK (LENGTH(password) >= 8),
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user', 'moderator')),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for performance (common sense for relations and queries)
+-- Indexes for performance
 CREATE INDEX idx_participants_email ON participants(email);
 CREATE INDEX idx_participants_role ON participants(participantRole);
 CREATE INDEX idx_events_type ON events(eventType);
@@ -151,10 +151,51 @@ CREATE INDEX idx_surveys_participant ON surveys(participantId);
 CREATE INDEX idx_users_role ON users(role);
 
 --------------------------------------------------------
--- Data import (adjust file paths as needed)
--- Assumes:
---   CSVs have a header row
---   Encoded as UTF-8
---   Columns in same order as table definitions (use \copy for import)
--- Example: \copy originTypes FROM '/path/to/origin_types.csv' WITH (FORMAT csv, HEADER true);
+-- DATA IMPORT
+-- IMPORTANT: Update these file paths to match your CSV locations
 --------------------------------------------------------
+
+-- Import origin types
+\copy originTypes(originTypePairId, participantOrigin, participantOriginType) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - OriginTypes.csv' WITH (FORMAT csv, HEADER true);
+
+-- Import survey recommendation buckets
+\copy surveyRecommendationBuckets(surveyRecommendationId, surveyRecommendationScore, surveyNpsBucket) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - SurveyRecommendationBuckets.csv' WITH (FORMAT csv, HEADER true);
+
+-- Import participants
+\copy participants(participantId, email, participantFirstName, participantLastName, participantDob, participantRole, participantPhone, participantCity, participantState, participantZip, originTypePairId, participantFieldOfInterest, totalDonations) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - Participants.csv' WITH (FORMAT csv, HEADER true, NULL '');
+
+-- Import events
+\copy events(eventId, eventName, eventType, eventDescription, eventRecurrencePattern, eventDefaultCapacity) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - Events.csv' WITH (FORMAT csv, HEADER true);
+
+-- Import event details
+\copy eventDetails(eventDetailsId, eventId, eventName, eventDatetimeStart, eventLocation, eventDatetimeEnd, eventCapacity, eventRegistrationDeadline) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - EventDetails.csv' WITH (FORMAT csv, HEADER true);
+
+-- Import donations (note: handle null dates)
+\copy donations(donationId, participantId, donationDate, donationAmount) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - Donations.csv' WITH (FORMAT csv, HEADER true, NULL 'null');
+
+-- Import milestones
+\copy milestones(milestoneId, participantId, milestoneTitle, milestoneDate) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - Milestones.csv' WITH (FORMAT csv, HEADER true);
+
+-- Import registrations
+\copy registrations(registrationId, participantId, eventDetailsId, eventId, eventDatetimeStart, registrationStatus, registrationCheckInTime, registrationCreatedAt, registrationAttendanceFlag) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - Registrations.csv' WITH (FORMAT csv, HEADER true, NULL '');
+
+-- Import surveys
+\copy surveys(surveyId, participantId, eventId, eventDatetimeStart, surveySatisfactionScore, surveyUsefulnessScore, surveyInstructorScore, surveyRecommendationScore, surveyRecommendationId, surveyOverallScore, surveyComments, surveySubmissionDate) FROM 'C:\Users\casey\Documents\OneDrive\IS jr\Intex\Intex\EllaRisesData.xlsx - Surveys.csv' WITH (FORMAT csv, HEADER true, NULL '');
+
+--------------------------------------------------------
+-- RESET SEQUENCES (required after CSV import)
+--------------------------------------------------------
+
+SELECT setval('originTypes_origintypepairid_seq', (SELECT MAX(originTypePairId) FROM originTypes));
+SELECT setval('surveyrecommendationbuckets_surveyrecommendationid_seq', (SELECT MAX(surveyRecommendationId) FROM surveyRecommendationBuckets));
+SELECT setval('participants_participantid_seq', (SELECT MAX(participantId) FROM participants));
+SELECT setval('events_eventid_seq', (SELECT MAX(eventId) FROM events));
+SELECT setval('eventdetails_eventdetailsid_seq', (SELECT MAX(eventDetailsId) FROM eventDetails));
+SELECT setval('milestones_milestoneid_seq', (SELECT MAX(milestoneId) FROM milestones));
+SELECT setval('donations_donationid_seq', (SELECT MAX(donationId) FROM donations));
+SELECT setval('registrations_registrationid_seq', (SELECT MAX(registrationId) FROM registrations));
+SELECT setval('surveys_surveyid_seq', (SELECT MAX(surveyId) FROM surveys));
+SELECT setval('users_userid_seq', 1);
+
+-- Done!
+\echo 'Database setup complete!'
