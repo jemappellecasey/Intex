@@ -3,10 +3,10 @@
 -- YOU WILL NEED TO CHANGE THE FILEPATHS TO MATCH WHERE THEY ARE LOCALLY ON YOUR MACHINE
 
 -- Create database
-CREATE DATABASE "312intex2";
+CREATE DATABASE "312intex";
 
 -- Connect to it
-\c 312intex2;
+\c 312intex;
 
 -- Enable extensions for better data handling (optional but recommended)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
