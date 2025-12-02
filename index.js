@@ -6,8 +6,6 @@ Surveys (post)
 Milestones (you will need to support the milestones setup which can then be assigned to participants in a 1 to many relationship)
 Donations
 
-
-
 */
 
 require('dotenv').config();
