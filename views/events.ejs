@@ -3,8 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <title>Events</title>
+  <style>
+    .layout { display: flex; gap: 16px; min-height: 100vh; }
+    .sidebar { min-width: 180px; border-right: 1px solid #ddd; padding: 12px 16px; }
+    .sidebar h2 { margin-top: 0; font-size: 18px; }
+    .sidebar a { display: block; margin: 6px 0; color: #333; text-decoration: none; }
+    .sidebar a.active { font-weight: bold; }
+    .main-content { flex: 1; padding: 16px; }
+  </style>
 </head>
 <body>
+<div class="layout">
+  <aside class="sidebar">
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events" class="active">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+  <main class="main-content">
 
 <h1>Events</h1>
 <p><a href="/dashboard">Back to Dashboard</a></p>
@@ -17,29 +42,31 @@
 <!-- ============================= -->
 <!-- SEARCH / FILTER SECTION       -->
 <!-- ============================= -->
-<section>
-  <h2>Search Events</h2>
-  <form method="get" action="/events">
-    <label>
-      Event Name:
-      <input type="text" name="name" value="<%= name || '' %>">
-    </label>
+<% if (isManager) { %>
+  <section>
+    <h2>Search Events</h2>
+    <form method="get" action="/events">
+      <label>
+        Event Name:
+        <input type="text" name="name" value="<%= name || '' %>">
+      </label>
 
-    <label>
-      Start Date:
-      <input type="date" name="startDate" value="<%= startDate || '' %>">
-    </label>
+      <label>
+        Start Date:
+        <input type="date" name="startDate" value="<%= startDate || '' %>">
+      </label>
 
-    <label>
-      End Date:
-      <input type="date" name="endDate" value="<%= endDate || '' %>">
-    </label>
+      <label>
+        End Date:
+        <input type="date" name="endDate" value="<%= endDate || '' %>">
+      </label>
 
-    <button type="submit">Search</button>
-  </form>
-</section>
+      <button type="submit">Search</button>
+    </form>
+  </section>
 
-<hr>
+  <hr>
+<% } %>
 
 <!-- ============================= -->
 <!-- UPCOMING EVENTS (25 per page) -->
@@ -255,5 +282,7 @@
 </section>
 <% } %>
 
+</main>
+</div>
 </body>
 </html>
