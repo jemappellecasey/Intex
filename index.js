@@ -183,9 +183,12 @@ app.post('/login', async (req, res) => {
 
         // If user cannot be finded, send the message to the login page-> Invalid Login
         if (!user) {
-            return res.render('login', { error_message: 'Invalid Login' });
+            return res.render('login', { error_message: 'Invalid Login no user' });
         }
 
+        // // Check plain text password
+        // const match = Boolean(sPassword === user.password)
+        // console.log(match)
         // It is going to check password by bccrypt 
         const match = await bcrypt.compare(sPassword, user.password);
 
