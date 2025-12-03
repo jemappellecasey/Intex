@@ -23,43 +23,43 @@
   <% } %>
 
   <!-- Filter form: event + basic participant info -->
-<form method="get" action="/participants">
-  <fieldset style="border:1px solid #ccc; padding:8px; margin-bottom:12px;">
-    <legend>Filter participants</legend>
-
-    <label style="display:block; margin-bottom:4px;">
-      First Name:
-      <input type="text" name="firstName"
-             value="<%= typeof firstName !== 'undefined' ? firstName : '' %>">
+  <form method="get" action="/participants">
+    <label>
+      Milestone Title:
+      <input
+        type="text"
+        name="milestoneTitle"
+        value="<%= typeof milestoneTitle !== 'undefined' ? milestoneTitle : '' %>">
     </label>
 
-    <label style="display:block; margin-bottom:4px;">
+    <!-- optional: keep these if you already added them -->
+    <label>
+      Name:
+      <input
+        type="text"
+        name="name"
+        value="<%= typeof name !== 'undefined' ? name : '' %>">
+    </label>
+
+    <label>
       Email:
-      <input type="text" name="email"
-             value="<%= typeof email !== 'undefined' ? email : '' %>">
+      <input
+        type="text"
+        name="email"
+        value="<%= typeof email !== 'undefined' ? email : '' %>">
     </label>
 
-    <label style="display:block; margin-bottom:4px;">
+    <label>
       Phone:
-      <input type="text" name="phone"
-             value="<%= typeof phone !== 'undefined' ? phone : '' %>">
-    </label>
-
-    <label style="display:block; margin-bottom:4px;">
-      Event Name:
-      <input type="text" name="eventName"
-             value="<%= typeof eventName !== 'undefined' ? eventName : '' %>">
-    </label>
-
-    <label style="display:block; margin-bottom:4px;">
-      Event Type:
-      <input type="text" name="eventType"
-             value="<%= typeof eventType !== 'undefined' ? eventType : '' %>">
+      <input
+        type="text"
+        name="phone"
+        value="<%= typeof phone !== 'undefined' ? phone : '' %>">
     </label>
 
     <button type="submit">Filter</button>
-  </fieldset>
-</form>
+  </form>
+
 
 
   <hr>
@@ -114,16 +114,12 @@
                   <li>Role: <%= p.participantrole %></li>
                   <li>City/State: <%= p.participantcity %>, <%= p.participantstate %></li>
                   <li>
-                    Events:
-                    <%= (p.attended_events && p.attended_events.trim() !== '')
-                          ? p.attended_events
-                          : 'No events yet' %>
-                  </li>
-                  <li>
-                    Event types:
-                    <%= (p.attended_event_types && p.attended_event_types.trim() !== '')
-                          ? p.attended_event_types
-                          : '-' %>
+                    Milestones:
+                    <% if (p.milestones && p.milestones.trim() !== '') { %>
+                      <%= p.milestones %>
+                    <% } else { %>
+                      <span>No milestones recorded yet</span>
+                    <% } %>
                   </li>
                 </ul>
                 <p style="margin-top: 4px;">

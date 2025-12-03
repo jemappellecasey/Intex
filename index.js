@@ -239,71 +239,76 @@ app.get('/participants', async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const offset = (page - 1) * pageSize;
 
-  // read filters from query string
-  const { firstName, email, phone, eventName, eventType } = req.query;
-
-    console.log("Received filters:", req.query);
-
+  // filters from query string
+  const { milestoneTitle, name, email, phone } = req.query;
 
   try {
-    // base query with joins (for events)
+    // Base query with LEFT JOIN to milestones
     const baseQuery = knex('participants as p')
-      .leftJoin('registrations as r', 'p.participantid', 'r.participantid')
-      .leftJoin('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
-      .leftJoin('events as e', 'ed.eventid', 'e.eventid');
+      .leftJoin('milestones as m', 'p.participantid', 'm.participantid')
+      .groupBy('p.participantid')
+      .select(
+        'p.*',
+        // aggregate milestone titles into one string per participant
+        knex.raw(
+          "COALESCE(string_agg(DISTINCT m.milestonetitle, ', '), '') AS milestones"
+        )
+      );
 
-    // apply filters only when user typed something
-    if (firstName && firstName.trim() !== '') {
-      console.log("Applying filter: firstName =", firstName);
-      baseQuery.whereILike('p.participantfirstname', `%${firstName.trim()}%`);
+    // --- Filters ---
+    if (milestoneTitle && milestoneTitle.trim() !== '') {
+      baseQuery.whereILike('m.milestonetitle', `%${milestoneTitle.trim()}%`);
     }
+
+    if (name && name.trim() !== '') {
+      const lowerName = name.trim().toLowerCase();
+      baseQuery.whereRaw(
+        "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+        [`%${lowerName}%`]
+      );
+    }
+
     if (email && email.trim() !== '') {
-      console.log("Applying filter: email =", email);
       baseQuery.whereILike('p.email', `%${email.trim()}%`);
     }
+
     if (phone && phone.trim() !== '') {
       baseQuery.whereILike('p.participantphone', `%${phone.trim()}%`);
     }
-    if (eventName && eventName.trim() !== '') {
-      console.log("Applying filter: eventName =", eventName);
-      baseQuery.whereILike('e.eventname', `%${eventName.trim()}%`);
-    }
-    if (eventType && eventType.trim() !== '') {
-      baseQuery.whereILike('e.eventtype', `%${eventType.trim()}%`);
-    }
 
-    // data query (participants + aggregated events)
-    const participantsQuery = baseQuery
-      .clone()
-      .groupBy('p.participantid')
-      .select('p.*')
-      .select(
-        knex.raw(
-          "COALESCE(string_agg(DISTINCT e.eventname, ', '), '') AS attended_events"
-        ),
-        knex.raw(
-          "COALESCE(string_agg(DISTINCT e.eventtype, ', '), '') AS attended_event_types"
-        )
-      )
-      .limit(pageSize)
-      .offset(offset);
-
-    // count query (for pagination)
-    const countQuery = baseQuery
-      .clone()
+    // Same filters for total count
+    const countQuery = knex('participants as p')
+      .leftJoin('milestones as m', 'p.participantid', 'm.participantid')
+      .modify((q) => {
+        if (milestoneTitle && milestoneTitle.trim() !== '') {
+          q.whereILike('m.milestonetitle', `%${milestoneTitle.trim()}%`);
+        }
+        if (name && name.trim() !== '') {
+          const lowerName = name.trim().toLowerCase();
+          q.whereRaw(
+            "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+            [`%${lowerName}%`]
+          );
+        }
+        if (email && email.trim() !== '') {
+          q.whereILike('p.email', `%${email.trim()}%`);
+        }
+        if (phone && phone.trim() !== '') {
+          q.whereILike('p.participantphone', `%${phone.trim()}%`);
+        }
+      })
       .countDistinct('p.participantid as total');
 
     const [participants, totalResult] = await Promise.all([
-      participantsQuery,
-      countQuery
+      baseQuery.limit(pageSize).offset(offset),
+      countQuery,
     ]);
 
     const total = parseInt(totalResult[0].total, 10) || 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-    console.log("Participants returned:", participants.length);
-    console.log("Pagination:", { page, totalPages });
-
+    console.log('Participants length:', participants.length);
+    console.log('Filter milestoneTitle:', milestoneTitle);
 
     res.render('participants', {
       participants,
@@ -312,14 +317,11 @@ app.get('/participants', async (req, res) => {
       Username: req.session.username,
       currentPage: page,
       totalPages,
-      // keep filter values so the form shows what you typed
-      firstName: firstName || '',
+      milestoneTitle: milestoneTitle || '',
+      name: name || '',
       email: email || '',
       phone: phone || '',
-      eventName: eventName || '',
-      eventType: eventType || ''
     });
-
   } catch (error) {
     console.error('Error loading participants:', error);
     res.render('participants', {
@@ -329,59 +331,15 @@ app.get('/participants', async (req, res) => {
       Username: req.session.username,
       currentPage: 1,
       totalPages: 1,
-      firstName: '',
-      email: '',
-      phone: '',
-      eventName: '',
-      eventType: ''
+      milestoneTitle: milestoneTitle || '',
+      name: name || '',
+      email: email || '',
+      phone: phone || '',
     });
   }
 });
 
 
-
-
-// View a single participant (details page)
-app.get('/participants/:participantid', async (req, res) => {
-  if (!req.session.isLoggedIn) {
-    return res.render('login', { error_message: null });
-  }
-
-  const participantid = req.params.participantid;
-
-  try {
-    const participant = await knex('participants')
-      .where({ participantid })
-      .first();
-
-    if (!participant) {
-      return res.render('participants', {
-        participants: [],
-        error_message: 'Participant not found.',
-        isAdmin: req.session.role === 'admin',
-        Username: req.session.username,
-        currentPage: 1,
-        totalPages: 1
-      });
-    }
-
-    // Later: join events / surveys / milestones / donations here
-
-    res.render('veiwParticipant', {
-      participant,
-    });
-  } catch (err) {
-    console.error('Error loading participant details:', err);
-    res.render('participants', {
-      participants: [],
-      error_message: 'Error loading participant details.',
-      isAdmin: req.session.role === 'admin',
-      Username: req.session.username,
-      currentPage: 1,
-      totalPages: 1
-    });
-  }
-});
 
 
 //get the edit pages to edit the participant
