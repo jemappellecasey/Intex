@@ -235,45 +235,59 @@ app.get('/participants', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  const pageSize = 50; // 1ページあたり人数
-  const page = parseInt(req.query.page, 10) || 1;
-  const offset = (page - 1) * pageSize;
+  const pageSize = 25;  // Number of participants per page
+  let page = parseInt(req.query.page, 10) || 1;  // Start at page 1 by default
+
+  // Prevent invalid page numbers (negative or zero)
+  if (page < 1) page = 1;
 
   try {
-    // Option: ここで eventName / eventType によるフィルタの WHERE も追加できる
-    const participantsQuery = knex('participants')
+    // --- Step 1: Count total number of participants ---
+    const totalResult = await knex('participants')
+      .count('* as total');
+
+    const total = parseInt(totalResult[0].total, 10);
+    const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+
+    // If the page number is too large, set it to the last page
+    if (page > totalPages) page = totalPages;
+
+    // --- Step 2: Calculate OFFSET for SQL query ---
+    const offset = (page - 1) * pageSize;
+
+    // --- Step 3: Fetch participants for the selected page ---
+    const participants = await knex('participants')
       .select('*')
       .limit(pageSize)
       .offset(offset);
 
-    const countQuery = knex('participants')
-      .count('* as total');
+    console.log(`participants length (page ${page}):`, participants.length);
 
-    const [participants, totalResult] = await Promise.all([participantsQuery, countQuery]);
-
-    const total = parseInt(totalResult[0].total, 10);
-    const totalPages = Math.ceil(total / pageSize);
-
+    // --- Step 4: Render the page with pagination values ---
     res.render('participants', {
       participants,
       error_message: '',
-      isAdmin: req.session.role === 'A',
+      isAdmin: req.session.role === 'admin',
       Username: req.session.username,
-      currentPage: 1,
-      totalPages: 1
+      currentPage: page,
+      totalPages
     });
+
   } catch (error) {
     console.error('Error loading participants:', error);
+
+    // Render error page if something goes wrong
     res.render('participants', {
       participants: [],
       error_message: `Database error: ${error.message}`,
-      isAdmin: req.session.role === 'A',
+      isAdmin: req.session.role === 'admin',
       Username: req.session.username,
       currentPage: 1,
       totalPages: 1
     });
   }
 });
+
 
 // View a single participant (details page)
 app.get('/participants/:participantid', async (req, res) => {

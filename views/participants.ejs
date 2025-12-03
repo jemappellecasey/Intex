@@ -37,15 +37,11 @@
   <table border="1" cellpadding="4" cellspacing="0">
     <thead>
       <tr>
-        <th>Email</th>
         <th>First Name</th>
         <th>Last Name</th>
         <th>Date of Birth</th>
-        <th>Role</th>
         <th>Phone Number</th>
         <th>City</th>
-        <th>State</th>
-        <th>Zip</th>
         <th>Field of Interest</th>
         <th>Actions</th>
       </tr>
@@ -57,15 +53,11 @@
          let p = participants[iCount];
     %>
       <tr>
-        <td><%= p.email %></td>
         <td><%= p.participantfirstname %></td>
         <td><%= p.participantlastname %></td>
-        <td><%= p.participantdob %></td>
-        <td><%= p.participantrole %></td>
+        <td><%= p.participantdob.toISOString().slice(0, 10) %></td>
         <td><%= p.participantphone %></td>
         <td><%= p.participantcity %></td>
-        <td><%= p.participantstate %></td>
-        <td><%= p.participantzip %></td>
         <td><%= p.participantfieldofinterest %></td>
         <td>
           <a href="/participants/<%= p.participantid %>">View</a>
@@ -85,10 +77,9 @@
           <details style="margin-top: 4px;">
             <summary>Quick view</summary>
             <ul>
-              <li>Email: <%= p.email %></li>.
+              <li>Email:<%= p.email %></li>
               <li>Role: <%= p.participantrole %></li>
               <li>City/State: <%= p.participantcity %>, <%= p.participantstate %></li>
-              <li>Field of interest: <%= p.participantfieldofinterest %></li>
             </ul>
             <p style="margin-top: 4px;">
               <a href="/participants/<%= p.participantid %>">Open full details →</a>
@@ -105,7 +96,10 @@
   <% } %>
 </tbody>
 
-  <div style="margin-top: 16px;">
+
+  </table>
+
+    <div style="margin-top: 16px;">
     <% if (currentPage > 1) { %>
       <a href="/participants?page=<%= currentPage - 1 %>">Prev</a>
     <% } %>
@@ -116,9 +110,7 @@
       <a href="/participants?page=<%= currentPage + 1 %>">Next</a>
     <% } %>
   </div>
-
-  </table>
-
+  
   <!-- Manager-only: Add new participant -->
   <% if (isAdmin) { %>
     <p>
