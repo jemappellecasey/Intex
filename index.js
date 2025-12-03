@@ -48,10 +48,24 @@ const knex = require("knex")({
 const app = express();
 const port = process.env.PORT || 3000;
 
+const multer = require('multer');
+const uploadRoot = path.join(__dirname, "images");
+const uploadDir = uploadRoot; // or path.join(uploadRoot, "uploads")
+const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function(req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
 app.set("view engine", "ejs");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+
 
 
 //this is secrity section for the external link. If you want to use tableau, 
@@ -128,10 +142,10 @@ const csrfProtection = csrf();
 app.use(csrfProtection);
 
 
-
-//This app.use helps to be use CSFRToken and flash in view folder.
-app.use((req, res, next) => {
-    res.locals.csrfToken = req.csrfToken();
+  
+  //This app.use helps to be use CSFRToken and flash in view folder.
+  app.use((req, res, next) => {
+      res.locals.csrfToken = req.csrfToken();
     const flashError = req.flash("error");
     if (!res.locals.error_message) {
       res.locals.error_message = flashError[0] || null;
@@ -162,7 +176,7 @@ app.use((req, res, next) => {
       }
   });
   
-  async function ensureParticipantId(req) {
+async function ensureParticipantId(req) {
   if (!req.session || !req.session.isLoggedIn || !req.session.userId) {
     return null;
   }
@@ -173,13 +187,36 @@ app.use((req, res, next) => {
   }
 
   try {
-    const userRow = await knex("users")
-      .select("participantid")
-      .where("userid", req.session.userId)
-      .first();
+    const hasColumn = await ensureUsersHasParticipantIdColumn();
+    let participantId = null;
 
-    if (userRow && userRow.participantid) {
-      const pid = parseInt(userRow.participantid, 10);
+    if (hasColumn) {
+      const userRow = await knex("users")
+        .select("participantid")
+        .where("userid", req.session.userId)
+        .first();
+      participantId = userRow && userRow.participantid;
+    }
+
+    if (!participantId) {
+      const email =
+        (req.session.username && req.session.username.trim().toLowerCase()) ||
+        (await knex("users")
+          .where("userid", req.session.userId)
+          .first()
+          .then((u) => (u && u.email ? u.email.trim().toLowerCase() : null))
+          .catch(() => null));
+
+      if (email) {
+        const participant = await knex("participants")
+          .whereILike("email", email)
+          .first();
+        participantId = participant ? participant.participantid : null;
+      }
+    }
+
+    if (participantId) {
+      const pid = parseInt(participantId, 10);
       if (!Number.isNaN(pid)) {
         req.session.participantId = pid;
         return pid;
@@ -189,6 +226,74 @@ app.use((req, res, next) => {
     console.error("Error reloading participantid for user", err);
   }
 
+  return null;
+}
+
+// Check once whether users.participantid exists to avoid schema errors.
+let usersHasParticipantIdColumn = null;
+async function ensureUsersHasParticipantIdColumn() {
+  if (usersHasParticipantIdColumn !== null) {
+    return usersHasParticipantIdColumn;
+  }
+  try {
+    usersHasParticipantIdColumn = await knex.schema.hasColumn("users", "participantid");
+  } catch (err) {
+    console.error("Error checking users.participantid column", err);
+    usersHasParticipantIdColumn = false;
+  }
+  return usersHasParticipantIdColumn;
+}
+
+// Ensure the session has a participantId; create/link one if missing.
+async function syncParticipantSession(req, user) {
+  if (!req.session || !user) {
+    return null;
+  }
+
+  let participantId = user.participantid;
+
+  try {
+    const normalizedEmail = (user.email || "").trim().toLowerCase();
+
+    if (!participantId && normalizedEmail) {
+      const existingParticipant = await knex("participants")
+        .whereILike("email", normalizedEmail)
+        .first();
+
+      if (existingParticipant) {
+        participantId = existingParticipant.participantid;
+      } else {
+        const [newParticipant] = await knex("participants")
+          .insert({
+            email: normalizedEmail,
+            participantfirstname: "",
+            participantlastname: "",
+            participantrole: "participant",
+          })
+          .returning("participantid");
+
+        participantId = newParticipant.participantid;
+      }
+    }
+
+    if (participantId) {
+      const pid = parseInt(participantId, 10);
+      if (!Number.isNaN(pid)) {
+        req.session.participantId = pid;
+        const hasColumn = await ensureUsersHasParticipantIdColumn();
+        if (user.userid && hasColumn) {
+          await knex("users")
+            .where({ userid: user.userid })
+            .update({ participantid: pid });
+        }
+        return pid;
+      }
+    }
+  } catch (err) {
+    console.error("Error syncing participant session", err);
+  }
+
+  req.session.participantId = null;
   return null;
 }
 
@@ -270,13 +375,17 @@ app.post("/signup", async (req, res) => {
     }
 
     // 4) Insert the user linked to that participant
+    const userInsert = {
+      email: normalizedEmail,
+      passwordhashed: hash,
+      role: "user"
+    };
+    if (await ensureUsersHasParticipantIdColumn()) {
+      userInsert.participantid = participantId;
+    }
+
     const [user] = await knex("users")
-      .insert({
-        email: normalizedEmail,
-        passwordhashed: hash,
-        role: "user",
-        participantid: participantId
-      })
+      .insert(userInsert)
       .returning("*");
 
     // 5) Log them in
@@ -284,6 +393,7 @@ app.post("/signup", async (req, res) => {
     req.session.userId = user.userid;
     req.session.username = user.email;
     req.session.role = user.role;
+    await syncParticipantSession(req, { ...user, participantid: participantId });
 
     return res.redirect("/dashboard");
   } catch (err) {
@@ -449,8 +559,14 @@ app.post("/login", async (req, res) => {
   const password = req.body.password;
 
   try {
+    const hasParticipantColumn = await ensureUsersHasParticipantIdColumn();
+    const columns = ["userid", "email", "passwordhashed", "role"];
+    if (hasParticipantColumn) {
+      columns.push("participantid");
+    }
+
     const user = await knex("users")
-      .select("userid", "email", "passwordhashed", "role")
+      .select(columns)
       .where("email", email.trim().toLowerCase())
       .first();
 
@@ -470,9 +586,7 @@ app.post("/login", async (req, res) => {
     req.session.username = user.email;
     req.session.role = user.role;
     req.session.userId = user.userid;
-    req.session.participantId = user.participantid
-      ? parseInt(user.participantid, 10)
-      : null;
+    await syncParticipantSession(req, user);
 
     return res.redirect("/dashboard");
   } catch (err) {
@@ -496,7 +610,14 @@ app.post("/dev-login-bypass", async (req, res) => {
 
   try {
     // Find a user with this role; you can adjust this query to match your schema
+    const hasParticipantColumn = await ensureUsersHasParticipantIdColumn();
+    const columns = ["userid", "email", "role"];
+    if (hasParticipantColumn) {
+      columns.push("participantid");
+    }
+
     const user = await knex("users")
+      .select(columns)
       .where({ role })
       .first();
 
@@ -511,9 +632,7 @@ app.post("/dev-login-bypass", async (req, res) => {
     req.session.username = user.username || user.email; // depending on your schema
     req.session.role = user.role;
     req.session.userId = user.userid;
-    req.session.participantId = user.participantid
-      ? parseInt(user.participantid, 10)
-      : null;
+    await syncParticipantSession(req, user);
     return res.redirect("/dashboard");
   } catch (err) {
     console.error("dev-login-bypass error", err);
@@ -1297,7 +1416,14 @@ app.get('/events', async (req, res) => {
   const upcomingPage = parseInt(req.query.upcomingPage, 10) || 1;
   const pastPage = parseInt(req.query.pastPage, 10) || 1;
 
-  const { name, startDate, endDate } = req.query;
+  const rawName = req.query.name || '';
+  const rawStartDate = req.query.startDate || '';
+  const rawEndDate = req.query.endDate || '';
+
+  // Only managers can use search filters.
+  const name = isManager ? rawName : '';
+  const startDate = isManager ? rawStartDate : '';
+  const endDate = isManager ? rawEndDate : '';
   const now = new Date();
 
   // Helper: apply filters (name, startDate, endDate)
