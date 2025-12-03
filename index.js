@@ -172,6 +172,112 @@ function requireManager(req, res, next) {
     return res.render('login', { error_message: 'You do not have permission to view this page.' });
 }
 
+// GET /signup
+app.get("/signup", (req, res) => {
+  res.render("signup", { csrfToken: req.csrfToken() });
+});
+
+// POST /signup
+app.post("/signup", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    req.flash("error", "Please enter a valid email address.");
+    return res.redirect("/signup");
+  }
+
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    let user = await knex("users").where({ email: normalizedEmail }).first();
+
+    if (!user) {
+      const [newUser] = await knex("users")
+        .insert({
+          email: normalizedEmail,
+          role: "user",
+          isverified: false,
+        })
+        .returning("*");
+      user = newUser;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    await knex("users")
+      .where({ userid: user.userid })
+      .update({
+        magic_token: token,
+        magic_token_expires_at: expiresAt,
+      });
+
+    const baseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
+    const verifyUrl = `${baseUrl}/verify-email/${token}`;
+
+    await transporter.sendMail({
+      from: process.env.SES_FROM || process.env.EMAIL_FROM,
+      to: normalizedEmail,
+      subject: "Verify your email",
+      html: `<p>Click this link to verify your email and log in:</p>
+             <p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+    });
+
+    req.flash("info", "Check your email for a verification link.");
+    res.redirect("/check-email");
+  } catch (err) {
+    console.error(err);
+    req.flash("error", "Something went wrong. Please try again.");
+    res.redirect("/signup");
+  }
+});
+
+// GET /check-email
+app.get("/check-email", (req, res) => {
+  res.render("check-email");
+});
+
+// GET /verify-email/:token
+app.get("/verify-email/:token", async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const user = await knex("users").where({ magic_token: token }).first();
+
+    if (!user) {
+      req.flash("error", "Invalid or expired verification link.");
+      return res.redirect("/signup");
+    }
+
+    if (
+      !user.magic_token_expires_at ||
+      new Date(user.magic_token_expires_at) < new Date()
+    ) {
+      req.flash("error", "Verification link has expired. Please sign up again.");
+      return res.redirect("/signup");
+    }
+
+    await knex("users")
+      .where({ userid: user.userid })
+      .update({
+        isverified: true,
+        magic_token: null,
+        magic_token_expires_at: null,
+      });
+
+    req.session.userId = user.userid;
+    req.session.role = user.role;
+
+    req.flash("success", "Your email has been verified and you are now logged in.");
+    res.redirect("/dashboard"); // change to your real route
+  } catch (err) {
+    console.error(err);
+    req.flash("error", "Something went wrong verifying your email.");
+    res.redirect("/signup");
+  }
+});
+
+
 
 
 //First, all user go to the landing page
@@ -204,7 +310,7 @@ app.post('/login', async (req, res) => {
             .where('username', sName)
             .first();
 
-        // If user cannot be finded, send the message to the login page-> Invalid Login
+        // If user cannot be found, send the message to the login page-> Invalid Login
         if (!user) {
             return res.render('login', { error_message: 'Invalid Login no user' });
         }
@@ -234,6 +340,46 @@ app.post('/login', async (req, res) => {
         return res.render('login', { error_message: 'Login error. Please try again.' });
     }
 });
+
+app.post("/dev-login-bypass", async (req, res) => {
+  const { role } = req.body;
+
+  // Only allow known roles
+  const allowedRoles = ["user", "manager", "secretary"];
+  if (!allowedRoles.includes(role)) {
+    return res.status(400).send("Invalid role");
+  }
+
+  try {
+    // Find a user with this role; you can adjust this query to match your schema
+    const user = await knex("users")
+      .where({ role })
+      .first();
+
+    if (!user) {
+      return res.render("login", {
+        error_message: `No user with role '${role}' exists for bypass.`,
+      });
+    }
+
+    // Set session as if logged in
+    req.session.isLoggedIn = true;
+    req.session.username = user.username || user.email; // depending on your schema
+    req.session.role = user.role;
+    req.session.userId = user.userid;
+    req.session.participantId = user.participantid
+      ? parseInt(user.participantid, 10)
+      : null;
+
+    return res.redirect("/dashboard");
+  } catch (err) {
+    console.error("dev-login-bypass error", err);
+    return res.render("login", {
+      error_message: "Bypass login error. Please try again.",
+    });
+  }
+});
+
 
 app.get("/logout", (req, res) => {
     // Get rid of the session object
