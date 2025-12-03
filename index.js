@@ -994,6 +994,11 @@ app.get('/events', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
+  const isAdmin = req.session.role === 'admin';
+  const participantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
   const pageSize = 25;
 
   // Separate page numbers for upcoming / past
@@ -1056,6 +1061,14 @@ app.get('/events', async (req, res) => {
     const q = knex('eventdetails as ed')
       .join('events as e', 'ed.eventid', 'e.eventid')
       .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid');
+    if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+      q.whereExists(
+        knex.select(1)
+          .from('registrations as rr')
+          .whereRaw('rr.eventdetailsid = ed.eventdetailsid')
+          .andWhere('rr.participantid', participantId)
+      );
+    }
     applyEventFilters(q);
     q.where('ed.eventdatetimestart', '>=', now);
     q.orderBy('ed.eventdatetimestart', 'asc');
@@ -1067,6 +1080,14 @@ app.get('/events', async (req, res) => {
     const q = knex('eventdetails as ed')
       .join('events as e', 'ed.eventid', 'e.eventid')
       .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid');
+    if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+      q.whereExists(
+        knex.select(1)
+          .from('registrations as rr')
+          .whereRaw('rr.eventdetailsid = ed.eventdetailsid')
+          .andWhere('rr.participantid', participantId)
+      );
+    }
     applyEventFilters(q);
     q.where('ed.eventdatetimestart', '<', now);
     q.orderBy('ed.eventdatetimestart', 'desc');
@@ -1088,6 +1109,14 @@ app.get('/events', async (req, res) => {
       (function () {
         const q = knex('eventdetails as ed')
           .join('events as e', 'ed.eventid', 'e.eventid');
+        if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+          q.whereExists(
+            knex.select(1)
+              .from('registrations as rr')
+              .whereRaw('rr.eventdetailsid = ed.eventdetailsid')
+              .andWhere('rr.participantid', participantId)
+          );
+        }
         applyEventFilters(q);
         q.where('ed.eventdatetimestart', '>=', now);
         return q.countDistinct('ed.eventdetailsid as total');
@@ -1097,6 +1126,14 @@ app.get('/events', async (req, res) => {
       (function () {
         const q = knex('eventdetails as ed')
           .join('events as e', 'ed.eventid', 'e.eventid');
+        if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+          q.whereExists(
+            knex.select(1)
+              .from('registrations as rr')
+              .whereRaw('rr.eventdetailsid = ed.eventdetailsid')
+              .andWhere('rr.participantid', participantId)
+          );
+        }
         applyEventFilters(q);
         q.where('ed.eventdatetimestart', '<', now);
         return q.countDistinct('ed.eventdetailsid as total');
