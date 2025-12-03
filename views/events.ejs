@@ -1,17 +1,258 @@
-<!-- For everyone -->
- <!-- Have a drop down with each event name and description -->
-  <!-- Allow them to search for events based on the name or on a date (or date range) -->
-   <!-- For all events, return the name, description, location, schedule, start date, start time, registration deadline, and a button to register for that event 
-    which will show "you are registered (or something)" if you already registered, and will instead give you a new button to unregister. 
-    If the number of registered people is equal to or greater that event capacity show "This event is fully booked (or something)"
-    Consider including the event capacity -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Events</title>
+</head>
+<body>
 
-<!-- Do we want to include information for past events? Like number of attendees?  -->
-<!-- Add a section to reveiw past events, showing only the events they attended. This will be linked to the survey.ejs page -->
+<h1>Events</h1>
 
+<!-- Error message -->
+<% if (error_message) { %>
+  <p style="color:red;"><%= error_message %></p>
+<% } %>
 
-<!-- For managers only -->
- <!-- Show a button to add a new event -->
+<!-- ============================= -->
+<!-- SEARCH / FILTER SECTION       -->
+<!-- ============================= -->
+<section>
+  <h2>Search Events</h2>
+  <form method="get" action="/events">
+    <label>
+      Event Name:
+      <input type="text" name="name" value="<%= name || '' %>">
+    </label>
 
- <!-- Show past event information: number of registered people, number of people who attended, drop down to show each person who attended -->
- <!-- Include the option to edit events -->
+    <label>
+      Start Date:
+      <input type="date" name="startDate" value="<%= startDate || '' %>">
+    </label>
+
+    <label>
+      End Date:
+      <input type="date" name="endDate" value="<%= endDate || '' %>">
+    </label>
+
+    <button type="submit">Search</button>
+  </form>
+</section>
+
+<hr>
+
+<!-- ============================= -->
+<!-- UPCOMING EVENTS (25 per page) -->
+<!-- ============================= -->
+<section>
+  <h2>Upcoming Events</h2>
+
+  <div>
+    <% if (upcomingCurrentPage > 1) { %>
+      <a href="/events?upcomingPage=<%= upcomingCurrentPage - 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Prev Upcoming
+      </a>
+    <% } %>
+
+    <span>Page <%= upcomingCurrentPage %> of <%= upcomingTotalPages %></span>
+
+    <% if (upcomingCurrentPage < upcomingTotalPages) { %>
+      <a href="/events?upcomingPage=<%= upcomingCurrentPage + 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Next Upcoming
+      </a>
+    <% } %>
+  </div>
+
+  <% if (!upcomingEvents || upcomingEvents.length === 0) { %>
+    <p>No upcoming events found.</p>
+  <% } else { %>
+    <table border="1" cellspacing="0" cellpadding="4">
+      <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Location</th>
+        <th>Start</th>
+        <th>End</th>
+        <th>Capacity</th>
+        <th>Registered</th>
+        <th>Deadline</th>
+        <th>Action</th>
+        <% if (isAdmin) { %>
+          <th>Edit</th>
+          <th>Delete</th>
+        <% } %>
+      </tr>
+      </thead>
+
+      <tbody>
+      <% upcomingEvents.forEach(function(ev) { %>
+        <tr>
+          <td><%= ev.eventname %></td>
+          <td><%= ev.eventdescription || 'N/A' %></td>
+          <td><%= ev.eventlocation || 'N/A' %></td>
+
+          <td>
+            <% if (ev.eventdatetimestart) { %>
+              <%= new Date(ev.eventdatetimestart).toLocaleString() %>
+            <% } else { %> N/A <% } %>
+          </td>
+
+          <td>
+            <% if (ev.eventdatetimeend) { %>
+              <%= new Date(ev.eventdatetimeend).toLocaleString() %>
+            <% } else { %> N/A <% } %>
+          </td>
+
+          <td><%= ev.eventcapacity %></td>
+          <td><%= ev.registeredcount %></td>
+
+          <td>
+            <% if (ev.eventregistrationdeadline) { %>
+              <%= new Date(ev.eventregistrationdeadline).toLocaleString() %>
+            <% } else { %> N/A <% } %>
+          </td>
+
+          <td>
+            <% const isFull = ev.eventcapacity !== null
+                              && ev.eventcapacity !== undefined
+                              && Number(ev.registeredcount) >= Number(ev.eventcapacity); %>
+
+            <% if (isFull) { %>
+              <strong style="color:red;">This event is fully booked</strong>
+            <% } else { %>
+              <!-- 🔹 Register button: go to registration form page -->
+              <form method="get" action="/events/<%= ev.eventdetailsid %>/register">
+                <button type="submit">Register Participant</button>
+              </form>
+            <% } %>
+          </td>
+
+          <% if (isAdmin) { %>
+            <!-- Edit button (manager only) -->
+            <td>
+              <a href="/events/<%= ev.eventdetailsid %>/edit">
+                <button type="button">Edit</button>
+              </a>
+            </td>
+
+            <!-- Delete button (manager only) -->
+            <td>
+              <form method="post" action="/events/<%= ev.eventdetailsid %>/delete"
+                    onsubmit="return confirm('Are you sure you want to delete this event?');">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit">Delete</button>
+              </form>
+            </td>
+          <% } %>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<hr>
+
+<!-- ============================= -->
+<!-- PAST EVENTS (25 per page)    -->
+<!-- ============================= -->
+<section>
+  <h2>Past Events</h2>
+
+  <div>
+    <% if (pastCurrentPage > 1) { %>
+      <a href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage - 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Prev Past
+      </a>
+    <% } %>
+
+    <span>Page <%= pastCurrentPage %> of <%= pastTotalPages %></span>
+
+    <% if (pastCurrentPage < pastTotalPages) { %>
+      <a href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage + 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Next Past
+      </a>
+    <% } %>
+  </div>
+
+  <% if (!pastEvents || pastEvents.length === 0) { %>
+    <p>No past events found.</p>
+  <% } else { %>
+    <table border="1" cellspacing="0" cellpadding="4">
+      <thead>
+      <tr>
+        <th>Name</th>
+        <th>Location</th>
+        <th>Start</th>
+        <th>End</th>
+        <th>Capacity</th>
+        <th>Registered</th>
+        <th>Attended</th>
+        <% if (isAdmin) { %>
+          <th>Edit</th>
+          <th>Delete</th>
+        <% } %>
+      </tr>
+      </thead>
+      <tbody>
+      <% pastEvents.forEach(function(ev) { %>
+        <tr>
+          <td><%= ev.eventname %></td>
+          <td><%= ev.eventlocation || 'N/A' %></td>
+
+          <td>
+            <% if (ev.eventdatetimestart) { %>
+              <%= new Date(ev.eventdatetimestart).toLocaleString() %>
+            <% } else { %> N/A <% } %>
+          </td>
+
+          <td>
+            <% if (ev.eventdatetimeend) { %>
+              <%= new Date(ev.eventdatetimeend).toLocaleString() %>
+            <% } else { %> N/A <% } %>
+          </td>
+
+          <td><%= ev.eventcapacity %></td>
+          <td><%= ev.registeredcount %></td>
+          <td><%= ev.attendedcount %></td>
+
+          <% if (isAdmin) { %>
+            <td>
+              <a href="/events/<%= ev.eventdetailsid %>/edit">
+                <button type="button">Edit</button>
+              </a>
+            </td>
+            <td>
+              <form method="post" action="/events/<%= ev.eventdetailsid %>/delete"
+                    onsubmit="return confirm('Are you sure you want to delete this event?');">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit">Delete</button>
+              </form>
+            </td>
+          <% } %>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<hr>
+
+<!-- ============================= -->
+<!-- MANAGER-ONLY TOOLS           -->
+<!-- ============================= -->
+<% if (isAdmin) { %>
+<section>
+  <h2>Manager Tools</h2>
+
+  <p>
+    <a href="/events/new">
+      <button>Add New Event</button>
+    </a>
+  </p>
+</section>
+<% } %>
+
+</body>
+</html>
