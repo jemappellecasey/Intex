@@ -3,6 +3,7 @@
     "@aws-sdk/client-sesv2": "^3.943.0",
     "@dr.pogodin/csurf": "^1.16.6",
     "bcrypt": "^6.0.0",
+    "client-sesv2": "github:aws-sdk/client-sesv2",
     "connect-flash": "^0.1.1",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",

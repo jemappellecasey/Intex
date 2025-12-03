@@ -56,7 +56,7 @@
 
 <hr>
 
-<% if (isAdmin) { %>
+<% if (isManager) { %>
   <!-- ============================= -->
   <!-- ADMIN: ADD NEW SURVEY        -->
   <!-- ============================= -->
@@ -74,7 +74,7 @@
 <!-- ============================= -->
 <!-- ADMIN VIEW: SURVEY LIST       -->
 <!-- ============================= -->
-<% if (isAdmin) { %>
+<% if (isManager) { %>
 <section>
   <h2>Survey List</h2>
 
@@ -120,7 +120,7 @@
           <th>Overall</th>
           <th>Attendance</th>
           <th>Submitted At</th>
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <th>Actions</th>
           <% } %>
         </tr>
@@ -163,7 +163,7 @@
             <% } else { %> N/A <% } %>
           </td>
 
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
           <td>
             <!-- Edit button (manager only) -->
             <a href="/surveys/<%= s.surveyid %>/edit">

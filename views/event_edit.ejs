@@ -16,7 +16,7 @@
 <!-- Basic info about who is logged in (optional) -->
 <% if (Username) { %>
   <p>Logged in as: <strong><%= Username %></strong>
-    <% if (isAdmin) { %>(Manager)<% } %>
+    <% if (isManager) { %>(Manager)<% } %>
   </p>
 <% } %>
 

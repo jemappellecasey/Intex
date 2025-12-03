@@ -78,7 +78,7 @@
         <th>Registered</th>
         <th>Deadline</th>
         <th>Action</th>
-        <% if (isAdmin) { %>
+        <% if (isManager) { %>
           <th>Edit</th>
           <th>Delete</th>
         <% } %>
@@ -128,7 +128,7 @@
             <% } %>
           </td>
 
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <!-- Edit button (manager only) -->
             <td>
               <a href="/events/<%= ev.eventdetailsid %>/edit">
@@ -189,7 +189,7 @@
         <th>Capacity</th>
         <th>Registered</th>
         <th>Attended</th>
-        <% if (isAdmin) { %>
+        <% if (isManager) { %>
           <th>Edit</th>
           <th>Delete</th>
         <% } %>
@@ -217,7 +217,7 @@
           <td><%= ev.registeredcount %></td>
           <td><%= ev.attendedcount %></td>
 
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <td>
               <a href="/events/<%= ev.eventdetailsid %>/edit">
                 <button type="button">Edit</button>
@@ -243,7 +243,7 @@
 <!-- ============================= -->
 <!-- MANAGER-ONLY TOOLS           -->
 <!-- ============================= -->
-<% if (isAdmin) { %>
+<% if (isManager) { %>
 <section>
   <h2>Manager Tools</h2>
 
