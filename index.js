@@ -165,7 +165,7 @@ app.use(csrfProtection);
   
   //Login check
   app.use((req, res, next)=> {
-        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass'];
+        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass', '/signup', '/landing'];
         if (openPaths.includes(req.path)) {
           return next();
         }
@@ -226,7 +226,6 @@ async function ensureParticipantId(req) {
   } catch (err) {
     console.error("Error reloading participantid for user", err);
   }
-
   return null;
 }
 
@@ -309,7 +308,7 @@ async function syncParticipantSession(req, user) {
   }
   
 
-const sr = process.env.SALT_ROUNDS;
+const sr = 10;
 
 app.get("/signup", (req, res) => {
   res.render("signup", {
@@ -321,7 +320,7 @@ app.get("/signup", (req, res) => {
 });
 
 app.post("/signup", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, first, last, phone, city, state, zip } = req.body;
 
   const renderError = (msg) => {
     return res.render("signup", {
@@ -332,12 +331,14 @@ app.post("/signup", async (req, res) => {
     });
   };
 
-  if (!email || !password) {
-    return renderError("Email and password are required.");
+  if (!email || !password || !first || !last) {
+    return renderError("Email, password, first name, and last name are required.");
   }
 
   try {
     const normalizedEmail = email.trim().toLowerCase();
+    const firstName = first.trim();
+    const lastName = last.trim();
 
     // 1) Check for existing user account
     const existing = await knex("users")
@@ -348,45 +349,44 @@ app.post("/signup", async (req, res) => {
       return renderError("An account with that email already exists.");
     }
 
-    // 2) Hash password (assuming `sr` is your bcrypt salt rounds variable)
-    const hash = await bcrypt.hash(password, sr);
+    // 2) Hash password
+    const SALT_ROUNDS = 10;
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // 3) Find or create a participant for this email
-    //    participants.email must be UNIQUE in your DB for this to be safe.
-    const participant = await knex("participants")
+    // 3) Find or create participant for this email
+    const existingParticipant = await knex("participants")
       .where({ email: normalizedEmail })
       .first();
 
     let participantId;
 
-    if (participant) {
-      participantId = participant.participantid;
+    if (existingParticipant) {
+      participantId = existingParticipant.participantid;
     } else {
-      // Insert minimal participant row; fill other fields later in profile UI
       const [newParticipant] = await knex("participants")
         .insert({
           email: normalizedEmail,
-          participantfirstname: "",
-          participantlastname: "",
-          participantrole: "participant"
+          participantfirstname: firstName,
+          participantlastname: lastName,
+          participantrole: "participant",
+          participantphone: phone && phone.trim() !== "" ? phone.trim() : null,
+          participantcity: city && city.trim() !== "" ? city.trim() : null,
+          participantstate: state && state.trim() !== "" ? state.trim() : null,
+          participantzip: zip && zip.trim() !== "" ? zip.trim() : null
         })
         .returning("*");
 
       participantId = newParticipant.participantid;
     }
 
-    // 4) Insert the user linked to that participant
-    const userInsert = {
-      email: normalizedEmail,
-      passwordhashed: hash,
-      role: "user"
-    };
-    if (await ensureUsersHasParticipantIdColumn()) {
-      userInsert.participantid = participantId;
-    }
-
+    // 4) Insert user linked to that participant
     const [user] = await knex("users")
-      .insert(userInsert)
+      .insert({
+        email: normalizedEmail,
+        passwordhashed: hash,
+        role: "user",
+        participantid: participantId
+      })
       .returning("*");
 
     // 5) Log them in
@@ -394,7 +394,7 @@ app.post("/signup", async (req, res) => {
     req.session.userId = user.userid;
     req.session.username = user.email;
     req.session.role = user.role;
-    await syncParticipantSession(req, { ...user, participantid: participantId });
+    req.session.participantId = participantId;
 
     return res.redirect("/dashboard");
   } catch (err) {

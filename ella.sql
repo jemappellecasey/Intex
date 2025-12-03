@@ -293,6 +293,7 @@ CREATE TABLE public.participants (
     createdat timestamp without time zone DEFAULT now(),
     updatedat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT participants_email_check CHECK ((email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'::text)),
+    CONSTRAINT participants_pkey PRIMARY KEY (participantid),
     CONSTRAINT participants_participantcity_check CHECK ((length(participantcity) <= 100)),
     CONSTRAINT participants_participantdob_check CHECK ((participantdob < CURRENT_DATE)),
     CONSTRAINT participants_participantfieldofinterest_check CHECK ((length(participantfieldofinterest) <= 255)),
@@ -8878,6 +8879,8 @@ SELECT pg_catalog.setval('public.surveys_surveyid_seq', 1, false);
 SELECT pg_catalog.setval('public.users_userid_seq', 3, true);
 
 
+
+
 --
 -- TOC entry 3559 (class 2606 OID 19468)
 -- Name: donations donations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
@@ -8931,14 +8934,6 @@ ALTER TABLE ONLY public.origintypes
 ALTER TABLE ONLY public.participants
     ADD CONSTRAINT participants_email_key UNIQUE (email);
 
-
---
--- TOC entry 3549 (class 2606 OID 19400)
--- Name: participants participants_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.participants
-    ADD CONSTRAINT participants_pkey PRIMARY KEY (participantid);
 
 
 --
@@ -9128,3 +9123,21 @@ ALTER TABLE ONLY public.surveys
 -- PostgreSQL database dump complete
 --
 
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM   pg_class c
+    JOIN   pg_namespace n ON n.oid = c.relnamespace
+    WHERE  c.relkind = 'S'
+    AND    n.nspname = 'public'
+    AND    c.relname = 'participants_participantid_seq'
+  ) THEN
+    PERFORM setval(
+      'public.participants_participantid_seq',
+      (SELECT COALESCE(MAX(participantid), 0) FROM public.participants) + 1,
+      false
+    );
+  END IF;
+END;
+$$;
