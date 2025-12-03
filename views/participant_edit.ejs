@@ -137,99 +137,134 @@
   <hr>
 
   <!-- Event history (read-only) -->
-  <section>
-    <h2>Event History</h2>
-    <% if (events && events.length > 0) { %>
-      <table border="1" cellpadding="4" cellspacing="0">
-        <thead>
-          <tr>
-            <th>Event Title</th>
-            <th>Event Type</th>
-            <th>Start Date/Time</th>
-            <th>Registration Status</th>
-            <th>Check-in Time</th>
-            <th>Attendance Flag</th>
-            <th>Registration Created At</th>
-          </tr>
-        </thead>
+<section>
+  <h2>Event History</h2>
+  <% if (events && events.length > 0) { %>
+    <table border="1" cellpadding="4" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Event Title</th>
+          <th>Event Type</th>
+          <th>Start Date/Time</th>
+          <th>Registration Status</th>
+          <th>Check-in Time</th>
+          <th>Attendance Flag</th>
+          <th>Registration Created At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
 
-        <tbody>
-        <% events.forEach(function(ev) { %>
-          <tr>
-            <td><%= ev.eventtitle %></td>
-            <td><%= ev.eventtype %></td>
+      <tbody>
+      <% events.forEach(function(ev) { %>
+        <tr>
+          <td><%= ev.eventtitle %></td>
+          <td><%= ev.eventtype %></td>
 
-            <td>
-              <% if (ev.eventdatetimestart) { %>
-                <%= (new Date(ev.eventdatetimestart))
-                      .toISOString().slice(0, 16).replace('T', ' ') %>
-              <% } else { %> N/A <% } %>
-            </td>
+          <td>
+            <% if (ev.eventdatetimestart) { %>
+              <%= (new Date(ev.eventdatetimestart))
+                    .toISOString().slice(0, 16).replace('T', ' ') %>
+            <% } else { %> N/A <% } %>
+          </td>
 
-            <td><%= ev.registrationstatus || 'N/A' %></td>
+          <td>
+            <form method="post" action="/participants/<%= participant.participantid %>/registrations/<%= ev.registrationid %>">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="text" name="registrationstatus" value="<%= ev.registrationstatus || '' %>">
+          </td>
 
-            <td>
-              <% if (ev.registrationcheckintime) { %>
-                <%= (new Date(ev.registrationcheckintime))
-                      .toISOString().slice(0, 16).replace('T', ' ') %>
-              <% } else { %> N/A <% } %>
-            </td>
+          <td>
+            <% if (ev.registrationcheckintime) { %>
+              <%= (new Date(ev.registrationcheckintime))
+                    .toISOString().slice(0, 16).replace('T', ' ') %>
+            <% } else { %> N/A <% } %>
+          </td>
 
-            <td><%= ev.registrationattendanceflag ? 'Yes' : 'No' %></td>
+          <td>
+              <input
+                type="checkbox"
+                name="registrationattendanceflag"
+                value="1"
+                <%= ev.registrationattendanceflag ? 'checked' : '' %>
+              >
+          </td>
 
-            <td>
-              <% if (ev.registrationcreatedat) { %>
-                <%= (new Date(ev.registrationcreatedat))
-                      .toISOString().slice(0, 16).replace('T', ' ') %>
-              <% } else { %> N/A <% } %>
-            </td>
-          </tr>
-        <% }); %>
-        </tbody>
-      </table>
-    <% } else { %>
-      <p>No event history found for this participant.</p>
-    <% } %>
-  </section>
+          <td>
+            <% if (ev.registrationcreatedat) { %>
+              <%= (new Date(ev.registrationcreatedat))
+                    .toISOString().slice(0, 16).replace('T', ' ') %>
+            <% } else { %> N/A <% } %>
+          </td>
+
+          <td>
+              <button type="submit">Save</button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No event history found for this participant.</p>
+  <% } %>
+</section>
+
 
   <hr>
 
-  <!-- Surveys (read-only) -->
-  <section>
-    <h2>Post-Event Surveys</h2>
+<section>
+  <h2>Post-Event Surveys</h2>
 
-    <% if (surveys && surveys.length > 0) { %>
-      <table border="1" cellpadding="4" cellspacing="0">
-        <thead>
-          <tr>
-            <th>Event Title</th>
-            <th>Event Start</th>
-            <th>Satisfaction</th>
-            <th>Usefulness</th>
-            <th>Instructor</th>
-            <th>Recommendation</th>
-            <th>Overall</th>
-            <th>Submission Date</th>
-          </tr>
-        </thead>
+  <% if (surveys && surveys.length > 0) { %>
+    <table border="1" cellpadding="4" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Event Title</th>
+          <th>Event Start</th>
+          <th>Satisfaction</th>
+          <th>Usefulness</th>
+          <th>Instructor</th>
+          <th>Recommendation</th>
+          <th>Overall</th>
+          <th>Submission Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
 
-        <tbody>
-        <% surveys.forEach(function(s) { %>
-          <tr>
-            <td><%= s.eventtitle %></td>
+      <tbody>
+      <% surveys.forEach(function(s) { %>
+        <tr>
+          <td><%= s.eventtitle %></td>
+
+          <td>
+            <% if (s.eventdatetimestart) { %>
+              <%= (new Date(s.eventdatetimestart))
+                    .toISOString().slice(0, 16).replace('T', ' ') %>
+            <% } else { %> N/A <% } %>
+          </td>
+
+          <form method="post" action="/participants/<%= participant.participantid %>/surveys/<%= s.surveyid %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
             <td>
-              <% if (s.eventdatetimestart) { %>
-                <%= (new Date(s.eventdatetimestart))
-                      .toISOString().slice(0, 16).replace('T', ' ') %>
-              <% } else { %> N/A <% } %>
+              <input type="number" name="surveysatisfactionscore" value="<%= s.surveysatisfactionscore || '' %>">
             </td>
 
-            <td><%= s.surveysatisfactionscore %></td>
-            <td><%= s.surveyusefulnessscore %></td>
-            <td><%= s.surveyinstructorscore %></td>
-            <td><%= s.surveyrecommendationscore %></td>
-            <td><%= s.surveyoverallscore %></td>
+            <td>
+              <input type="number" name="surveyusefulnessscore" value="<%= s.surveyusefulnessscore || '' %>">
+            </td>
+
+            <td>
+              <input type="number" name="surveyinstructorscore" value="<%= s.surveyinstructorscore || '' %>">
+            </td>
+
+            <td>
+              <input type="number" name="surveyrecommendationscore" value="<%= s.surveyrecommendationscore || '' %>">
+            </td>
+
+            <td>
+              <input type="number" name="surveyoverallscore" value="<%= s.surveyoverallscore || '' %>">
+            </td>
 
             <td>
               <% if (s.surveysubmissiondate) { %>
@@ -237,83 +272,126 @@
                       .toISOString().slice(0, 16).replace('T', ' ') %>
               <% } else { %> N/A <% } %>
             </td>
-          </tr>
-        <% }); %>
-        </tbody>
-      </table>
 
-    <% } else { %>
-      <p>No surveys recorded for this participant.</p>
-    <% } %>
-  </section>
+            <td>
+              <button type="submit">Save</button>
+            </td>
+          </form>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+
+  <% } else { %>
+    <p>No surveys recorded for this participant.</p>
+  <% } %>
+</section>
 
   <hr>
 
   <!-- Milestones (read-only) -->
-  <section>
-    <h2>Milestones</h2>
+ <section>
+  <h2>Milestones</h2>
 
-    <% if (milestones && milestones.length > 0) { %>
-      <table border="1" cellpadding="4" cellspacing="0">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Date</th>
-          </tr>
-        </thead>
+  <% if (milestones && milestones.length > 0) { %>
+    <table border="1" cellpadding="4" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
 
-        <tbody>
-        <% milestones.forEach(function(m) { %>
-          <tr>
-            <td><%= m.milestonetitle %></td>
+      <tbody>
+      <% milestones.forEach(function(m) { %>
+        <tr>
+          <form method="post" action="/participants/<%= participant.participantid %>/milestones/<%= m.milestoneid %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
             <td>
-              <% if (m.milestonedate) { %>
-                <%= (new Date(m.milestonedate)).toISOString().slice(0, 10) %>
-              <% } else { %> N/A <% } %>
+              <input type="text" name="milestonetitle" value="<%= m.milestonetitle || '' %>">
             </td>
-          </tr>
-        <% }); %>
-        </tbody>
-      </table>
 
-    <% } else { %>
-      <p>No milestones recorded for this participant.</p>
-    <% } %>
-  </section>
+            <td>
+              <input
+                type="date"
+                name="milestonedate"
+                value="<% if (m.milestonedate) { %>
+                         <%= (new Date(m.milestonedate)).toISOString().slice(0, 10) %>
+                       <% } %>"
+              >
+            </td>
+
+            <td>
+              <button type="submit">Save</button>
+            </td>
+          </form>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+
+  <% } else { %>
+    <p>No milestones recorded for this participant.</p>
+  <% } %>
+</section>
+
 
   <hr>
 
-  <!-- Donations (read-only) -->
-  <section>
-    <h2>Donations</h2>
+<section>
+  <h2>Donations</h2>
 
-    <% if (donations && donations.length > 0) { %>
-      <table border="1" cellpadding="4" cellspacing="0">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
+  <% if (donations && donations.length > 0) { %>
+    <table border="1" cellpadding="4" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
 
-        <tbody>
-        <% donations.forEach(function(d) { %>
-          <tr>
+      <tbody>
+      <% donations.forEach(function(d) { %>
+        <tr>
+          <form method="post" action="/participants/<%= participant.participantid %>/donations/<%= d.donationid %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
             <td>
-              <% if (d.donationdate) { %>
-                <%= (new Date(d.donationdate)).toISOString().slice(0, 10) %>
-              <% } else { %> N/A <% } %>
+              <input
+                type="date"
+                name="donationdate"
+                value="<% if (d.donationdate) { %>
+                         <%= (new Date(d.donationdate)).toISOString().slice(0, 10) %>
+                       <% } %>"
+              >
             </td>
-            <td><%= d.donationamount %></td>
-          </tr>
-        <% }); %>
-        </tbody>
-      </table>
 
-    <% } else { %>
-      <p>No donations recorded for this participant.</p>
-    <% } %>
-  </section>
+            <td>
+              <input
+                type="number"
+                step="0.01"
+                name="donationamount"
+                value="<%= d.donationamount || '' %>"
+              >
+            </td>
+
+            <td>
+              <button type="submit">Save</button>
+            </td>
+          </form>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+
+  <% } else { %>
+    <p>No donations recorded for this participant.</p>
+  <% } %>
+</section>
+
 
 </body>
 </html>

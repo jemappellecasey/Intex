@@ -477,12 +477,13 @@ app.get('/participants/:participantid', async (req, res) => {
   }
 });
 
-// Edit page: form + read-only summary (admin only)
+// Edit page: form + editable summary (admin only)
 app.get('/participants/:participantid/edit', async (req, res) => {
-  if (!req.session.isLoggedIn) {
+  if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
 
+  // Only admins can edit participants
   if (req.session.role !== 'admin') {
     return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
   }
@@ -490,6 +491,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
   const participantid = req.params.participantid;
 
   try {
+    // 1) Participant basic info + origin info
     const participant = await knex('participants as p')
       .leftJoin('origintypes as o', 'p.origintypepairid', 'o.origintypepairid')
       .where('p.participantid', participantid)
@@ -502,14 +504,30 @@ app.get('/participants/:participantid/edit', async (req, res) => {
 
     if (!participant) {
       console.error('Edit: participant not found for id =', participantid);
-      return res.send('Participant not found.');
+      return res.render('participant_edit', {
+        participant: null,
+        events: [],
+        milestones: [],
+        surveys: [],
+        donations: [],
+        avgOverallScore: null,
+        surveyCount: 0,
+        firstRegistration: null,
+        lastRegistration: null,
+        csrfToken: req.csrfToken(),
+        isAdmin: req.session.role === 'admin',
+        Username: req.session.username,
+        error_message: 'Participant not found.'
+      });
     }
 
+    // 2) Events + registrations (include registrationid for editing)
     const events = await knex('registrations as r')
       .join('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
       .join('events as e', 'ed.eventid', 'e.eventid')
       .where('r.participantid', participantid)
       .select(
+        'r.registrationid',
         'e.eventname as eventtitle',
         'e.eventtype',
         'ed.eventdatetimestart',
@@ -520,10 +538,17 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       )
       .orderBy('ed.eventdatetimestart', 'asc');
 
+    // 3) Milestones (include milestoneid for editing)
     const milestones = await knex('milestones')
-      .where({ participantid })
-      .orderBy('milestonedate', 'asc');
+    .where({ participantid })
+    .select(
+        'milestoneid',
+        'milestonetitle',
+        'milestonedate'
+    )
+    .orderBy('milestonedate', 'asc');
 
+    // 4) Post-event surveys list (include surveyid for editing)
     const surveys = await knex('surveys as s')
       .join('events as e', 's.eventid', 'e.eventid')
       .where('s.participantid', participantid)
@@ -540,6 +565,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       )
       .orderBy('s.surveysubmissiondate', 'asc');
 
+    // 5) Survey aggregate
     const surveyAgg = await knex('surveys')
       .where({ participantid })
       .avg({ avgOverallScore: 'surveyoverallscore' })
@@ -551,6 +577,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       : null;
     const surveyCount = surveyAgg ? Number(surveyAgg.surveyCount) : 0;
 
+    // 6) Earliest and latest registration timestamps
     const regAgg = await knex('registrations')
       .where({ participantid })
       .min({ firstRegistration: 'registrationcreatedat' })
@@ -560,8 +587,14 @@ app.get('/participants/:participantid/edit', async (req, res) => {
     const firstRegistration = regAgg ? regAgg.firstRegistration : null;
     const lastRegistration = regAgg ? regAgg.lastRegistration : null;
 
+    // 7) Donations list (include donationid for editing)
     const donations = await knex('donations')
       .where({ participantid })
+      .select(
+        'donationid',
+        'donationdate',
+        'donationamount'
+      )
       .orderBy('donationdate', 'asc');
 
     console.log('Edit page loaded for participantid =', participantid);
@@ -583,9 +616,24 @@ app.get('/participants/:participantid/edit', async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading participant (edit route):', err);
-    return res.send('Error loading participant.');
+    return res.render('participant_edit', {
+      participant: null,
+      events: [],
+      milestones: [],
+      surveys: [],
+      donations: [],
+      avgOverallScore: null,
+      surveyCount: 0,
+      firstRegistration: null,
+      lastRegistration: null,
+      csrfToken: req.csrfToken(),
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      error_message: 'Error loading participant for editing.'
+    });
   }
 });
+
 
 
 //Update the participant information
@@ -614,6 +662,96 @@ app.post('/participants/:participantid/edit', (req, res) => {
             res.send("Update error.");
         });
 });
+
+// Update a single registration row (event history) for this participant
+app.post('/participants/:participantid/registrations/:registrationid', async (req, res) => {
+  const { participantid, registrationid } = req.params;
+
+  // Editable fields from the form
+  const updated = {
+    registrationstatus: req.body.registrationstatus || null,
+    registrationattendanceflag: req.body.registrationattendanceflag ? true : false
+  };
+
+  try {
+    await knex('registrations')
+      .where({ registrationid, participantid })
+      .update(updated);
+
+    return res.redirect(`/participants/${participantid}/edit`);
+  } catch (err) {
+    console.error('Error updating registration:', err);
+    return res.status(500).send('Error updating registration.');
+  }
+});
+
+// Update a single survey row (post-event survey scores) for this participant
+app.post('/participants/:participantid/surveys/:surveyid', async (req, res) => {
+  const { participantid, surveyid } = req.params;
+
+  const updated = {
+    surveysatisfactionscore: req.body.surveysatisfactionscore || null,
+    surveyusefulnessscore: req.body.surveyusefulnessscore || null,
+    surveyinstructorscore: req.body.surveyinstructorscore || null,
+    surveyrecommendationscore: req.body.surveyrecommendationscore || null,
+    surveyoverallscore: req.body.surveyoverallscore || null
+  };
+
+  try {
+    await knex('surveys')
+      .where({ surveyid, participantid })
+      .update(updated);
+
+    return res.redirect(`/participants/${participantid}/edit`);
+  } catch (err) {
+    console.error('Error updating survey:', err);
+    return res.status(500).send('Error updating survey.');
+  }
+});
+
+// Update a single milestone for this participant
+app.post('/participants/:participantid/milestones/:milestoneid', async (req, res) => {
+  const { participantid, milestoneid } = req.params;
+
+  const updated = {
+    milestonetitle: req.body.milestonetitle || null,
+    milestonedate: req.body.milestonedate || null
+  };
+
+  try {
+    await knex('milestones')
+      .where({ milestoneid, participantid })
+      .update(updated);
+
+    return res.redirect(`/participants/${participantid}/edit`);
+  } catch (err) {
+    console.error('Error updating milestone:', err);
+    return res.status(500).send('Error updating milestone.');
+  }
+});
+
+// Update a single donation for this participant
+app.post('/participants/:participantid/donations/:donationid', async (req, res) => {
+  const { participantid, donationid } = req.params;
+
+  const updated = {
+    donationdate: req.body.donationdate || null,
+    donationamount: req.body.donationamount || null
+  };
+
+  try {
+    await knex('donations')
+      .where({ donationid, participantid })
+      .update(updated);
+
+    return res.redirect(`/participants/${participantid}/edit`);
+  } catch (err) {
+    console.error('Error updating donation:', err);
+    return res.status(500).send('Error updating donation.');
+  }
+});
+
+
 
 
 app.post('/deleteparticipants/:participantid', (req, res) => {
