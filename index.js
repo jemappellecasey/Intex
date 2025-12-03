@@ -48,10 +48,24 @@ const knex = require("knex")({
 const app = express();
 const port = process.env.PORT || 3000;
 
+const multer = require('multer');
+const uploadRoot = path.join(__dirname, "images");
+const uploadDir = uploadRoot; // or path.join(uploadRoot, "uploads")
+const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function(req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
 app.set("view engine", "ejs");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+
 
 
 //this is secrity section for the external link. If you want to use tableau, 
@@ -1297,7 +1311,14 @@ app.get('/events', async (req, res) => {
   const upcomingPage = parseInt(req.query.upcomingPage, 10) || 1;
   const pastPage = parseInt(req.query.pastPage, 10) || 1;
 
-  const { name, startDate, endDate } = req.query;
+  const rawName = req.query.name || '';
+  const rawStartDate = req.query.startDate || '';
+  const rawEndDate = req.query.endDate || '';
+
+  // Only managers can use search filters.
+  const name = isManager ? rawName : '';
+  const startDate = isManager ? rawStartDate : '';
+  const endDate = isManager ? rawEndDate : '';
   const now = new Date();
 
   // Helper: apply filters (name, startDate, endDate)
