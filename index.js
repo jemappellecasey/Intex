@@ -21,6 +21,18 @@ const flash = require("connect-flash");      // flash message
 const bcrypt = require("bcrypt");            // password hash
 const nodemailer = require("nodemailer");    // if the mail needed
 
+const crypto = require("crypto");
+const { SESv2Client, SendEmailCommand } = require("@aws-sdk/client-sesv2");
+
+const sesClient = new SESv2Client({
+  region: process.env.AWS_REGION || "us-east-1",
+});
+
+const transporter = nodemailer.createTransport({
+  SES: { sesClient, SendEmailCommand },
+});
+
+
 
 //We need to fix it before deploying the AWS!!
 const knex = require("knex")({
@@ -28,7 +40,7 @@ const knex = require("knex")({
     connection: {
         host : process.env.DB_HOST || "localhost",
         user : process.env.DB_USER || "postgres",
-        password : process.env.DB_PASSWORD || "admin",
+        password : process.env.DB_PASSWORD || "manager",
         database : process.env.DB_NAME || "312intex",
         port : process.env.DB_PORT || 5432
     }
@@ -97,16 +109,25 @@ app.use(
 
 
 app.use(
-    session({
-        secret: process.env.SESSION_SECRET || 'fallback-secret-key', 
-        resave: false,
-        saveUninitialized: false,
-    })
+  session({
+    secret: process.env.SESSION_SECRET || "dev-secret",
+    resave: false,
+    saveUninitialized: false,
+  })
 );
 
 app.use(flash());
 
-app.use(csrf());
+app.use((req, res, next) => {
+  res.locals.error = req.flash("error");
+  res.locals.info = req.flash("info");
+  res.locals.success = req.flash("success");
+  next();
+});
+
+const csrfProtection = csrf();
+app.use(csrfProtection);
+
 
 
 //This app.use helps to be use CSFRToken and flash in view folder.
@@ -145,11 +166,13 @@ app.use((req, res, next)=> {
 
 //This is security for website if the user are manager or not.
 function requireManager(req, res, next) {
-    if (req.session.isLoggedIn && req.session.role === 'admin') {
+    if (req.session.isLoggedIn && req.session.role === 'manager') {
         return next();
     }
     return res.render('login', { error_message: 'You do not have permission to view this page.' });
 }
+
+
 
 //First, all user go to the landing page
 app.get('/', (req, res) => {
@@ -229,7 +252,7 @@ app.get('/dashboard', (req, res) => {
 
     res.render('dashboard', { 
         error_message: null,
-        isAdmin: req.session.role === 'admin',
+        isManager: req.session.role === 'manager',
         Username: req.session.username
     });
 });
@@ -240,13 +263,13 @@ app.get('/participants', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   let participantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
 
   // If the session lacks participantId, reload it from users and store it (participant role only).
-  if (!isAdmin && (!participantId || Number.isNaN(participantId)) && req.session.userId) {
+  if (!isManager && (!participantId || Number.isNaN(participantId)) && req.session.userId) {
     try {
       const userRow = await knex('users')
         .select('participantid')
@@ -262,11 +285,11 @@ app.get('/participants', async (req, res) => {
   }
 
   // Participant role without a linked participantId returns early.
-  if (!isAdmin && (!participantId || Number.isNaN(participantId))) {
+  if (!isManager && (!participantId || Number.isNaN(participantId))) {
     return res.render('participants', {
       participants: [],
       error_message: 'No participant record is linked to this user.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: participantId,
       currentPage: 1,
@@ -320,7 +343,7 @@ app.get('/participants', async (req, res) => {
     }
 
     // Participant role scopes to their own participantid.
-    if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+    if (!isManager && participantId && !Number.isNaN(participantId)) {
       baseQuery.where('p.participantid', participantId);
     }
 
@@ -344,7 +367,7 @@ app.get('/participants', async (req, res) => {
         if (phone && phone.trim() !== '') {
           q.whereILike('p.participantphone', `%${phone.trim()}%`);
         }
-        if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+        if (!isManager && participantId && !Number.isNaN(participantId)) {
           q.where('p.participantid', participantId);
         }
       })
@@ -356,11 +379,11 @@ app.get('/participants', async (req, res) => {
     ]);
 
     // 念のため二重チェックで自分以外を除外
-    const scopedParticipants = (!isAdmin && participantId && !Number.isNaN(participantId))
+    const scopedParticipants = (!isManager && participantId && !Number.isNaN(participantId))
       ? participants.filter((p) => Number(p.participantid) === participantId)
       : participants;
 
-    const total = (!isAdmin && participantId && !Number.isNaN(participantId))
+    const total = (!isManager && participantId && !Number.isNaN(participantId))
       ? scopedParticipants.length
       : (parseInt(totalResult[0].total, 10) || 0);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -371,7 +394,7 @@ app.get('/participants', async (req, res) => {
     res.render('participants', {
       participants: scopedParticipants,
       error_message: '',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: participantId,
       currentPage: page,
@@ -386,7 +409,7 @@ app.get('/participants', async (req, res) => {
     res.render('participants', {
       participants: [],
       error_message: `Database error: ${error.message}`,
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: participantId,
       currentPage: 1,
@@ -399,24 +422,24 @@ app.get('/participants', async (req, res) => {
   }
 });
 
-// Add new participant form (admin only)
+// Add new participant form (manager only)
 app.get('/participants/add', (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', { error_message: 'You do not have permission to add participants.' });
   }
 
   res.render('participant_add', {
     error_message: '',
-    isAdmin: true,
+    isManager: true,
     Username: req.session.username,
     csrfToken: req.csrfToken()
   });
 });
 
-// Create a new participant (admin only)
+// Create a new participant (manager only)
 app.post('/participants/add', async (req, res) => {
 
   // Check login status
@@ -424,8 +447,8 @@ app.post('/participants/add', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  // Check admin role
-  if (req.session.role !== 'admin') {
+  // Check manager role
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to add participants.'
     });
@@ -469,7 +492,7 @@ app.post('/participants/add', async (req, res) => {
     // Re-render the form with an error message
     return res.render('participant_add', {
       error_message: 'Error creating participant.',
-      isAdmin: true,
+      isManager: true,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -482,7 +505,7 @@ app.get('/participants/:participantid', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId;
   const participantid = parseInt(req.params.participantid, 10);
 
@@ -497,18 +520,18 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount: 0,
       firstRegistration: null,
       lastRegistration: null,
-      isAdmin,
+      isManager,
       Username: req.session.username,
       error_message: 'Invalid participant id.'
     });
   }
 
   // Participant-level users can only view their own record.
-  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
+  if (!isManager && String(participantid) !== String(sessionParticipantId || '')) {
     return res.status(403).render('participants', {
       participants: [],
       error_message: 'You can only view your own participant record.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       currentPage: 1,
       totalPages: 1,
@@ -543,7 +566,7 @@ app.get('/participants/:participantid', async (req, res) => {
         surveyCount: 0,
         firstRegistration: null,
         lastRegistration: null,
-        isAdmin,
+        isManager,
         Username: req.session.username,
         error_message: 'Participant not found.'
       });
@@ -626,7 +649,7 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount,
       firstRegistration,
       lastRegistration,
-      isAdmin,
+      isManager,
       Username: req.session.username,
       error_message: ''
     });
@@ -642,25 +665,25 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount: 0,
       firstRegistration: null,
       lastRegistration: null,
-      isAdmin,
+      isManager,
       Username: req.session.username,
       error_message: 'Error loading participant details.'
     });
   }
 });
 
-// Edit page: form + editable summary (admin only)
+// Edit page: form + editable summary (manager only)
 app.get('/participants/:participantid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
 
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId;
   const participantid = req.params.participantid;
 
-  // Allow admins or the participant themself; block others.
-  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
+  // Allow managers or the participant themself; block others.
+  if (!isManager && String(participantid) !== String(sessionParticipantId || '')) {
     return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
   }
 
@@ -689,7 +712,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
         firstRegistration: null,
         lastRegistration: null,
         csrfToken: req.csrfToken(),
-        isAdmin: req.session.role === 'admin',
+        isManager: req.session.role === 'manager',
         Username: req.session.username,
         error_message: 'Participant not found.'
       });
@@ -786,7 +809,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       firstRegistration,
       lastRegistration,
       csrfToken: req.csrfToken(),
-      isAdmin: req.session.role === 'admin',
+      isManager: req.session.role === 'manager',
       Username: req.session.username,
       error_message: '',
       success_message: successMessage
@@ -804,7 +827,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       firstRegistration: null,
       lastRegistration: null,
       csrfToken: req.csrfToken(),
-      isAdmin: req.session.role === 'admin',
+      isManager: req.session.role === 'manager',
       Username: req.session.username,
       success_message: '',
       error_message: 'Error loading participant for editing.'
@@ -814,10 +837,10 @@ app.get('/participants/:participantid/edit', async (req, res) => {
 
 
 
-// Update basic participant information (self or admin)
+// Update basic participant information (self or manager)
 app.post('/participants/:participantid/edit', async (req, res) => {
   const participantid = parseInt(req.params.participantid, 10);
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId;
 
   if (!req.session || !req.session.isLoggedIn) {
@@ -826,7 +849,7 @@ app.post('/participants/:participantid/edit', async (req, res) => {
   if (Number.isNaN(participantid)) {
     return res.render('login', { error_message: 'Invalid participant id.' });
   }
-  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
+  if (!isManager && String(participantid) !== String(sessionParticipantId || '')) {
     return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
   }
 
@@ -860,7 +883,7 @@ app.post('/participants/:participantid/edit', async (req, res) => {
         firstRegistration: null,
         lastRegistration: null,
         csrfToken: req.csrfToken(),
-        isAdmin,
+        isManager,
         Username: req.session.username,
         success_message: '',
         error_message: 'Participant not found.'
@@ -881,7 +904,7 @@ app.post('/participants/:participantid/edit', async (req, res) => {
       firstRegistration: null,
       lastRegistration: null,
       csrfToken: req.csrfToken(),
-      isAdmin,
+      isManager,
       Username: req.session.username,
       success_message: '',
       error_message: 'Update error.'
@@ -893,7 +916,7 @@ app.post('/participants/:participantid/edit', async (req, res) => {
 // Update a single survey row (post-event survey scores) for this participant
 app.post('/participants/:participantid/surveys/:surveyid', async (req, res) => {
   const { participantid, surveyid } = req.params;
-  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'admin') {
+  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'manager') {
     return res.render('login', { error_message: 'You do not have permission to edit this survey.' });
   }
 
@@ -920,7 +943,7 @@ app.post('/participants/:participantid/surveys/:surveyid', async (req, res) => {
 // Update a single milestone for this participant
 app.post('/participants/:participantid/milestones/:milestoneid', async (req, res) => {
   const { participantid, milestoneid } = req.params;
-  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'admin') {
+  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'manager') {
     return res.render('login', { error_message: 'You do not have permission to edit this milestone.' });
   }
 
@@ -944,7 +967,7 @@ app.post('/participants/:participantid/milestones/:milestoneid', async (req, res
 // Update a single donation for this participant
 app.post('/participants/:participantid/donations/:donationid', async (req, res) => {
   const { participantid, donationid } = req.params;
-  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'admin') {
+  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'manager') {
     return res.render('login', { error_message: 'You do not have permission to edit this donation.' });
   }
 
@@ -994,7 +1017,7 @@ app.get('/events', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const participantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -1061,7 +1084,7 @@ app.get('/events', async (req, res) => {
     const q = knex('eventdetails as ed')
       .join('events as e', 'ed.eventid', 'e.eventid')
       .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid');
-    if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+    if (!isManager && participantId && !Number.isNaN(participantId)) {
       q.whereExists(
         knex.select(1)
           .from('registrations as rr')
@@ -1080,7 +1103,7 @@ app.get('/events', async (req, res) => {
     const q = knex('eventdetails as ed')
       .join('events as e', 'ed.eventid', 'e.eventid')
       .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid');
-    if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+    if (!isManager && participantId && !Number.isNaN(participantId)) {
       q.whereExists(
         knex.select(1)
           .from('registrations as rr')
@@ -1109,7 +1132,7 @@ app.get('/events', async (req, res) => {
       (function () {
         const q = knex('eventdetails as ed')
           .join('events as e', 'ed.eventid', 'e.eventid');
-        if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+        if (!isManager && participantId && !Number.isNaN(participantId)) {
           q.whereExists(
             knex.select(1)
               .from('registrations as rr')
@@ -1126,7 +1149,7 @@ app.get('/events', async (req, res) => {
       (function () {
         const q = knex('eventdetails as ed')
           .join('events as e', 'ed.eventid', 'e.eventid');
-        if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+        if (!isManager && participantId && !Number.isNaN(participantId)) {
           q.whereExists(
             knex.select(1)
               .from('registrations as rr')
@@ -1157,7 +1180,7 @@ app.get('/events', async (req, res) => {
 
     return res.render('events', {
       error_message: '',
-      isAdmin: req.session.role === 'admin',
+      isManager: req.session.role === 'manager',
       Username: req.session.username,
 
       name: name || '',
@@ -1176,7 +1199,7 @@ app.get('/events', async (req, res) => {
     console.error('Error loading events:', err);
     return res.render('events', {
       error_message: 'Error loading events.',
-      isAdmin: req.session.role === 'admin',
+      isManager: req.session.role === 'manager',
       Username: req.session.username,
 
       name: name || '',
@@ -1199,7 +1222,7 @@ app.get('/events/:eventdetailsid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', { error_message: 'You do not have permission to edit events.' });
   }
 
@@ -1230,7 +1253,7 @@ app.get('/events/:eventdetailsid/edit', async (req, res) => {
     res.render('event_edit', {
       event,
       error_message: '',
-      isAdmin: req.session.role === 'admin',
+      isManager: req.session.role === 'manager',
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -1245,7 +1268,7 @@ app.post('/events/:eventdetailsid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', { error_message: 'You do not have permission to edit events.' });
   }
 
@@ -1305,7 +1328,7 @@ app.post('/events/:eventdetailsid/delete', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', { error_message: 'You do not have permission to delete events.' });
   }
 
@@ -1339,7 +1362,7 @@ app.get('/surveys', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const participantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -1358,14 +1381,14 @@ app.get('/surveys', async (req, res) => {
 
   try {
     // Participant view: show answered vs pending surveys for this participant only.
-    if (!isAdmin) {
+    if (!isManager) {
       if (!participantId || Number.isNaN(participantId)) {
         return res.render('survey', {
           surveys: [],
           answeredSurveys: [],
           pendingSurveys: [],
           error_message: 'No participant record is linked to this user.',
-          isAdmin,
+          isManager,
           Username: req.session.username,
           eventName,
           participantName,
@@ -1434,7 +1457,7 @@ app.get('/surveys', async (req, res) => {
         answeredSurveys,
         pendingSurveys,
         error_message: '',
-        isAdmin,
+        isManager,
         Username: req.session.username,
         eventName,
         participantName,
@@ -1548,7 +1571,7 @@ app.get('/surveys', async (req, res) => {
     return res.render('survey', {
       surveys,
       error_message: '',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       eventName,
       participantName,
@@ -1566,7 +1589,7 @@ app.get('/surveys', async (req, res) => {
       answeredSurveys: [],
       pendingSurveys: [],
       error_message: 'Error loading surveys.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       eventName,
       participantName,
@@ -1581,13 +1604,13 @@ app.get('/surveys', async (req, res) => {
 
 
 // =======================================
-// Survey - show "new survey" form (admin)
+// Survey - show "new survey" form (manager)
 // =======================================
 app.get('/surveys/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to add surveys.'
     });
@@ -1607,7 +1630,7 @@ app.get('/surveys/new', async (req, res) => {
       events,
       participants,
       error_message: '',
-      isAdmin: true,
+      isManager: true,
       Username: req.session.username,
       // csrfToken is already in res.locals
     });
@@ -1617,20 +1640,20 @@ app.get('/surveys/new', async (req, res) => {
       events: [],
       participants: [],
       error_message: 'Error loading data for new survey.',
-      isAdmin: true,
+      isManager: true,
       Username: req.session.username
     });
   }
 });
 
 // =====================================
-// Survey - create new survey (admin)
+// Survey - create new survey (manager)
 // =====================================
 app.post('/surveys/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to add surveys.'
     });
@@ -1691,7 +1714,7 @@ app.post('/surveys/new', async (req, res) => {
       events: [],
       participants: [],
       error_message: 'Error inserting new survey.',
-      isAdmin: true,
+      isManager: true,
       Username: req.session.username
     });
   }
@@ -1699,13 +1722,13 @@ app.post('/surveys/new', async (req, res) => {
 
 
 // =====================================
-// Survey - show edit form (admin only)
+// Survey - show edit form (manager only)
 // =====================================
 app.get('/surveys/:surveyid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to edit surveys.'
     });
@@ -1743,7 +1766,7 @@ app.get('/surveys/:surveyid/edit', async (req, res) => {
     return res.render('survey_edit', {
       survey,
       error_message: '',
-      isAdmin: req.session.role === 'admin',
+      isManager: req.session.role === 'manager',
       Username: req.session.username,
       csrfToken: req.csrfToken()  
     });
@@ -1755,13 +1778,13 @@ app.get('/surveys/:surveyid/edit', async (req, res) => {
 
 
 // =====================================
-// Survey - update existing survey (admin)
+// Survey - update existing survey (manager)
 // =====================================
 app.post('/surveys/:surveyid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to edit surveys.'
     });
@@ -1819,13 +1842,13 @@ app.post('/surveys/:surveyid/edit', async (req, res) => {
 
 
 // =====================================
-// Survey - delete (admin only)
+// Survey - delete (manager only)
 // =====================================
 app.post('/surveys/:surveyid/delete', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to delete surveys.'
     });
@@ -1853,7 +1876,7 @@ app.get('/milestones', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -1882,7 +1905,7 @@ app.get('/milestones', async (req, res) => {
         'p.email'
       );
 
-    if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+    if (!isManager && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
       baseQuery.where('p.participantid', sessionParticipantId);
     }
 
@@ -1912,7 +1935,7 @@ app.get('/milestones', async (req, res) => {
     const countQuery = knex('milestones as m')
       .join('participants as p', 'm.participantid', 'p.participantid')
       .modify((q) => {
-        if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+        if (!isManager && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
           q.where('p.participantid', sessionParticipantId);
         }
         if (participantName !== '') {
@@ -1951,7 +1974,7 @@ app.get('/milestones', async (req, res) => {
     return res.render('milestones', {
       milestones,
       error_message: '',
-      isAdmin,
+      isManager,
       selfParticipantId: sessionParticipantId,
       Username: req.session.username,
       participantName,
@@ -1968,7 +1991,7 @@ app.get('/milestones', async (req, res) => {
     return res.render('milestones', {
       milestones: [],
       error_message: 'Error loading milestones.',
-      isAdmin,
+      isManager,
       selfParticipantId: sessionParticipantId,
       Username: req.session.username,
       participantName,
@@ -1986,18 +2009,18 @@ app.get('/milestones', async (req, res) => {
 
 
 // =====================================
-// Milestones - new (admin only, GET)
+// Milestones - new (manager only, GET)
 // =====================================
 app.get('/milestones/new', (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
 
-  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('login', {
       error_message: 'You do not have permission to add milestones.'
     });
@@ -2010,7 +2033,7 @@ app.get('/milestones/new', (req, res) => {
     milestonetitle: '',
     milestonedate: '',
     error_message: '',
-    isAdmin,
+    isManager,
     Username: req.session.username,
     selfParticipantId: sessionParticipantId,
     csrfToken: req.csrfToken()
@@ -2020,17 +2043,17 @@ app.get('/milestones/new', (req, res) => {
 
 
 // =====================================
-// Milestones - create (admin only, POST)
+// Milestones - create (manager only, POST)
 // =====================================
 app.post('/milestones/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
-  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('login', {
       error_message: 'You do not have permission to add milestones.'
     });
@@ -2041,7 +2064,7 @@ app.post('/milestones/new', async (req, res) => {
   try {
     let participantIdToUse = null;
 
-    if (isAdmin) {
+    if (isManager) {
       const participant = await knex('participants')
         .whereILike('email', email.trim())
         .first();
@@ -2052,7 +2075,7 @@ app.post('/milestones/new', async (req, res) => {
           milestonetitle,
           milestonedate,
           error_message: 'No participant found with that email.',
-          isAdmin,
+          isManager,
           Username: req.session.username,
           selfParticipantId: sessionParticipantId,
           csrfToken: req.csrfToken()
@@ -2077,7 +2100,7 @@ app.post('/milestones/new', async (req, res) => {
       milestonetitle,
       milestonedate,
       error_message: 'Error creating milestone.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
@@ -2091,7 +2114,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -2118,20 +2141,20 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
         milestone: null,
         participants: [],
         error_message: 'Milestone not found.',
-        isAdmin,
+        isManager,
         Username: req.session.username,
         csrfToken: req.csrfToken()
       });
     }
 
-    if (!isAdmin && String(milestone.participantid) !== String(sessionParticipantId || '')) {
+    if (!isManager && String(milestone.participantid) !== String(sessionParticipantId || '')) {
       return res.render('login', {
         error_message: 'You do not have permission to edit milestones.'
       });
     }
 
     let participants = [];
-    if (isAdmin) {
+    if (isManager) {
       participants = await knex('participants')
         .select(
           'participantid',
@@ -2147,7 +2170,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       milestone,
       participants,                      
       error_message: '',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -2157,7 +2180,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       milestone: null,
       participants: [],              
       error_message: 'Error loading milestone for edit.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -2166,13 +2189,13 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
 
 
 // =====================================
-// Milestones - update (admin only, POST)
+// Milestones - update (manager only, POST)
 // =====================================
 app.post('/milestones/:milestoneid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -2182,7 +2205,7 @@ app.post('/milestones/:milestoneid/edit', async (req, res) => {
 
   try {
     // Ensure ownership for participant users
-    if (!isAdmin) {
+    if (!isManager) {
       const row = await knex('milestones')
         .where({ milestoneid })
         .first('participantid');
@@ -2210,13 +2233,13 @@ app.post('/milestones/:milestoneid/edit', async (req, res) => {
 });
 
 // =====================================
-// Milestones - delete (admin only, POST)
+// Milestones - delete (manager only, POST)
 // =====================================
 app.post('/milestones/:milestoneid/delete', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to delete milestones.'
     });
