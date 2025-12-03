@@ -173,65 +173,62 @@ app.use((req, res, next) => {
       return res.render('login', { error_message: 'You do not have permission to view this page.' });
   }
   
-  // GET /signup
-  app.get("/signup", (req, res) => {
-  res.render("signup", { csrfToken: req.csrfToken() });
+
+const sr = process.env.SALT_ROUNDS;
+
+app.get("/signup", (req, res) => {
+  res.render("signup", { csrfToken: req.csrfToken(), error_message: null });
 });
 
-// POST /signup
 app.post("/signup", async (req, res) => {
-  const { email } = req.body;
-  
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    req.flash("error", "Please enter a valid email address.");
-    return res.redirect("/signup");
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.render("signup", {
+      csrfToken: req.csrfToken(),
+      error_message: "Email and password are required.",
+    });
   }
-  
+
   try {
     const normalizedEmail = email.trim().toLowerCase();
-    
-    let user = await knex("users").where({ email: normalizedEmail }).first();
-    
-    if (!user) {
-      const [newUser] = await knex("users")
+
+    const existing = await knex("users")
+      .where({ email: normalizedEmail })
+      .first();
+
+    if (existing) {
+      return res.render("signup", {
+        csrfToken: req.csrfToken(),
+        error_message: "An account with that email already exists.",
+      });
+    }
+
+    const hash = await bcrypt.hash(password, sr);
+
+    const [user] = await knex("users")
       .insert({
         email: normalizedEmail,
+        passwordhashed: hash,
         role: "user",
-        isverified: false,
       })
       .returning("*");
-      user = newUser;
-    }
-    
-    const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-    
-    await knex("users")
-    .where({ userid: user.userid })
-    .update({
-      magic_token: token,
-      magic_token_expires_at: expiresAt,
-    });
-    
-    const baseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-    const verifyUrl = `${baseUrl}/verify-email/${token}`;
-    
-    await transporter.sendMail({
-      from: process.env.SES_FROM || process.env.EMAIL_FROM,
-      to: normalizedEmail,
-      subject: "Verify your email",
-      html: `<p>Click this link to verify your email and log in:</p>
-      <p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
-    });
-    
-    req.flash("info", "Check your email for a verification link.");
-    res.redirect("/check-email");
+
+    req.session.isLoggedIn = true;
+    req.session.userId = user.userid;
+    req.session.username = user.email;
+    req.session.role = user.role;
+
+    return res.redirect("/dashboard");
   } catch (err) {
-    console.error(err);
-    req.flash("error", "Something went wrong. Please try again.");
-    res.redirect("/signup");
+    console.error("signup error", err);
+    return res.render("signup", {
+      csrfToken: req.csrfToken(),
+      error_message: "Signup error. Please try again.",
+    });
   }
 });
+
 
 // GET /check-email
 app.get("/check-email", (req, res) => {
@@ -296,54 +293,47 @@ app.get('/login', (req, res) => {
 });
 
 
-app.post('/login', async (req, res) => {
-    const sName = req.body.username;
-    const sPassword = req.body.password;
+app.post("/login", async (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
 
-    console.log("Login attempt:");
-    console.log("Username:", sName);
-    console.log("Password:", sPassword);
-    
-    try {
-        // get the one username
-        const user = await knex('users')
-            .select('userid', 'username', 'password', 'role', 'participantid')
-            .where('username', sName)
-            .first();
+  try {
+    const user = await knex("users")
+      .select("userid", "email", "passwordhashed", "role")
+      .where("email", email.trim().toLowerCase())
+      .first();
 
-        // If user cannot be found, send the message to the login page-> Invalid Login
-        if (!user) {
-            return res.render('login', { error_message: 'Invalid Login no user' });
-        }
+    console.log(email.trim().toLowerCase())
 
-        // // Check plain text password
-        // const match = Boolean(sPassword === user.password)
-        // console.log(match)
-        // It is going to check password by bccrypt 
-        const match = await bcrypt.compare(sPassword, user.password);
-
-        //If it does not match the password, send the message to the login page-> Invalid Login
-        if (!match) {
-            return res.render('login', { error_message: 'Invalid Login' });
-        }
-
-        // There are going to set the session .
-        req.session.isLoggedIn = true;
-        req.session.username = user.username;
-        req.session.role = user.role;
-        req.session.userId = user.userid;
-        req.session.participantId = user.participantid ? parseInt(user.participantid, 10) : null;
-
-        return res.redirect('/dashboard');
-
-    } catch (err) {
-        console.error('login error', err);
-        return res.render('login', { error_message: 'Login error. Please try again.' });
+    if (!user) {
+      return res.render("login", { error_message: "Invalid login." });
     }
+
+    const match = await bcrypt.compare(password, user.passwordhashed);
+
+    if (!match) {
+      return res.render("login", { error_message: "Invalid login." });
+    }
+
+    req.session.isLoggedIn = true;
+    req.session.username = user.email;
+    req.session.role = user.role;
+    req.session.userId = user.userid;
+    req.session.participantId = user.participantid
+      ? parseInt(user.participantid, 10)
+      : null;
+
+    return res.redirect("/dashboard");
+  } catch (err) {
+    console.error("login error", err);
+    return res.render("login", {
+      error_message: "Login error. Please try again.",
+    });
+  }
 });
 
+
 app.post("/dev-login-bypass", async (req, res) => {
-  console.log("post received")
   const { role } = req.body;
 
   // Only allow known roles
@@ -373,7 +363,6 @@ app.post("/dev-login-bypass", async (req, res) => {
     req.session.participantId = user.participantid
       ? parseInt(user.participantid, 10)
       : null;
-    console.log("sdfsfd")
     return res.redirect("/dashboard");
   } catch (err) {
     console.error("dev-login-bypass error", err);

@@ -482,15 +482,14 @@ ALTER SEQUENCE public.surveys_surveyid_seq OWNED BY public.surveys.surveyid;
 
 
 CREATE TABLE public.users (
-    userid                  SERIAL PRIMARY KEY,
-    email                   VARCHAR(255) NOT NULL UNIQUE,
-    role                    VARCHAR(50) DEFAULT 'user',
-    isverified              BOOLEAN NOT NULL DEFAULT FALSE,
-    magic_token             VARCHAR(255),
-    magic_token_expires_at  TIMESTAMPTZ,
-    createdat               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updatedat               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    userid         SERIAL PRIMARY KEY,
+    email          VARCHAR(255) NOT NULL UNIQUE,
+    passwordhashed VARCHAR(255) NOT NULL,
+    role           VARCHAR(50) DEFAULT 'user',
+    createdat      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updatedat      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
 
 CREATE OR REPLACE FUNCTION public.set_updatedat_timestamp()
 RETURNS TRIGGER AS $$
@@ -8767,16 +8766,14 @@ COPY public.surveys (surveyid, participantid, eventid, eventdatetimestart, surve
 COPY public.users (
     userid,
     email,
+    passwordhashed,
     role,
-    isverified,
-    magic_token,
-    magic_token_expires_at,
     createdat,
     updatedat
-) FROM stdin WITH (FORMAT csv, NULL '\N', HEADER false);
-1,2025Intex312EllaRisesExampleUser@proton.me,user,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
-2,2025Intex312EllaRisesExampleManager@proton.me,manager,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
-3,2025Intex312EllaRisesExampleSecretary@proton.me,secretary,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+) FROM stdin WITH (FORMAT csv, HEADER false);
+1,2025intex312ellarisesexampleuser@proton.me,$2b$10$nwwDRowZGC8KqYVZBIfdk.6wYOa0zi5yk41qalPB9uQVkEbQuQFqG,user,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+2,2025intex312ellarisesexamplemanager@proton.me,$2b$10$nwwDRowZGC8KqYVZBIfdk.6wYOa0zi5yk41qalPB9uQVkEbQuQFqG,manager,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+3,2025intex312ellarisesexamplesecretary@proton.me,$2b$10$nwwDRowZGC8KqYVZBIfdk.6wYOa0zi5yk41qalPB9uQVkEbQuQFqG,secretary,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
 \.
 
 --
