@@ -151,6 +151,92 @@ function requireManager(req, res, next) {
     return res.render('login', { error_message: 'You do not have permission to view this page.' });
 }
 
+// Admin-only settings: manage user roles
+app.get('/admin/settings', requireManager, async (req, res) => {
+  try {
+    const users = await knex('users')
+      .leftJoin('participants as p', 'users.participantid', 'p.participantid')
+      .select(
+        'users.userid',
+        'users.username',
+        // Some schemas may not have users.email; fall back to participant email only.
+        'p.email',
+        'users.role',
+        'users.participantid'
+      )
+      .orderBy('username', 'asc');
+
+    return res.render('admin_settings', {
+      users,
+      error_message: '',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  } catch (err) {
+    console.error('Error loading admin settings:', err);
+    return res.render('admin_settings', {
+      users: [],
+      error_message: 'Error loading users.',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
+  const { userid } = req.params;
+  const { role } = req.body;
+
+  const allowedRoles = ['admin', 'user'];
+  if (!allowedRoles.includes(role)) {
+    const users = await knex('users')
+      .leftJoin('participants as p', 'users.participantid', 'p.participantid')
+      .select(
+        'users.userid',
+        'users.username',
+        'p.email',
+        'users.role',
+        'users.participantid'
+      )
+      .orderBy('username', 'asc');
+    return res.render('admin_settings', {
+      users,
+      error_message: 'Invalid role.',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  }
+
+  try {
+    await knex('users')
+      .where({ userid })
+      .update({ role });
+    return res.redirect('/admin/settings');
+  } catch (err) {
+    console.error('Error updating user role:', err);
+    const users = await knex('users')
+      .leftJoin('participants as p', 'users.participantid', 'p.participantid')
+      .select(
+        'users.userid',
+        'users.username',
+        'p.email',
+        'users.role',
+        'users.participantid'
+      )
+      .orderBy('username', 'asc');
+    return res.render('admin_settings', {
+      users,
+      error_message: 'Error updating user role.',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
 //First, all user go to the landing page
 app.get('/', (req, res) => {
   res.render('landing', { 

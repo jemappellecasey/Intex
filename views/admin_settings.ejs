@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Settings</title>
+</head>
+<body>
+
+<h1>Admin Settings</h1>
+<p><a href="/dashboard">Back to Dashboard</a></p>
+
+<% if (error_message) { %>
+  <p style="color:red;"><%= error_message %></p>
+<% } %>
+
+<section>
+  <h2>User Roles</h2>
+  <table border="1" cellspacing="0" cellpadding="4">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Participant ID</th>
+      </tr>
+    </thead>
+    <tbody>
+    <% users.forEach(function(u) { %>
+      <tr>
+        <td><%= u.username %></td>
+        <td><%= u.email || 'N/A' %></td>
+        <td>
+          <form method="post" action="/admin/users/<%= u.userid %>/role" style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <select name="role">
+              <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>admin</option>
+              <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>user</option>
+            </select>
+            <button type="submit">Save</button>
+          </form>
+        </td>
+        <td><%= u.participantid || 'None' %></td>
+      </tr>
+    <% }); %>
+    </tbody>
+  </table>
+</section>
+
+</body>
+</html>
