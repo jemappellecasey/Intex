@@ -1492,6 +1492,326 @@ app.post('/surveys/:surveyid/delete', async (req, res) => {
   }
 });
 
+// =====================================
+// Milestones - list (logged-in users)
+// =====================================
+app.get('/milestones', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const pageSize = 25;
+  const page = parseInt(req.query.page, 10) || 1;
+  const offset = (page - 1) * pageSize;
+
+  const participantName = req.query.participantName ? req.query.participantName.trim() : '';
+  const email = req.query.email ? req.query.email.trim() : '';
+  const milestoneTitle = req.query.milestoneTitle ? req.query.milestoneTitle.trim() : '';
+  const startDate = req.query.startDate || '';
+  const endDate = req.query.endDate || '';
+
+  try {
+    // Base query
+    const baseQuery = knex('milestones as m')
+      .join('participants as p', 'm.participantid', 'p.participantid')
+      .select(
+        'm.milestoneid',
+        'm.milestonetitle',
+        'm.milestonedate',
+        'p.participantid',
+        'p.participantfirstname',
+        'p.participantlastname',
+        'p.email'
+      );
+
+    if (participantName !== '') {
+      const lower = participantName.toLowerCase();
+      baseQuery.whereRaw(
+        "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+        [`%${lower}%`]
+      );
+    }
+
+    if (email !== '') {
+      baseQuery.whereILike('p.email', `%${email}%`);
+    }
+
+    if (milestoneTitle !== '') {
+      baseQuery.whereILike('m.milestonetitle', `%${milestoneTitle}%`);
+    }
+
+    if (startDate !== '') {
+      baseQuery.where('m.milestonedate', '>=', startDate);
+    }
+    if (endDate !== '') {
+      baseQuery.where('m.milestonedate', '<=', endDate);
+    }
+
+    const countQuery = knex('milestones as m')
+      .join('participants as p', 'm.participantid', 'p.participantid')
+      .modify((q) => {
+        if (participantName !== '') {
+          const lower = participantName.toLowerCase();
+          q.whereRaw(
+            "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+            [`%${lower}%`]
+          );
+        }
+        if (email !== '') {
+          q.whereILike('p.email', `%${email}%`);
+        }
+        if (milestoneTitle !== '') {
+          q.whereILike('m.milestonetitle', `%${milestoneTitle}%`);
+        }
+        if (startDate !== '') {
+          q.where('m.milestonedate', '>=', startDate);
+        }
+        if (endDate !== '') {
+          q.where('m.milestonedate', '<=', endDate);
+        }
+      })
+      .countDistinct('m.milestoneid as total');
+
+    const [milestones, totalResult] = await Promise.all([
+      baseQuery
+        .orderBy('m.milestonedate', 'desc')
+        .limit(pageSize)
+        .offset(offset),
+      countQuery
+    ]);
+
+    const total = parseInt(totalResult[0].total, 10) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    return res.render('milestones', {
+      milestones,
+      error_message: '',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      participantName,
+      email,
+      milestoneTitle,
+      startDate,
+      endDate,
+      currentPage: page,
+      totalPages,
+      csrfToken: req.csrfToken()
+    });
+  } catch (err) {
+    console.error('Error loading milestones:', err);
+    return res.render('milestones', {
+      milestones: [],
+      error_message: 'Error loading milestones.',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      participantName,
+      email,
+      milestoneTitle,
+      startDate,
+      endDate,
+      currentPage: 1,
+      totalPages: 1,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+
+
+// =====================================
+// Milestones - new (admin only, GET)
+// =====================================
+app.get('/milestones/new', (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to add milestones.'
+    });
+  }
+
+  const prefillEmail = req.query.email || '';
+
+  return res.render('milestones_new', {
+    email: prefillEmail,
+    milestonetitle: '',
+    milestonedate: '',
+    error_message: '',
+    isAdmin: true,
+    Username: req.session.username,
+    csrfToken: req.csrfToken()
+  });
+});
+
+
+
+// =====================================
+// Milestones - create (admin only, POST)
+// =====================================
+app.post('/milestones/new', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to add milestones.'
+    });
+  }
+
+  const { email, milestonetitle, milestonedate } = req.body;
+
+  try {
+    const participant = await knex('participants')
+      .whereILike('email', email.trim())
+      .first();
+
+    if (!participant) {
+      return res.render('milestones_new', {
+        email,
+        milestonetitle,
+        milestonedate,
+        error_message: 'No participant found with that email.',
+        isAdmin: true,
+        Username: req.session.username,
+        csrfToken: req.csrfToken()
+      });
+    }
+
+    await knex('milestones').insert({
+      participantid: participant.participantid,
+      milestonetitle: milestonetitle || null,
+      milestonedate: milestonedate || null
+    });
+
+    return res.redirect('/milestones');
+  } catch (err) {
+    console.error('Error creating milestone:', err);
+    return res.render('milestones_new', {
+      email,
+      milestonetitle,
+      milestonedate,
+      error_message: 'Error creating milestone.',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+
+
+// =====================================
+// Milestones - edit form (admin only)
+// =====================================
+app.get('/milestones/:milestoneid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to edit milestones.'
+    });
+  }
+
+  const { milestoneid } = req.params;
+
+  try {
+    const milestone = await knex('milestones as m')
+      .join('participants as p', 'm.participantid', 'p.participantid')
+      .where('m.milestoneid', milestoneid)
+      .select(
+        'm.milestoneid',
+        'm.milestonetitle',
+        'm.milestonedate',
+        'p.participantfirstname',
+        'p.participantlastname',
+        'p.email'
+      )
+      .first();
+
+    return res.render('milestones_edit', {
+      milestone,
+      error_message: milestone ? '' : 'Milestone not found.',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  } catch (err) {
+    console.error('Error loading milestone for edit:', err);
+    return res.render('milestones_edit', {
+      milestone: null,
+      error_message: 'Error loading milestone for edit.',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+
+// =====================================
+// Milestones - update (admin only, POST)
+// =====================================
+app.post('/milestones/:milestoneid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to edit milestones.'
+    });
+  }
+
+  const { milestoneid } = req.params;
+  const { milestonetitle, milestonedate } = req.body;
+
+  try {
+    await knex('milestones')
+      .where({ milestoneid })
+      .update({
+        milestonetitle: milestonetitle || null,
+        milestonedate: milestonedate || null
+      });
+
+    return res.redirect('/milestones');
+  } catch (err) {
+    console.error('Error updating milestone:', err);
+    // 再度編集画面を出したい場合は、もう一度 SELECT しても良いけど、
+    // ここではシンプルにメッセージだけ返す
+    return res.send('Error updating milestone.');
+  }
+});
+
+// =====================================
+// Milestones - delete (admin only, POST)
+// =====================================
+app.post('/milestones/:milestoneid/delete', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to delete milestones.'
+    });
+  }
+
+  const { milestoneid } = req.params;
+
+  try {
+    await knex('milestones')
+      .where({ milestoneid })
+      .del();
+
+    return res.redirect('/milestones');
+  } catch (err) {
+    console.error('Error deleting milestone:', err);
+    return res.send('Error deleting milestone.');
+  }
+});
+
+
+
 
 
 app.listen(port, () => {

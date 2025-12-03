@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>New Survey</title>
+</head>
+<body>
+
+<h1>Create New Survey</h1>
+
+<% if (error_message) { %>
+  <p style="color:red;"><%= error_message %></p>
+<% } %>
+
+<p>Logged in as: <%= Username %></p>
+
+<form method="post" action="/surveys/new">
+  <!-- CSRF token -->
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <!-- Participant select -->
+  <div>
+    <label>
+      Participant:
+      <select name="participantid" required>
+        <% participants.forEach(function(p) { %>
+          <option value="<%= p.participantid %>">
+            <%= p.participantfirstname %> <%= p.participantlastname %> (<%= p.email %>)
+          </option>
+        <% }) %>
+      </select>
+    </label>
+  </div>
+
+  <!-- Event select -->
+  <div>
+    <label>
+      Event:
+      <select name="eventid" required>
+        <% events.forEach(function(e) { %>
+          <option value="<%= e.eventid %>">
+            <%= e.eventname %>
+          </option>
+        <% }) %>
+      </select>
+    </label>
+  </div>
+
+  <!-- EventDateTimeStart -->
+  <div>
+    <label>
+      Event Date/Time Start:
+      <input
+        type="datetime-local"
+        name="eventdatetimestart"
+        required
+      >
+    </label>
+  </div>
+
+  <!-- Scores -->
+  <div>
+    <label>
+      Satisfaction (1–5):
+      <input type="number" name="surveysatisfactionscore" min="1" max="5">
+    </label>
+  </div>
+
+  <div>
+    <label>
+      Usefulness (1–5):
+      <input type="number" name="surveyusefulnessscore" min="1" max="5">
+    </label>
+  </div>
+
+  <div>
+    <label>
+      Instructor (1–5):
+      <input type="number" name="surveyinstructorscore" min="1" max="5">
+    </label>
+  </div>
+
+  <div>
+    <label>
+      Recommendation (1–5):
+      <input type="number" name="surveyrecommendationscore" min="1" max="5">
+    </label>
+  </div>
+
+  <!-- Overall (optional: auto計算するなら空でOK) -->
+  <div>
+    <label>
+      Overall Score:
+      <input type="number" step="0.01" name="surveyoverallscore">
+    </label>
+  </div>
+
+  <!-- Submission date -->
+  <div>
+    <label>
+      Submission Date:
+      <input type="date" name="surveysubmissiondate">
+    </label>
+  </div>
+
+  <button type="submit">Create Survey</button>
+</form>
+
+<p>
+  <a href="/surveys">Back to Surveys List</a>
+</p>
+
+</body>
+</html>
