@@ -245,7 +245,7 @@ app.get('/participants', async (req, res) => {
     ? parseInt(req.session.participantId, 10)
     : null;
 
-  // セッションにparticipantIdが無い場合はDBから再取得してセッションに保存（参加者ロールのみ）
+  // If the session lacks participantId, reload it from users and store it (participant role only).
   if (!isAdmin && (!participantId || Number.isNaN(participantId)) && req.session.userId) {
     try {
       const userRow = await knex('users')
@@ -261,13 +261,14 @@ app.get('/participants', async (req, res) => {
     }
   }
 
-  // Participant権限なのに紐づくparticipantが無い場合は早期リターン
+  // Participant role without a linked participantId returns early.
   if (!isAdmin && (!participantId || Number.isNaN(participantId))) {
     return res.render('participants', {
       participants: [],
       error_message: 'No participant record is linked to this user.',
       isAdmin,
       Username: req.session.username,
+      selfParticipantId: participantId,
       currentPage: 1,
       totalPages: 1,
       milestoneTitle: '',
@@ -318,7 +319,7 @@ app.get('/participants', async (req, res) => {
       baseQuery.whereILike('p.participantphone', `%${phone.trim()}%`);
     }
 
-    // 参加者ロールは自分のparticipantidに絞り込み
+    // Participant role scopes to their own participantid.
     if (!isAdmin && participantId && !Number.isNaN(participantId)) {
       baseQuery.where('p.participantid', participantId);
     }
@@ -372,6 +373,7 @@ app.get('/participants', async (req, res) => {
       error_message: '',
       isAdmin,
       Username: req.session.username,
+      selfParticipantId: participantId,
       currentPage: page,
       totalPages,
       milestoneTitle: milestoneTitle || '',
@@ -386,6 +388,7 @@ app.get('/participants', async (req, res) => {
       error_message: `Database error: ${error.message}`,
       isAdmin,
       Username: req.session.username,
+      selfParticipantId: participantId,
       currentPage: 1,
       totalPages: 1,
       milestoneTitle: milestoneTitle || '',
@@ -517,7 +520,7 @@ app.get('/participants/:participantid', async (req, res) => {
   }
 
   try {
-    // 1) Participant 基本情報 + Origin 情報
+    // 1) Participant basic info + origin info
     const participant = await knex('participants as p')
       .leftJoin('origintypes as o', 'p.origintypepairid', 'o.origintypepairid')
       .where('p.participantid', participantid)
@@ -546,7 +549,7 @@ app.get('/participants/:participantid', async (req, res) => {
       });
     }
 
-    // 2) Events + Registrations
+    // 2) Events + registrations
     const events = await knex('registrations as r')
       .join('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
       .join('events as e', 'ed.eventid', 'e.eventid')
@@ -567,7 +570,7 @@ app.get('/participants/:participantid', async (req, res) => {
       .where({ participantid })
       .orderBy('milestonedate', 'asc');
 
-    // 4) Surveys (post) 一覧
+    // 4) Surveys (post-event) list
     const surveys = await knex('surveys as s')
       .join('events as e', 's.eventid', 'e.eventid')
       .where('s.participantid', participantid)
@@ -584,7 +587,7 @@ app.get('/participants/:participantid', async (req, res) => {
       )
       .orderBy('s.surveysubmissiondate', 'asc');
 
-    // 5) Survey 集計
+    // 5) Survey aggregate
     const surveyAgg = await knex('surveys')
       .where({ participantid })
       .avg({ avgOverallScore: 'surveyoverallscore' })
@@ -596,7 +599,7 @@ app.get('/participants/:participantid', async (req, res) => {
       : null;
     const surveyCount = surveyAgg ? Number(surveyAgg.surveyCount) : 0;
 
-    // 6) Registrations の最初・最後
+    // 6) Registrations first/last timestamps
     const regAgg = await knex('registrations')
       .where({ participantid })
       .min({ firstRegistration: 'registrationcreatedat' })
@@ -606,7 +609,7 @@ app.get('/participants/:participantid', async (req, res) => {
     const firstRegistration = regAgg ? regAgg.firstRegistration : null;
     const lastRegistration = regAgg ? regAgg.lastRegistration : null;
 
-    // 7) Donations 一覧
+    // 7) Donations list
     const donations = await knex('donations')
       .where({ participantid })
       .orderBy('donationdate', 'asc');
@@ -652,12 +655,14 @@ app.get('/participants/:participantid/edit', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  // Only admins can edit participants
-  if (req.session.role !== 'admin') {
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId;
+  const participantid = req.params.participantid;
+
+  // Allow admins or the participant themself; block others.
+  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
     return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
   }
-
-  const participantid = req.params.participantid;
 
   try {
     // 1) Participant basic info + origin info
@@ -689,6 +694,8 @@ app.get('/participants/:participantid/edit', async (req, res) => {
         error_message: 'Participant not found.'
       });
     }
+
+    const successMessage = req.query.updated ? 'Changes saved.' : '';
 
     // 2) Events + registrations (include registrationid for editing)
     const events = await knex('registrations as r')
@@ -781,7 +788,8 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       csrfToken: req.csrfToken(),
       isAdmin: req.session.role === 'admin',
       Username: req.session.username,
-      error_message: ''
+      error_message: '',
+      success_message: successMessage
     });
   } catch (err) {
     console.error('Error loading participant (edit route):', err);
@@ -798,6 +806,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       csrfToken: req.csrfToken(),
       isAdmin: req.session.role === 'admin',
       Username: req.session.username,
+      success_message: '',
       error_message: 'Error loading participant for editing.'
     });
   }
@@ -805,37 +814,88 @@ app.get('/participants/:participantid/edit', async (req, res) => {
 
 
 
-//Update the participant information
-app.post('/participants/:participantid/edit', (req, res) => {
-    const participantid = req.params.participantid;
+// Update basic participant information (self or admin)
+app.post('/participants/:participantid/edit', async (req, res) => {
+  const participantid = parseInt(req.params.participantid, 10);
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId;
 
-    const updated = {
-        email: req.body.email,
-        participantfirstname: req.body.participantfirstname,
-        participantlastname: req.body.participantlastname,
-        participantdob: req.body.participantdob,
-        participantrole: req.body.participantrole,
-        participantphone: req.body.participantphone,
-        participantcity: req.body.participantcity,
-        participantstate: req.body.participantstate,
-        participantzip: req.body.participantzip,
-        participantfieldofinterest: req.body.participantfieldofinterest
-    };
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (Number.isNaN(participantid)) {
+    return res.render('login', { error_message: 'Invalid participant id.' });
+  }
+  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
+    return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
+  }
 
-    knex('participants')
-        .where({ participantid })
-        .update(updated)
-        .then(() => res.redirect('/participants'))
-        .catch(err => {
-            console.error("Error updating participant:", err);
-            res.send("Update error.");
-        });
+  const updated = {
+    email: req.body.email,
+    participantfirstname: req.body.participantfirstname,
+    participantlastname: req.body.participantlastname,
+    participantdob: req.body.participantdob || null,
+    participantrole: req.body.participantrole,
+    participantphone: req.body.participantphone,
+    participantcity: req.body.participantcity,
+    participantstate: req.body.participantstate,
+    participantzip: req.body.participantzip,
+    participantfieldofinterest: req.body.participantfieldofinterest
+  };
+
+  try {
+    const rows = await knex('participants')
+      .where({ participantid })
+      .update(updated);
+
+    if (rows === 0) {
+      return res.render('participant_edit', {
+        participant: null,
+        events: [],
+        milestones: [],
+        surveys: [],
+        donations: [],
+        avgOverallScore: null,
+        surveyCount: 0,
+        firstRegistration: null,
+        lastRegistration: null,
+        csrfToken: req.csrfToken(),
+        isAdmin,
+        Username: req.session.username,
+        success_message: '',
+        error_message: 'Participant not found.'
+      });
+    }
+
+    return res.redirect(`/participants/${participantid}/edit?updated=1`);
+  } catch (err) {
+    console.error("Error updating participant:", err);
+    return res.render('participant_edit', {
+      participant: null,
+      events: [],
+      milestones: [],
+      surveys: [],
+      donations: [],
+      avgOverallScore: null,
+      surveyCount: 0,
+      firstRegistration: null,
+      lastRegistration: null,
+      csrfToken: req.csrfToken(),
+      isAdmin,
+      Username: req.session.username,
+      success_message: '',
+      error_message: 'Update error.'
+    });
+  }
 });
 
 
 // Update a single survey row (post-event survey scores) for this participant
 app.post('/participants/:participantid/surveys/:surveyid', async (req, res) => {
   const { participantid, surveyid } = req.params;
+  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to edit this survey.' });
+  }
 
   const updated = {
     surveysatisfactionscore: req.body.surveysatisfactionscore || null,
@@ -860,6 +920,9 @@ app.post('/participants/:participantid/surveys/:surveyid', async (req, res) => {
 // Update a single milestone for this participant
 app.post('/participants/:participantid/milestones/:milestoneid', async (req, res) => {
   const { participantid, milestoneid } = req.params;
+  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to edit this milestone.' });
+  }
 
   const updated = {
     milestonetitle: req.body.milestonetitle || null,
@@ -881,6 +944,9 @@ app.post('/participants/:participantid/milestones/:milestoneid', async (req, res
 // Update a single donation for this participant
 app.post('/participants/:participantid/donations/:donationid', async (req, res) => {
   const { participantid, donationid } = req.params;
+  if (!req.session || !req.session.isLoggedIn || req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to edit this donation.' });
+  }
 
   const updated = {
     donationdate: req.body.donationdate || null,
