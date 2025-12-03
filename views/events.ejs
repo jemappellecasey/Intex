@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="stylesheet" href="/css/style.css">
+
   <meta charset="UTF-8">
   <title>Events</title>
-  <style>
-    .layout { display: flex; gap: 16px; min-height: 100vh; }
-    .sidebar { min-width: 180px; border-right: 1px solid #ddd; padding: 12px 16px; }
-    .sidebar h2 { margin-top: 0; font-size: 18px; }
-    .sidebar a { display: block; margin: 6px 0; color: #333; text-decoration: none; }
-    .sidebar a.active { font-weight: bold; }
-    .main-content { flex: 1; padding: 16px; }
-  </style>
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/dashboard" aria-label="Back to dashboard">
+        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+      </a>
+    </div>
     <h2>Menu</h2>
     <nav>
       <a href="/dashboard">Dashboard</a>
