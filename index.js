@@ -206,43 +206,80 @@ app.use((req, res, next) => {
 const sr = process.env.SALT_ROUNDS;
 
 app.get("/signup", (req, res) => {
-  res.render("signup", { csrfToken: req.csrfToken(), error_message: null });
+  res.render("signup", {
+    csrfToken: req.csrfToken(),
+    error: [],
+    info: [],
+    success: []
+  });
 });
 
 app.post("/signup", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  const renderError = (msg) => {
     return res.render("signup", {
       csrfToken: req.csrfToken(),
-      error_message: "Email and password are required.",
+      error: [msg],
+      info: [],
+      success: []
     });
+  };
+
+  if (!email || !password) {
+    return renderError("Email and password are required.");
   }
 
   try {
     const normalizedEmail = email.trim().toLowerCase();
 
+    // 1) Check for existing user account
     const existing = await knex("users")
       .where({ email: normalizedEmail })
       .first();
 
     if (existing) {
-      return res.render("signup", {
-        csrfToken: req.csrfToken(),
-        error_message: "An account with that email already exists.",
-      });
+      return renderError("An account with that email already exists.");
     }
 
+    // 2) Hash password (assuming `sr` is your bcrypt salt rounds variable)
     const hash = await bcrypt.hash(password, sr);
 
+    // 3) Find or create a participant for this email
+    //    participants.email must be UNIQUE in your DB for this to be safe.
+    const participant = await knex("participants")
+      .where({ email: normalizedEmail })
+      .first();
+
+    let participantId;
+
+    if (participant) {
+      participantId = participant.participantid;
+    } else {
+      // Insert minimal participant row; fill other fields later in profile UI
+      const [newParticipant] = await knex("participants")
+        .insert({
+          email: normalizedEmail,
+          participantfirstname: "",
+          participantlastname: "",
+          participantrole: "participant"
+        })
+        .returning("*");
+
+      participantId = newParticipant.participantid;
+    }
+
+    // 4) Insert the user linked to that participant
     const [user] = await knex("users")
       .insert({
         email: normalizedEmail,
         passwordhashed: hash,
         role: "user",
+        participantid: participantId
       })
       .returning("*");
 
+    // 5) Log them in
     req.session.isLoggedIn = true;
     req.session.userId = user.userid;
     req.session.username = user.email;
@@ -251,12 +288,10 @@ app.post("/signup", async (req, res) => {
     return res.redirect("/dashboard");
   } catch (err) {
     console.error("signup error", err);
-    return res.render("signup", {
-      csrfToken: req.csrfToken(),
-      error_message: "Signup error. Please try again.",
-    });
+    return renderError("Signup error. Please try again.");
   }
 });
+
 
 
 // GET /check-email

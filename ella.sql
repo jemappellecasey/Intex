@@ -481,32 +481,44 @@ ALTER SEQUENCE public.surveys_surveyid_seq OWNED BY public.surveys.surveyid;
 
 
 
+-- TOC entry 233 (class 1259 OID 19534)
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
 CREATE TABLE public.users (
-    userid         SERIAL PRIMARY KEY,
-    email          VARCHAR(255) NOT NULL UNIQUE,
-    passwordhashed VARCHAR(255) NOT NULL,
-    role           VARCHAR(50) DEFAULT 'user',
-    createdat      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updatedat      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    userid          SERIAL PRIMARY KEY,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    passwordhashed  VARCHAR(255) NOT NULL,
+    role            VARCHAR(50) DEFAULT 'user',
+    participantid   integer,
+    createdat       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updatedat       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE public.users
+  ADD CONSTRAINT users_participantid_fkey
+  FOREIGN KEY (participantid)
+  REFERENCES public.participants(participantid)
+  ON DELETE SET NULL;
 
-CREATE OR REPLACE FUNCTION public.set_updatedat_timestamp()
-RETURNS TRIGGER AS $$
+ALTER TABLE public.users OWNER TO postgres;
+
+CREATE OR REPLACE FUNCTION public.setupdatedattimestamp()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
     NEW.updatedat = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_set_users_updatedat
 BEFORE UPDATE ON public.users
 FOR EACH ROW
-EXECUTE FUNCTION public.set_updatedat_timestamp();
+EXECUTE FUNCTION public.setupdatedattimestamp();
 
 
-
-ALTER TABLE public.users OWNER TO postgres;
 
 --
 -- TOC entry 232 (class 1259 OID 19533)
