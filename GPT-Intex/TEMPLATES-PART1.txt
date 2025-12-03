@@ -1,0 +1,344 @@
+# ALL EJS TEMPLATES FOR ELLA RISES
+# Split each section into its own file in the /views folder
+
+# ============================================================================
+# FILE: views/login.ejs
+# ============================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Ella Rises</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <div class="auth-box">
+      <div class="auth-header">
+        <h1>🎵 Ella Rises</h1>
+        <p>Event Management Portal</p>
+      </div>
+
+      <% if (error_message) { %>
+        <div class="alert alert-error">
+          <span>❌ <%= error_message %></span>
+        </div>
+      <% } %>
+
+      <form method="POST" action="/login" class="form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+
+      <div class="auth-footer">
+        <p><a href="/">← Back to Home</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+# ============================================================================
+# FILE: views/error.ejs
+# ============================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error - Ella Rises</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">🎵 Ella Rises</div>
+      <% if (isLoggedIn) { %>
+        <ul class="nav-menu">
+          <li><a href="/dashboard">Dashboard</a></li>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
+      <% } %>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <div class="container">
+      <div class="error-page">
+        <h1>⚠️ Error <%= status || 500 %></h1>
+        <p class="error-message"><%= message %></p>
+        <a href="/" class="btn btn-primary">Go Home</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2025 Ella Rises</p>
+  </footer>
+</body>
+</html>
+
+# ============================================================================
+# FILE: views/dashboard.ejs
+# ============================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Ella Rises</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">🎵 Ella Rises</div>
+      <ul class="nav-menu">
+        <li><a href="/dashboard">Dashboard</a></li>
+        <% if (isManager) { %>
+          <li><a href="/users">Users</a></li>
+        <% } %>
+        <li><a href="/participants">Participants</a></li>
+        <li><a href="/events">Events</a></li>
+        <li><a href="/surveys">Surveys</a></li>
+        <li><a href="/donations">Donations</a></li>
+        <li><a href="/logout" class="nav-logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <% if (error_message) { %>
+      <div class="alert alert-error">
+        <span>❌ <%= error_message %></span>
+      </div>
+    <% } %>
+
+    <div class="container">
+      <h1>Dashboard</h1>
+      <p class="welcome-text">Welcome back, <%= user.username %>!</p>
+
+      <!-- Statistics Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Total Participants</h3>
+          <p class="stat-number"><%= totalParticipants %></p>
+        </div>
+        <div class="stat-card">
+          <h3>Total Events</h3>
+          <p class="stat-number"><%= totalEvents %></p>
+        </div>
+        <div class="stat-card">
+          <h3>Upcoming Events</h3>
+          <p class="stat-number"><%= upcomingEvents.length %></p>
+        </div>
+        <div class="stat-card">
+          <h3>Recent Surveys</h3>
+          <p class="stat-number"><%= recentSurveys.length %></p>
+        </div>
+      </div>
+
+      <!-- Upcoming Events -->
+      <section class="section">
+        <h2>📅 Upcoming Events</h2>
+        <% if (upcomingEvents && upcomingEvents.length > 0) { %>
+          <div class="event-list">
+            <% upcomingEvents.forEach(event => { %>
+              <div class="event-item">
+                <h4><%= event.event_name %></h4>
+                <p>📍 <%= event.event_location || 'TBD' %></p>
+                <p>🕐 <%= new Date(event.event_date_time_start).toLocaleString() %></p>
+                <a href="/events" class="btn btn-small">View Events →</a>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <p class="text-muted">No upcoming events scheduled</p>
+        <% } %>
+      </section>
+
+      <!-- Quick Links -->
+      <section class="section">
+        <h2>Quick Links</h2>
+        <div class="quick-links">
+          <a href="/participants" class="link-card">👥 Manage Participants</a>
+          <a href="/events" class="link-card">📅 Manage Events</a>
+          <a href="/surveys" class="link-card">📊 View Surveys</a>
+          <a href="/donations" class="link-card">💝 Track Donations</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2025 Ella Rises</p>
+  </footer>
+</body>
+</html>
+
+# ============================================================================
+# FILE: views/userMaintenance.ejs
+# ============================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management - Ella Rises</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">🎵 Ella Rises</div>
+      <ul class="nav-menu">
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/users">Users</a></li>
+        <li><a href="/participants">Participants</a></li>
+        <li><a href="/events">Events</a></li>
+        <li><a href="/surveys">Surveys</a></li>
+        <li><a href="/donations">Donations</a></li>
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <% if (error_message) { %>
+      <div class="alert alert-error"><%= error_message %></div>
+    <% } %>
+    <% if (success_message) { %>
+      <div class="alert alert-success"><%= success_message %></div>
+    <% } %>
+
+    <div class="container">
+      <div class="page-header">
+        <h1>User Management</h1>
+        <a href="/users/add" class="btn btn-primary">+ Add User</a>
+      </div>
+
+      <!-- Search Bar -->
+      <form method="get" class="search-form">
+        <input type="text" name="search" placeholder="Search by username..." value="<%= search %>" class="search-input">
+        <button type="submit" class="btn btn-small">Search</button>
+      </form>
+
+      <!-- Users Table -->
+      <% if (users && users.length > 0) { %>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach(user => { %>
+              <tr>
+                <td><%= user.username %></td>
+                <td><span class="badge badge-<%= user.role === 'M' ? 'primary' : 'secondary' %>"><%= user.role === 'M' ? 'Manager' : 'User' %></span></td>
+                <td><%= new Date(user.created_at).toLocaleDateString() %></td>
+                <td class="actions">
+                  <a href="/users/<%= user.id %>/edit" class="btn btn-small">Edit</a>
+                  <form method="post" action="/users/<%= user.id %>/delete" style="display:inline;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn btn-small btn-danger" onclick="return confirm('Delete this user?');">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p class="text-muted">No users found</p>
+      <% } %>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2025 Ella Rises</p>
+  </footer>
+</body>
+</html>
+
+# ============================================================================
+# FILE: views/userForm.ejs
+# ============================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= user ? 'Edit User' : 'Add User' %> - Ella Rises</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">🎵 Ella Rises</div>
+      <ul class="nav-menu">
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/users">Users</a></li>
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <div class="container form-container">
+      <h1><%= user ? 'Edit User' : 'Add New User' %></h1>
+
+      <form method="POST" action="<%= user ? '/users/' + user.id + '/edit' : '/users/add' %>" class="form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="form-group">
+          <label for="username">Username *</label>
+          <input type="text" id="username" name="username" value="<%= user ? user.username : '' %>" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password"><%= user ? 'New Password (leave blank to keep current)' : 'Password' %> *</label>
+          <input type="password" id="password" name="password" <%= user ? '' : 'required' %>>
+        </div>
+
+        <div class="form-group">
+          <label for="role">Role *</label>
+          <select id="role" name="role" required>
+            <option value="">-- Select Role --</option>
+            <option value="M" <%= user && user.role === 'M' ? 'selected' : '' %>>Manager</option>
+            <option value="U" <%= user && user.role === 'U' ? 'selected' : '' %>>User</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a href="/users" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2025 Ella Rises</p>
+  </footer>
+</body>
+</html>

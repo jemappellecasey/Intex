@@ -1,0 +1,29 @@
+<!-- FILE: views/error.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error - Ella Rises</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">🎵 Ella Rises</div>
+    </div>
+  </nav>
+  <main class="main-container">
+    <div class="container">
+      <div class="error-page">
+        <h1>⚠️ Error <%= status || 500 %></h1>
+        <p class="error-message"><%= message %></p>
+        <a href="/" class="btn btn-primary">Go Home</a>
+      </div>
+    </div>
+  </main>
+  <footer class="footer">
+    <p>&copy; 2025 Ella Rises</p>
+  </footer>
+</body>
+</html>

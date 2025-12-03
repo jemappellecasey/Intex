@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Participant</title>
+</head>
+<body>
+
+  <h1>Edit Participant</h1>
+
+  <% if (error_message && error_message !== '') { %>
+    <p style="color:red;"><%= error_message %></p>
+  <% } %>
+
+  <!-- Editable participant information (only for admin users) -->
+  <section>
+    <h2>Basic Information</h2>
+
+    <form method="post" action="/participants/<%= participant.participantid %>/edit">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <table border="1" cellpadding="4" cellspacing="0">
+        <tr>
+          <th>Email</th>
+          <td>
+            <input type="email" name="email" value="<%= participant.email || '' %>" required>
+          </td>
+        </tr>
+
+        <tr>
+          <th>First Name</th>
+          <td>
+            <input type="text" name="participantfirstname" value="<%= participant.participantfirstname || '' %>" required>
+          </td>
+        </tr>
+
+        <tr>
+          <th>Last Name</th>
+          <td>
+            <input type="text" name="participantlastname" value="<%= participant.participantlastname || '' %>" required>
+          </td>
+        </tr>
+
+        <tr>
+          <th>Date of Birth</th>
+          <td>
+            <input type="date" name="participantdob"
+              value="<% if (participant.participantdob) { %>
+                       <%= participant.participantdob.toISOString
+                            ? participant.participantdob.toISOString().slice(0,10)
+                            : participant.participantdob %>
+                     <% } %>">
+          </td>
+        </tr>
+
+        <tr>
+          <th>Role</th>
+          <td>
+            <input type="text" name="participantrole" value="<%= participant.participantrole || '' %>">
+          </td>
+        </tr>
+
+        <tr>
+          <th>Phone Number</th>
+          <td>
+            <input type="text" name="participantphone" value="<%= participant.participantphone || '' %>">
+          </td>
+        </tr>
+
+        <tr>
+          <th>City</th>
+          <td>
+            <input type="text" name="participantcity" value="<%= participant.participantcity || '' %>">
+          </td>
+        </tr>
+
+        <tr>
+          <th>State</th>
+          <td>
+            <input type="text" name="participantstate" value="<%= participant.participantstate || '' %>">
+          </td>
+        </tr>
+
+        <tr>
+          <th>Zip</th>
+          <td>
+            <input type="text" name="participantzip" value="<%= participant.participantzip || '' %>">
+          </td>
+        </tr>
+
+        <tr>
+          <th>Field of Interest</th>
+          <td>
+            <input type="text" name="participantfieldofinterest" value="<%= participant.participantfieldofinterest || '' %>">
+          </td>
+        </tr>
+      </table>
+
+      <p>
+        <button type="submit">Save Changes</button>
+        <a href="/participants/<%= participant.participantid %>">Cancel</a>
+      </p>
+    </form>
+  </section>
+
+  <hr>
+
+  <!-- Display-only summary information (same content as viewParticipant.ejs) -->
+  <section>
+    <h2>Summary</h2>
+    <ul>
+      <li>
+        First Registration:
+        <% if (firstRegistration) { %>
+          <%= (new Date(firstRegistration)).toISOString().slice(0, 10) %>
+        <% } else { %> N/A <% } %>
+      </li>
+
+      <li>
+        Latest Registration:
+        <% if (lastRegistration) { %>
+          <%= (new Date(lastRegistration)).toISOString().slice(0, 10) %>
+        <% } else { %> N/A <% } %>
+      </li>
+
+      <li>Total Surveys: <%= surveyCount %></li>
+
+      <li>
+        Average Overall Survey Score:
+        <% if (avgOverallScore) { %>
+          <%= Number(avgOverallScore).toFixed(2) %>
+        <% } else { %> N/A <% } %>
+      </li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <!-- Event history (read-only) -->
+  <section>
+    <h2>Event History</h2>
+    <% if (events && events.length > 0) { %>
+      <table border="1" cellpadding="4" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Event Title</th>
+            <th>Event Type</th>
+            <th>Start Date/Time</th>
+            <th>Registration Status</th>
+            <th>Check-in Time</th>
+            <th>Attendance Flag</th>
+            <th>Registration Created At</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        <% events.forEach(function(ev) { %>
+          <tr>
+            <td><%= ev.eventtitle %></td>
+            <td><%= ev.eventtype %></td>
+
+            <td>
+              <% if (ev.eventdatetimestart) { %>
+                <%= (new Date(ev.eventdatetimestart))
+                      .toISOString().slice(0, 16).replace('T', ' ') %>
+              <% } else { %> N/A <% } %>
+            </td>
+
+            <td><%= ev.registrationstatus || 'N/A' %></td>
+
+            <td>
+              <% if (ev.registrationcheckintime) { %>
+                <%= (new Date(ev.registrationcheckintime))
+                      .toISOString().slice(0, 16).replace('T', ' ') %>
+              <% } else { %> N/A <% } %>
+            </td>
+
+            <td><%= ev.registrationattendanceflag ? 'Yes' : 'No' %></td>
+
+            <td>
+              <% if (ev.registrationcreatedat) { %>
+                <%= (new Date(ev.registrationcreatedat))
+                      .toISOString().slice(0, 16).replace('T', ' ') %>
+              <% } else { %> N/A <% } %>
+            </td>
+          </tr>
+        <% }); %>
+        </tbody>
+      </table>
+    <% } else { %>
+      <p>No event history found for this participant.</p>
+    <% } %>
+  </section>
+
+  <hr>
+
+  <!-- Surveys (read-only) -->
+  <section>
+    <h2>Post-Event Surveys</h2>
+
+    <% if (surveys && surveys.length > 0) { %>
+      <table border="1" cellpadding="4" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Event Title</th>
+            <th>Event Start</th>
+            <th>Satisfaction</th>
+            <th>Usefulness</th>
+            <th>Instructor</th>
+            <th>Recommendation</th>
+            <th>Overall</th>
+            <th>Submission Date</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        <% surveys.forEach(function(s) { %>
+          <tr>
+            <td><%= s.eventtitle %></td>
+
+            <td>
+              <% if (s.eventdatetimestart) { %>
+                <%= (new Date(s.eventdatetimestart))
+                      .toISOString().slice(0, 16).replace('T', ' ') %>
+              <% } else { %> N/A <% } %>
+            </td>
+
+            <td><%= s.surveysatisfactionscore %></td>
+            <td><%= s.surveyusefulnessscore %></td>
+            <td><%= s.surveyinstructorscore %></td>
+            <td><%= s.surveyrecommendationscore %></td>
+            <td><%= s.surveyoverallscore %></td>
+
+            <td>
+              <% if (s.surveysubmissiondate) { %>
+                <%= (new Date(s.surveysubmissiondate))
+                      .toISOString().slice(0, 16).replace('T', ' ') %>
+              <% } else { %> N/A <% } %>
+            </td>
+          </tr>
+        <% }); %>
+        </tbody>
+      </table>
+
+    <% } else { %>
+      <p>No surveys recorded for this participant.</p>
+    <% } %>
+  </section>
+
+  <hr>
+
+  <!-- Milestones (read-only) -->
+  <section>
+    <h2>Milestones</h2>
+
+    <% if (milestones && milestones.length > 0) { %>
+      <table border="1" cellpadding="4" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        <% milestones.forEach(function(m) { %>
+          <tr>
+            <td><%= m.milestonetitle %></td>
+            <td>
+              <% if (m.milestonedate) { %>
+                <%= (new Date(m.milestonedate)).toISOString().slice(0, 10) %>
+              <% } else { %> N/A <% } %>
+            </td>
+          </tr>
+        <% }); %>
+        </tbody>
+      </table>
+
+    <% } else { %>
+      <p>No milestones recorded for this participant.</p>
+    <% } %>
+  </section>
+
+  <hr>
+
+  <!-- Donations (read-only) -->
+  <section>
+    <h2>Donations</h2>
+
+    <% if (donations && donations.length > 0) { %>
+      <table border="1" cellpadding="4" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        <% donations.forEach(function(d) { %>
+          <tr>
+            <td>
+              <% if (d.donationdate) { %>
+                <%= (new Date(d.donationdate)).toISOString().slice(0, 10) %>
+              <% } else { %> N/A <% } %>
+            </td>
+            <td><%= d.donationamount %></td>
+          </tr>
+        <% }); %>
+        </tbody>
+      </table>
+
+    <% } else { %>
+      <p>No donations recorded for this participant.</p>
+    <% } %>
+  </section>
+
+</body>
+</html>

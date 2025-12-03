@@ -60,6 +60,8 @@ app.use(
           "https://public.tableau.com/javascripts/api/"
         ],
 
+        "script-src-attr": ["'self'", "'unsafe-inline'"],
+
         // Allow embedding Tableau dashboards (iframe/object)
         "frame-src": [
           "'self'",
@@ -143,7 +145,7 @@ app.use((req, res, next)=> {
 
 //This is security for website if the user are manager or not.
 function requireManager(req, res, next) {
-    if (req.session.isLoggedIn && req.session.role === 'A') {
+    if (req.session.isLoggedIn && req.session.role === 'admin') {
         return next();
     }
     return res.render('login', { error_message: 'You do not have permission to view this page.' });
@@ -220,42 +222,419 @@ app.get('/dashboard', (req, res) => {
         return res.render('login', { error_message: null });
     }
 
+    res.render('dashboard', { 
+        error_message: null,
+        isAdmin: req.session.role === 'admin',
+        Username: req.session.username
+    });
 });
 
-app.get('/participants', (req, res) => {
-    if (!req.session.isLoggedIn) {
-        return res.render('login', { error_message: null });
+
+app.get('/participants', async (req, res) => {
+  if (!req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const pageSize = 25;
+  const page = parseInt(req.query.page, 10) || 1;
+  const offset = (page - 1) * pageSize;
+
+  // filters from query string
+  const { milestoneTitle, name, email, phone } = req.query;
+
+  try {
+    // Base query with LEFT JOIN to milestones
+    const baseQuery = knex('participants as p')
+      .leftJoin('milestones as m', 'p.participantid', 'm.participantid')
+      .groupBy('p.participantid')
+      .select(
+        'p.*',
+        // aggregate milestone titles into one string per participant
+        knex.raw(
+          "COALESCE(string_agg(DISTINCT m.milestonetitle, ', '), '') AS milestones"
+        )
+      );
+
+    // --- Filters ---
+    if (milestoneTitle && milestoneTitle.trim() !== '') {
+      baseQuery.whereILike('m.milestonetitle', `%${milestoneTitle.trim()}%`);
     }
 
-    knex
-        .select('*')
-        .from('participants')
-        .then(participants => {
-            res.render('participants', {
-                participants,
-                error_message: '',
-                isManager: req.session.role === 'A',
-                Username: req.session.username
+    if (name && name.trim() !== '') {
+      const lowerName = name.trim().toLowerCase();
+      baseQuery.whereRaw(
+        "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+        [`%${lowerName}%`]
+      );
+    }
 
-            });
-        })
+    if (email && email.trim() !== '') {
+      baseQuery.whereILike('p.email', `%${email.trim()}%`);
+    }
 
-        
-        .catch(error => {
-            console.error('Error loading users for dashboard:', error);
-            res.render('participants', {
-                participants: [],
-                error_message: `Database error: ${error.message}`,
-                isManager: req.session.role === 'A'
-            });
-        });
+    if (phone && phone.trim() !== '') {
+      baseQuery.whereILike('p.participantphone', `%${phone.trim()}%`);
+    }
 
+    // Same filters for total count
+    const countQuery = knex('participants as p')
+      .leftJoin('milestones as m', 'p.participantid', 'm.participantid')
+      .modify((q) => {
+        if (milestoneTitle && milestoneTitle.trim() !== '') {
+          q.whereILike('m.milestonetitle', `%${milestoneTitle.trim()}%`);
+        }
+        if (name && name.trim() !== '') {
+          const lowerName = name.trim().toLowerCase();
+          q.whereRaw(
+            "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+            [`%${lowerName}%`]
+          );
+        }
+        if (email && email.trim() !== '') {
+          q.whereILike('p.email', `%${email.trim()}%`);
+        }
+        if (phone && phone.trim() !== '') {
+          q.whereILike('p.participantphone', `%${phone.trim()}%`);
+        }
+      })
+      .countDistinct('p.participantid as total');
 
+    const [participants, totalResult] = await Promise.all([
+      baseQuery.limit(pageSize).offset(offset),
+      countQuery,
+    ]);
+
+    const total = parseInt(totalResult[0].total, 10) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    console.log('Participants length:', participants.length);
+    console.log('Filter milestoneTitle:', milestoneTitle);
+
+    res.render('participants', {
+      participants,
+      error_message: '',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      currentPage: page,
+      totalPages,
+      milestoneTitle: milestoneTitle || '',
+      name: name || '',
+      email: email || '',
+      phone: phone || '',
+    });
+  } catch (error) {
+    console.error('Error loading participants:', error);
+    res.render('participants', {
+      participants: [],
+      error_message: `Database error: ${error.message}`,
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1,
+      milestoneTitle: milestoneTitle || '',
+      name: name || '',
+      email: email || '',
+      phone: phone || '',
+    });
+  }
 });
 
-//app.get('/participants/:id', ...)
-//app.get('/participants/:id/edit', ...)
-//app.post('/participants/:id/delete', ...)
+// View-only participant details page
+app.get('/participants/:participantid', async (req, res) => {
+  if (!req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const participantid = req.params.participantid;
+
+  try {
+    // 1) Participant 基本情報 + Origin 情報
+    const participant = await knex('participants as p')
+      .leftJoin('origintypes as o', 'p.origintypepairid', 'o.origintypepairid')
+      .where('p.participantid', participantid)
+      .select(
+        'p.*',
+        'o.participantorigin',
+        'o.participantorigintype'
+      )
+      .first();
+
+    if (!participant) {
+      console.error('Participant not found for id =', participantid);
+      return res.render('viewParticipant', {
+        participant: null,
+        events: [],
+        milestones: [],
+        surveys: [],
+        donations: [],
+        avgOverallScore: null,
+        surveyCount: 0,
+        firstRegistration: null,
+        lastRegistration: null,
+        isAdmin: req.session.role === 'admin',
+        Username: req.session.username,
+        error_message: 'Participant not found.'
+      });
+    }
+
+    // 2) Events + Registrations
+    const events = await knex('registrations as r')
+      .join('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
+      .join('events as e', 'ed.eventid', 'e.eventid')
+      .where('r.participantid', participantid)
+      .select(
+        'e.eventname as eventtitle',
+        'e.eventtype',
+        'ed.eventdatetimestart',
+        'r.registrationstatus',
+        'r.registrationcheckintime',
+        'r.registrationattendanceflag',
+        'r.registrationcreatedat'
+      )
+      .orderBy('ed.eventdatetimestart', 'asc');
+
+    // 3) Milestones
+    const milestones = await knex('milestones')
+      .where({ participantid })
+      .orderBy('milestonedate', 'asc');
+
+    // 4) Surveys (post) 一覧
+    const surveys = await knex('surveys as s')
+      .join('events as e', 's.eventid', 'e.eventid')
+      .where('s.participantid', participantid)
+      .select(
+        's.surveyid',
+        'e.eventname as eventtitle',
+        's.eventdatetimestart',
+        's.surveysatisfactionscore',
+        's.surveyusefulnessscore',
+        's.surveyinstructorscore',
+        's.surveyrecommendationscore',
+        's.surveyoverallscore',
+        's.surveysubmissiondate'
+      )
+      .orderBy('s.surveysubmissiondate', 'asc');
+
+    // 5) Survey 集計
+    const surveyAgg = await knex('surveys')
+      .where({ participantid })
+      .avg({ avgOverallScore: 'surveyoverallscore' })
+      .count({ surveyCount: '*' })
+      .first();
+
+    const avgOverallScore = surveyAgg && surveyAgg.avgOverallScore
+      ? Number(surveyAgg.avgOverallScore)
+      : null;
+    const surveyCount = surveyAgg ? Number(surveyAgg.surveyCount) : 0;
+
+    // 6) Registrations の最初・最後
+    const regAgg = await knex('registrations')
+      .where({ participantid })
+      .min({ firstRegistration: 'registrationcreatedat' })
+      .max({ lastRegistration: 'registrationcreatedat' })
+      .first();
+
+    const firstRegistration = regAgg ? regAgg.firstRegistration : null;
+    const lastRegistration = regAgg ? regAgg.lastRegistration : null;
+
+    // 7) Donations 一覧
+    const donations = await knex('donations')
+      .where({ participantid })
+      .orderBy('donationdate', 'asc');
+
+    console.log('View page loaded for participantid =', participantid);
+
+    return res.render('viewParticipant', {
+      participant,
+      events,
+      milestones,
+      surveys,
+      donations,
+      avgOverallScore,
+      surveyCount,
+      firstRegistration,
+      lastRegistration,
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      error_message: ''
+    });
+  } catch (err) {
+    console.error('Error loading participant details:', err);
+    return res.render('viewParticipant', {
+      participant: null,
+      events: [],
+      milestones: [],
+      surveys: [],
+      donations: [],
+      avgOverallScore: null,
+      surveyCount: 0,
+      firstRegistration: null,
+      lastRegistration: null,
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      error_message: 'Error loading participant details.'
+    });
+  }
+});
+
+// Edit page: form + read-only summary (admin only)
+app.get('/participants/:participantid/edit', async (req, res) => {
+  if (!req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  if (req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
+  }
+
+  const participantid = req.params.participantid;
+
+  try {
+    const participant = await knex('participants as p')
+      .leftJoin('origintypes as o', 'p.origintypepairid', 'o.origintypepairid')
+      .where('p.participantid', participantid)
+      .select(
+        'p.*',
+        'o.participantorigin',
+        'o.participantorigintype'
+      )
+      .first();
+
+    if (!participant) {
+      console.error('Edit: participant not found for id =', participantid);
+      return res.send('Participant not found.');
+    }
+
+    const events = await knex('registrations as r')
+      .join('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
+      .join('events as e', 'ed.eventid', 'e.eventid')
+      .where('r.participantid', participantid)
+      .select(
+        'e.eventname as eventtitle',
+        'e.eventtype',
+        'ed.eventdatetimestart',
+        'r.registrationstatus',
+        'r.registrationcheckintime',
+        'r.registrationattendanceflag',
+        'r.registrationcreatedat'
+      )
+      .orderBy('ed.eventdatetimestart', 'asc');
+
+    const milestones = await knex('milestones')
+      .where({ participantid })
+      .orderBy('milestonedate', 'asc');
+
+    const surveys = await knex('surveys as s')
+      .join('events as e', 's.eventid', 'e.eventid')
+      .where('s.participantid', participantid)
+      .select(
+        's.surveyid',
+        'e.eventname as eventtitle',
+        's.eventdatetimestart',
+        's.surveysatisfactionscore',
+        's.surveyusefulnessscore',
+        's.surveyinstructorscore',
+        's.surveyrecommendationscore',
+        's.surveyoverallscore',
+        's.surveysubmissiondate'
+      )
+      .orderBy('s.surveysubmissiondate', 'asc');
+
+    const surveyAgg = await knex('surveys')
+      .where({ participantid })
+      .avg({ avgOverallScore: 'surveyoverallscore' })
+      .count({ surveyCount: '*' })
+      .first();
+
+    const avgOverallScore = surveyAgg && surveyAgg.avgOverallScore
+      ? Number(surveyAgg.avgOverallScore)
+      : null;
+    const surveyCount = surveyAgg ? Number(surveyAgg.surveyCount) : 0;
+
+    const regAgg = await knex('registrations')
+      .where({ participantid })
+      .min({ firstRegistration: 'registrationcreatedat' })
+      .max({ lastRegistration: 'registrationcreatedat' })
+      .first();
+
+    const firstRegistration = regAgg ? regAgg.firstRegistration : null;
+    const lastRegistration = regAgg ? regAgg.lastRegistration : null;
+
+    const donations = await knex('donations')
+      .where({ participantid })
+      .orderBy('donationdate', 'asc');
+
+    console.log('Edit page loaded for participantid =', participantid);
+
+    return res.render('participant_edit', {
+      participant,
+      events,
+      milestones,
+      surveys,
+      donations,
+      avgOverallScore,
+      surveyCount,
+      firstRegistration,
+      lastRegistration,
+      csrfToken: req.csrfToken(),
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      error_message: ''
+    });
+  } catch (err) {
+    console.error('Error loading participant (edit route):', err);
+    return res.send('Error loading participant.');
+  }
+});
+
+
+//Update the participant information
+app.post('/participants/:participantid/edit', (req, res) => {
+    const participantid = req.params.participantid;
+
+    const updated = {
+        email: req.body.email,
+        participantfirstname: req.body.participantfirstname,
+        participantlastname: req.body.participantlastname,
+        participantdob: req.body.participantdob,
+        participantrole: req.body.participantrole,
+        participantphone: req.body.participantphone,
+        participantcity: req.body.participantcity,
+        participantstate: req.body.participantstate,
+        participantzip: req.body.participantzip,
+        participantfieldofinterest: req.body.participantfieldofinterest
+    };
+
+    knex('participants')
+        .where({ participantid })
+        .update(updated)
+        .then(() => res.redirect('/participants'))
+        .catch(err => {
+            console.error("Error updating participant:", err);
+            res.send("Update error.");
+        });
+});
+
+
+app.post('/deleteparticipants/:participantid', (req, res) => {
+    // Get participant ID from URL parameter
+    const participantid = req.params.participantid;
+
+    knex('participants')
+      // Delete the record matching this participant ID
+      .where('participantid', participantid)
+      .del()
+      .then(() => {
+        // After deleting, redirect back to the participants list
+        res.redirect('/participants');
+      })
+      .catch(err => {
+        // Log any database errors for debugging
+        console.error(err);
+        res.status(500).json({ err });
+      });
+});
+
 
 app.listen(port, () => {
     console.log("The server is listening");
