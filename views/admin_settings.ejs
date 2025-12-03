@@ -18,28 +18,39 @@
   <table border="1" cellspacing="0" cellpadding="4">
     <thead>
       <tr>
-        <th>Username</th>
+        <th>User ID</th>
         <th>Email</th>
         <th>Role</th>
-        <th>Participant ID</th>
+        <th>Verified</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
     <% users.forEach(function(u) { %>
       <tr>
-        <td><%= u.username %></td>
-        <td><%= u.email || 'N/A' %></td>
+        <td><%= u.userid %></td>
+        <td><%= u.email %></td>
         <td>
           <form method="post" action="/admin/users/<%= u.userid %>/role" style="display:inline;">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <select name="role">
-              <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>admin</option>
+              <option value="manager" <%= u.role === 'manager' ? 'selected' : '' %>>manager</option>
               <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>user</option>
+              <option value="secretary" <%= u.role === 'secretary' ? 'selected' : '' %>>secretary</option>
             </select>
             <button type="submit">Save</button>
           </form>
         </td>
-        <td><%= u.participantid || 'None' %></td>
+        <td><%= u.isverified ? 'Yes' : 'No' %></td>
+        <td>
+          <form method="post"
+                action="/admin/users/<%= u.userid %>/delete"
+                onsubmit="return confirm('Delete this user?');"
+                style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
       </tr>
     <% }); %>
     </tbody>

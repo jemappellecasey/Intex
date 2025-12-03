@@ -172,6 +172,52 @@ app.use((req, res, next) => {
       return res.render('login', { error_message: 'You do not have permission to view this page.' });
   }
   
+  // Helper: resolve and cache participantId for the logged-in user.
+  async function ensureParticipantId(req) {
+    if (!req.session || !req.session.userId) {
+      return null;
+    }
+
+    const cached = req.session.participantId;
+    if (cached && !Number.isNaN(parseInt(cached, 10))) {
+      return parseInt(cached, 10);
+    }
+
+    try {
+      // Read user row (email is required in the current schema)
+      const userRow = await knex('users')
+        .select('email')
+        .where('userid', req.session.userId)
+        .first();
+
+      let participantId = null;
+
+      // Fallback: map by email to participants.email
+      const lookupEmail = (userRow && userRow.email)
+        ? userRow.email
+        : (req.session.username && req.session.username.includes('@') ? req.session.username : null);
+
+      if (lookupEmail) {
+        const participantRow = await knex('participants')
+          .select('participantid')
+          .whereILike('email', lookupEmail)
+          .first();
+        if (participantRow && participantRow.participantid) {
+          participantId = parseInt(participantRow.participantid, 10);
+        }
+      }
+
+      if (participantId && !Number.isNaN(participantId)) {
+        req.session.participantId = participantId;
+        return participantId;
+      }
+    } catch (err) {
+      console.error('Error resolving participantId for session', err);
+    }
+
+    return null;
+  }
+  
   // GET /signup
   app.get("/signup", (req, res) => {
   res.render("signup", { csrfToken: req.csrfToken() });
@@ -282,21 +328,13 @@ app.get("/verify-email/:token", async (req, res) => {
 app.get('/admin/settings', requireManager, async (req, res) => {
   try {
     const users = await knex('users')
-      .leftJoin('participants as p', 'users.participantid', 'p.participantid')
-      .select(
-        'users.userid',
-        'users.username',
-        // Some schemas may not have users.email; fall back to participant email only.
-        'p.email',
-        'users.role',
-        'users.participantid'
-      )
-      .orderBy('username', 'asc');
+      .select('userid', 'email', 'role', 'isverified')
+      .orderBy('userid', 'asc');
 
     return res.render('admin_settings', {
       users,
       error_message: '',
-      isAdmin: true,
+      isManager: true,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -305,7 +343,7 @@ app.get('/admin/settings', requireManager, async (req, res) => {
     return res.render('admin_settings', {
       users: [],
       error_message: 'Error loading users.',
-      isAdmin: true,
+      isManager: true,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -316,22 +354,15 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
   const { userid } = req.params;
   const { role } = req.body;
 
-  const allowedRoles = ['admin', 'user'];
+  const allowedRoles = ['manager', 'user', 'secretary'];
   if (!allowedRoles.includes(role)) {
     const users = await knex('users')
-      .leftJoin('participants as p', 'users.participantid', 'p.participantid')
-      .select(
-        'users.userid',
-        'users.username',
-        'p.email',
-        'users.role',
-        'users.participantid'
-      )
-      .orderBy('username', 'asc');
+      .select('userid', 'email', 'role', 'isverified')
+      .orderBy('userid', 'asc');
     return res.render('admin_settings', {
       users,
       error_message: 'Invalid role.',
-      isAdmin: true,
+      isManager: true,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -345,19 +376,37 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
   } catch (err) {
     console.error('Error updating user role:', err);
     const users = await knex('users')
-      .leftJoin('participants as p', 'users.participantid', 'p.participantid')
-      .select(
-        'users.userid',
-        'users.username',
-        'p.email',
-        'users.role',
-        'users.participantid'
-      )
-      .orderBy('username', 'asc');
+      .select('userid', 'email', 'role', 'isverified')
+      .orderBy('userid', 'asc');
     return res.render('admin_settings', {
       users,
       error_message: 'Error updating user role.',
-      isAdmin: true,
+      isManager: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+// Admin: delete user
+app.post('/admin/users/:userid/delete', requireManager, async (req, res) => {
+  const { userid } = req.params;
+
+  try {
+    await knex('users')
+      .where({ userid })
+      .del();
+
+    return res.redirect('/admin/settings');
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    const users = await knex('users')
+      .select('userid', 'email', 'role', 'isverified')
+      .orderBy('userid', 'asc');
+    return res.render('admin_settings', {
+      users,
+      error_message: 'Error deleting user.',
+      isManager: true,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -390,7 +439,7 @@ app.post('/login', async (req, res) => {
     try {
         // get the one username
         const user = await knex('users')
-            .select('userid', 'username', 'password', 'role', 'participantid')
+            .select('userid', 'username', 'email', 'password', 'role')
             .where('username', sName)
             .first();
 
@@ -412,10 +461,13 @@ app.post('/login', async (req, res) => {
 
         // There are going to set the session .
         req.session.isLoggedIn = true;
-        req.session.username = user.username;
+        req.session.username = user.username || user.email;
         req.session.role = user.role;
         req.session.userId = user.userid;
-        req.session.participantId = user.participantid ? parseInt(user.participantid, 10) : null;
+        req.session.participantId = null;
+
+        // Try to map participant by email when participantid is not stored on users.
+        await ensureParticipantId(req);
 
         return res.redirect('/dashboard');
 
@@ -453,9 +505,8 @@ app.post("/dev-login-bypass", async (req, res) => {
     req.session.username = user.username || user.email; // depending on your schema
     req.session.role = user.role;
     req.session.userId = user.userid;
-    req.session.participantId = user.participantid
-      ? parseInt(user.participantid, 10)
-      : null;
+    req.session.participantId = null;
+    await ensureParticipantId(req);
     console.log("sdfsfd")
     return res.redirect("/dashboard");
   } catch (err) {
@@ -496,25 +547,7 @@ app.get('/participants', async (req, res) => {
   }
 
   const isManager = req.session.role === 'manager';
-  let participantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
-
-  // If the session lacks participantId, reload it from users and store it (participant role only).
-  if (!isManager && (!participantId || Number.isNaN(participantId)) && req.session.userId) {
-    try {
-      const userRow = await knex('users')
-        .select('participantid')
-        .where('userid', req.session.userId)
-        .first();
-      if (userRow && userRow.participantid) {
-        participantId = parseInt(userRow.participantid, 10);
-        req.session.participantId = participantId;
-      }
-    } catch (lookupErr) {
-      console.error('Error reloading participantid for user', lookupErr);
-    }
-  }
+  const participantId = await ensureParticipantId(req);
 
   // Participant role without a linked participantId returns early.
   if (!isManager && (!participantId || Number.isNaN(participantId))) {
@@ -1250,9 +1283,7 @@ app.get('/events', async (req, res) => {
   }
 
   const isManager = req.session.role === 'manager';
-  const participantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
+  const participantId = await ensureParticipantId(req);
 
   const pageSize = 25;
 
@@ -1595,9 +1626,7 @@ app.get('/surveys', async (req, res) => {
   }
 
   const isManager = req.session.role === 'manager';
-  const participantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
+  const participantId = await ensureParticipantId(req);
 
   const pageSize = 25;
   const page = parseInt(req.query.page, 10) || 1;
@@ -2109,9 +2138,25 @@ app.get('/milestones', async (req, res) => {
   }
 
   const isManager = req.session.role === 'manager';
-  const sessionParticipantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
+  const sessionParticipantId = await ensureParticipantId(req);
+
+  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+    return res.render('milestones', {
+      milestones: [],
+      error_message: 'No participant record is linked to this user.',
+      isManager,
+      selfParticipantId: sessionParticipantId,
+      Username: req.session.username,
+      participantName: '',
+      email: '',
+      milestoneTitle: '',
+      startDate: '',
+      endDate: '',
+      currentPage: 1,
+      totalPages: 1,
+      csrfToken: req.csrfToken()
+    });
+  }
 
   const pageSize = 25;
   const page = parseInt(req.query.page, 10) || 1;
@@ -2243,14 +2288,12 @@ app.get('/milestones', async (req, res) => {
 // =====================================
 // Milestones - new (manager only, GET)
 // =====================================
-app.get('/milestones/new', (req, res) => {
+app.get('/milestones/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
   const isManager = req.session.role === 'manager';
-  const sessionParticipantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
+  const sessionParticipantId = await ensureParticipantId(req);
 
   if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('login', {
@@ -2502,9 +2545,7 @@ app.get('/donations', async (req, res) => {
   }
 
   const isManager = req.session.role === 'manager';
-  const sessionParticipantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
+  const sessionParticipantId = await ensureParticipantId(req);
 
   const pageSize = 25;
   const page = parseInt(req.query.page, 10) || 1;
@@ -2522,6 +2563,7 @@ app.get('/donations', async (req, res) => {
       error_message: 'No participant record is linked to this user.',
       isManager,
       Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
       name,
       email,
       startDate,
@@ -2636,6 +2678,7 @@ app.get('/donations', async (req, res) => {
       error_message: '',
       isManager,
       Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
       name,
       email,
       startDate,
@@ -2652,6 +2695,7 @@ app.get('/donations', async (req, res) => {
       error_message: 'Error loading donations.',
       isManager,
       Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
       name,
       email,
       startDate,

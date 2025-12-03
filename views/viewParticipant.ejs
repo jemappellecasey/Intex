@@ -284,7 +284,7 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
     <!-- Back / Edit links -->
     <p>
       <a href="/participants">Back to Participants List</a>
-      <% if (isAdmin) { %>
+      <% if (isManager) { %>
         | <a href="/participants/<%= participant.participantid %>/edit">Edit Participant</a>
       <% } %>
     </p>

@@ -17,29 +17,31 @@
 <!-- ============================= -->
 <!-- SEARCH / FILTER SECTION       -->
 <!-- ============================= -->
-<section>
-  <h2>Search Events</h2>
-  <form method="get" action="/events">
-    <label>
-      Event Name:
-      <input type="text" name="name" value="<%= name || '' %>">
-    </label>
+<% if (isManager) { %>
+  <section>
+    <h2>Search Events</h2>
+    <form method="get" action="/events">
+      <label>
+        Event Name:
+        <input type="text" name="name" value="<%= name || '' %>">
+      </label>
 
-    <label>
-      Start Date:
-      <input type="date" name="startDate" value="<%= startDate || '' %>">
-    </label>
+      <label>
+        Start Date:
+        <input type="date" name="startDate" value="<%= startDate || '' %>">
+      </label>
 
-    <label>
-      End Date:
-      <input type="date" name="endDate" value="<%= endDate || '' %>">
-    </label>
+      <label>
+        End Date:
+        <input type="date" name="endDate" value="<%= endDate || '' %>">
+      </label>
 
-    <button type="submit">Search</button>
-  </form>
-</section>
+      <button type="submit">Search</button>
+    </form>
+  </section>
 
-<hr>
+  <hr>
+<% } %>
 
 <!-- ============================= -->
 <!-- UPCOMING EVENTS (25 per page) -->

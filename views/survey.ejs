@@ -25,36 +25,38 @@
 <!-- ============================= -->
 <!-- SEARCH / FILTER SECTION       -->
 <!-- ============================= -->
-<section>
-  <h2>Search Surveys</h2>
+<% if (isManager) { %>
+  <section>
+    <h2>Search Surveys</h2>
 
-  <!-- GET so that paging links can keep the same filters -->
-  <form method="get" action="/surveys">
-    <label>
-      Event Name:
-      <input type="text" name="eventName" value="<%= eventName || '' %>">
-    </label>
+    <!-- GET so that paging links can keep the same filters -->
+    <form method="get" action="/surveys">
+      <label>
+        Event Name:
+        <input type="text" name="eventName" value="<%= eventName || '' %>">
+      </label>
 
-    <label>
-      Participant Name:
-      <input type="text" name="participantName" value="<%= participantName || '' %>">
-    </label>
+      <label>
+        Participant Name:
+        <input type="text" name="participantName" value="<%= participantName || '' %>">
+      </label>
 
-    <label>
-      From Date:
-      <input type="date" name="startDate" value="<%= startDate || '' %>">
-    </label>
+      <label>
+        From Date:
+        <input type="date" name="startDate" value="<%= startDate || '' %>">
+      </label>
 
-    <label>
-      To Date:
-      <input type="date" name="endDate" value="<%= endDate || '' %>">
-    </label>
+      <label>
+        To Date:
+        <input type="date" name="endDate" value="<%= endDate || '' %>">
+      </label>
 
-    <button type="submit">Search</button>
-  </form>
-</section>
+      <button type="submit">Search</button>
+    </form>
+  </section>
 
-<hr>
+  <hr>
+<% } %>
 
 <% if (isManager) { %>
   <!-- ============================= -->

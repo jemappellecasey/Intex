@@ -18,39 +18,41 @@
 <!-- ============================= -->
 <!-- SEARCH / FILTER SECTION       -->
 <!-- ============================= -->
-<section>
-  <h2>Search Milestones</h2>
-  <form method="get" action="/milestones">
-    <label>
-      Participant Name:
-      <input type="text" name="participantName" value="<%= participantName || '' %>">
-    </label>
+<% if (isManager) { %>
+  <section>
+    <h2>Search Milestones</h2>
+    <form method="get" action="/milestones">
+      <label>
+        Participant Name:
+        <input type="text" name="participantName" value="<%= participantName || '' %>">
+      </label>
 
-    <label>
-      Email:
-      <input type="text" name="email" value="<%= email || '' %>">
-    </label>
+      <label>
+        Email:
+        <input type="text" name="email" value="<%= email || '' %>">
+      </label>
 
-    <label>
-      Milestone Title:
-      <input type="text" name="milestoneTitle" value="<%= milestoneTitle || '' %>">
-    </label>
+      <label>
+        Milestone Title:
+        <input type="text" name="milestoneTitle" value="<%= milestoneTitle || '' %>">
+      </label>
 
-    <label>
-      Start Date:
-      <input type="date" name="startDate" value="<%= startDate || '' %>">
-    </label>
+      <label>
+        Start Date:
+        <input type="date" name="startDate" value="<%= startDate || '' %>">
+      </label>
 
-    <label>
-      End Date:
-      <input type="date" name="endDate" value="<%= endDate || '' %>">
-    </label>
+      <label>
+        End Date:
+        <input type="date" name="endDate" value="<%= endDate || '' %>">
+      </label>
 
-    <button type="submit">Search</button>
-  </form>
-</section>
+      <button type="submit">Search</button>
+    </form>
+  </section>
 
-<hr>
+  <hr>
+<% } %>
 
 <!-- ============================= -->
 <!-- LIST + PAGINATION             -->
