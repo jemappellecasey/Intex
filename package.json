@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.943.0",
     "@dr.pogodin/csurf": "^1.16.6",
     "bcrypt": "^6.0.0",
     "connect-flash": "^0.1.1",
