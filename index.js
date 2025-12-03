@@ -772,6 +772,316 @@ app.post('/deleteparticipants/:participantid', (req, res) => {
         res.status(500).json({ err });
       });
 });
+// =========================
+// Events list (search + paging)
+// =========================
+app.get('/events', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const pageSize = 25;
+
+  // Separate page numbers for upcoming / past
+  const upcomingPage = parseInt(req.query.upcomingPage, 10) || 1;
+  const pastPage = parseInt(req.query.pastPage, 10) || 1;
+
+  const { name, startDate, endDate } = req.query;
+  const now = new Date();
+
+  // Helper: apply filters (name, startDate, endDate)
+  function applyEventFilters(q) {
+    if (name && name.trim() !== '') {
+      q.whereILike('e.eventname', `%${name.trim()}%`);
+    }
+    if (startDate && startDate.trim() !== '') {
+      // startDate is yyyy-mm-dd; compare as >= that date
+      q.where('ed.eventdatetimestart', '>=', startDate);
+    }
+    if (endDate && endDate.trim() !== '') {
+      // <= endDate end-of-day
+      q.where('ed.eventdatetimestart', '<', new Date(endDate + 'T23:59:59'));
+    }
+  }
+
+  // Base select clause (used for both upcoming / past)
+  function baseSelect(q) {
+    return q
+      .select(
+        'ed.eventdetailsid',
+        'e.eventid',
+        'e.eventname',
+        'e.eventdescription',
+        'ed.eventdatetimestart',
+        'ed.eventdatetimeend',
+        'ed.eventlocation',
+        'ed.eventcapacity',
+        'ed.eventregistrationdeadline',
+        // number of registrations
+        knex.raw('COUNT(r.registrationid) AS registeredcount'),
+        // number of attendees (attendance flag true)
+        knex.raw(
+          "COALESCE(SUM(CASE WHEN r.registrationattendanceflag = true THEN 1 ELSE 0 END), 0) AS attendedcount"
+        )
+      )
+      .groupBy(
+        'ed.eventdetailsid',
+        'e.eventid',
+        'e.eventname',
+        'e.eventdescription',
+        'ed.eventdatetimestart',
+        'ed.eventdatetimeend',
+        'ed.eventlocation',
+        'ed.eventcapacity',
+        'ed.eventregistrationdeadline'
+      );
+  }
+
+  // Build upcoming events query
+  function buildUpcomingQuery() {
+    const q = knex('eventdetails as ed')
+      .join('events as e', 'ed.eventid', 'e.eventid')
+      .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid');
+    applyEventFilters(q);
+    q.where('ed.eventdatetimestart', '>=', now);
+    q.orderBy('ed.eventdatetimestart', 'asc');
+    return baseSelect(q);
+  }
+
+  // Build past events query
+  function buildPastQuery() {
+    const q = knex('eventdetails as ed')
+      .join('events as e', 'ed.eventid', 'e.eventid')
+      .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid');
+    applyEventFilters(q);
+    q.where('ed.eventdatetimestart', '<', now);
+    q.orderBy('ed.eventdatetimestart', 'desc');
+    return baseSelect(q);
+  }
+
+  try {
+    const upcomingOffset = (upcomingPage - 1) * pageSize;
+    const pastOffset = (pastPage - 1) * pageSize;
+
+    const [
+      upcomingEvents,
+      upcomingCountRows,
+      pastEvents,
+      pastCountRows
+    ] = await Promise.all([
+      buildUpcomingQuery().limit(pageSize).offset(upcomingOffset),
+      // count distinct eventdetailsid for upcoming
+      (function () {
+        const q = knex('eventdetails as ed')
+          .join('events as e', 'ed.eventid', 'e.eventid');
+        applyEventFilters(q);
+        q.where('ed.eventdatetimestart', '>=', now);
+        return q.countDistinct('ed.eventdetailsid as total');
+      })(),
+      buildPastQuery().limit(pageSize).offset(pastOffset),
+      // count distinct eventdetailsid for past
+      (function () {
+        const q = knex('eventdetails as ed')
+          .join('events as e', 'ed.eventid', 'e.eventid');
+        applyEventFilters(q);
+        q.where('ed.eventdatetimestart', '<', now);
+        return q.countDistinct('ed.eventdetailsid as total');
+      })()
+    ]);
+
+    const upcomingTotal =
+      upcomingCountRows && upcomingCountRows.length > 0
+        ? parseInt(upcomingCountRows[0].total, 10) || 0
+        : 0;
+    const pastTotal =
+      pastCountRows && pastCountRows.length > 0
+        ? parseInt(pastCountRows[0].total, 10) || 0
+        : 0;
+
+    const upcomingTotalPages = Math.max(
+      1,
+      Math.ceil(upcomingTotal / pageSize)
+    );
+    const pastTotalPages = Math.max(1, Math.ceil(pastTotal / pageSize));
+
+    return res.render('events', {
+      error_message: '',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+
+      name: name || '',
+      startDate: startDate || '',
+      endDate: endDate || '',
+
+      upcomingEvents,
+      upcomingCurrentPage: upcomingPage,
+      upcomingTotalPages,
+
+      pastEvents,
+      pastCurrentPage: pastPage,
+      pastTotalPages
+    });
+  } catch (err) {
+    console.error('Error loading events:', err);
+    return res.render('events', {
+      error_message: 'Error loading events.',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+
+      name: name || '',
+      startDate: startDate || '',
+      endDate: endDate || '',
+
+      upcomingEvents: [],
+      upcomingCurrentPage: 1,
+      upcomingTotalPages: 1,
+
+      pastEvents: [],
+      pastCurrentPage: 1,
+      pastTotalPages: 1
+    });
+  }
+});
+
+// Show edit form for an eventdetail (manager only)
+app.get('/events/:eventdetailsid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to edit events.' });
+  }
+
+  const { eventdetailsid } = req.params;
+
+  try {
+    const event = await knex('eventdetails as ed')
+      .join('events as e', 'ed.eventid', 'e.eventid')
+      .where('ed.eventdetailsid', eventdetailsid)
+      .select(
+        'ed.eventdetailsid',
+        'e.eventid',
+        'e.eventname',
+        'e.eventtype', 
+        'e.eventdescription',
+        'ed.eventdatetimestart',
+        'ed.eventdatetimeend',
+        'ed.eventlocation',
+        'ed.eventcapacity',
+        'ed.eventregistrationdeadline'
+      )
+      .first();
+
+    if (!event) {
+      return res.send('Event not found.');
+    }
+
+    res.render('event_edit', {
+      event,
+      error_message: '',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  } catch (err) {
+    console.error('Error loading event for edit:', err);
+    res.send('Error loading event for edit.');
+  }
+});
+
+// Update event (manager only)
+app.post('/events/:eventdetailsid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to edit events.' });
+  }
+
+  const { eventdetailsid } = req.params;
+  const {
+    eventname,
+    eventtype,
+    eventdescription,
+    eventdatetimestart,
+    eventdatetimeend,
+    eventlocation,
+    eventcapacity,
+    eventregistrationdeadline
+  } = req.body;
+
+  try {
+    await knex.transaction(async (trx) => {
+      const detailRow = await trx('eventdetails')
+        .where({ eventdetailsid })
+        .select('eventid')
+        .first();
+
+      if (!detailRow) {
+        throw new Error('Event not found.');
+      }
+
+      const eventid = detailRow.eventid;
+
+      await trx('events')
+        .where({ eventid })
+        .update({
+          eventname,
+          eventtype,
+          eventdescription
+        });
+
+      await trx('eventdetails')
+        .where({ eventdetailsid })
+        .update({
+          eventdatetimestart,
+          eventdatetimeend,
+          eventlocation,
+          eventcapacity,
+          eventregistrationdeadline
+        });
+    });
+
+    res.redirect('/events');
+  } catch (err) {
+    console.error('Error updating event:', err);
+    res.send('Error updating event.');
+  }
+});
+
+// Delete eventdetail (manager only)
+app.post('/events/:eventdetailsid/delete', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to delete events.' });
+  }
+
+  const { eventdetailsid } = req.params;
+
+  try {
+    await knex.transaction(async (trx) => {
+      // Delete registrations for this eventdetail first (to avoid FK issues)
+      await trx('registrations')
+        .where({ eventdetailsid })
+        .del();
+
+      // Then delete eventdetails row
+      await trx('eventdetails')
+        .where({ eventdetailsid })
+        .del();
+    });
+
+    res.redirect('/events');
+  } catch (err) {
+    console.error('Error deleting event:', err);
+    res.send('Error deleting event.');
+  }
+});
+
+
+
 
 
 app.listen(port, () => {
