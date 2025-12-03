@@ -339,13 +339,107 @@ app.get('/participants', async (req, res) => {
   }
 });
 
+// Add new participant form (admin only)
+app.get('/participants/add', (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', { error_message: 'You do not have permission to add participants.' });
+  }
+
+  res.render('participant_add', {
+    error_message: '',
+    isAdmin: true,
+    Username: req.session.username,
+    csrfToken: req.csrfToken()
+  });
+});
+
+// Create a new participant (admin only)
+app.post('/participants/add', async (req, res) => {
+
+  // Check login status
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  // Check admin role
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to add participants.'
+    });
+  }
+
+  // Extract form data
+  const {
+    email,
+    participantfirstname,
+    participantlastname,
+    participantdob,
+    participantrole,
+    participantphone,
+    participantcity,
+    participantstate,
+    participantzip,
+    participantfieldofinterest
+  } = req.body;
+
+  try {
+    // Insert into database
+    await knex('participants').insert({
+    email,
+    participantfirstname,
+    participantlastname,
+    participantdob: participantdob || null,
+    participantrole: participantrole || null,
+    participantphone: participantphone || null,
+    participantcity: participantcity || null,
+    participantstate: participantstate || null,
+    participantzip: participantzip || null,
+    participantfieldofinterest: participantfieldofinterest || null
+    });
+
+    // Redirect after success
+    return res.redirect('/participants');
+
+  } catch (err) {
+    console.error('Error inserting participant:', err);
+
+    // Re-render the form with an error message
+    return res.render('participant_add', {
+      error_message: 'Error creating participant.',
+      isAdmin: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
 // View-only participant details page
 app.get('/participants/:participantid', async (req, res) => {
   if (!req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
 
-  const participantid = req.params.participantid;
+  const participantid = parseInt(req.params.participantid, 10);
+
+  if (Number.isNaN(participantid)) {
+    return res.render('viewParticipant', {
+      participant: null,
+      events: [],
+      milestones: [],
+      surveys: [],
+      donations: [],
+      avgOverallScore: null,
+      surveyCount: 0,
+      firstRegistration: null,
+      lastRegistration: null,
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      error_message: 'Invalid participant id.'
+    });
+  }
 
   try {
     // 1) Participant 基本情報 + Origin 情報
@@ -663,27 +757,6 @@ app.post('/participants/:participantid/edit', (req, res) => {
         });
 });
 
-// Update a single registration row (event history) for this participant
-app.post('/participants/:participantid/registrations/:registrationid', async (req, res) => {
-  const { participantid, registrationid } = req.params;
-
-  // Editable fields from the form
-  const updated = {
-    registrationstatus: req.body.registrationstatus || null,
-    registrationattendanceflag: req.body.registrationattendanceflag ? true : false
-  };
-
-  try {
-    await knex('registrations')
-      .where({ registrationid, participantid })
-      .update(updated);
-
-    return res.redirect(`/participants/${participantid}/edit`);
-  } catch (err) {
-    console.error('Error updating registration:', err);
-    return res.status(500).send('Error updating registration.');
-  }
-});
 
 // Update a single survey row (post-event survey scores) for this participant
 app.post('/participants/:participantid/surveys/:surveyid', async (req, res) => {
@@ -1701,9 +1774,6 @@ app.post('/milestones/new', async (req, res) => {
 
 
 
-// =====================================
-// Milestones - edit form (admin only)
-// =====================================
 app.get('/milestones/:milestoneid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
@@ -1724,14 +1794,27 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
         'm.milestoneid',
         'm.milestonetitle',
         'm.milestonedate',
+        'm.participantid',           
         'p.participantfirstname',
         'p.participantlastname',
         'p.email'
       )
       .first();
 
+    
+    const participants = await knex('participants')
+      .select(
+        'participantid',
+        'participantfirstname',
+        'participantlastname',
+        'email'
+      )
+      .orderBy('participantlastname', 'asc')
+      .orderBy('participantfirstname', 'asc');
+
     return res.render('milestones_edit', {
       milestone,
+      participants,                      
       error_message: milestone ? '' : 'Milestone not found.',
       isAdmin: true,
       Username: req.session.username,
@@ -1741,6 +1824,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
     console.error('Error loading milestone for edit:', err);
     return res.render('milestones_edit', {
       milestone: null,
+      participants: [],              
       error_message: 'Error loading milestone for edit.',
       isAdmin: true,
       Username: req.session.username,
