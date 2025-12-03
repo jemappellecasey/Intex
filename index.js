@@ -374,24 +374,6 @@ app.get('/participants/:participantid', async (req, res) => {
   }
 
   const participantid = req.params.participantid;
-  const isAdmin = req.session.role === 'admin';
-  const sessionParticipantId = req.session.participantId;
-
-  // Participant-level users can only view their own record.
-  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
-    return res.status(403).render('participants', {
-      participants: [],
-      error_message: 'You can only view your own participant record.',
-      isAdmin,
-      Username: req.session.username,
-      currentPage: 1,
-      totalPages: 1,
-      milestoneTitle: '',
-      name: '',
-      email: '',
-      phone: '',
-    });
-  }
 
   try {
     // 1) Participant 基本情報 + Origin 情報
