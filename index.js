@@ -2261,6 +2261,453 @@ app.post('/milestones/:milestoneid/delete', async (req, res) => {
 
 
 
+// ===============================
+// Donations - list (admin or self)
+// ===============================
+app.get('/donations', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
+  const pageSize = 25;
+  const page = parseInt(req.query.page, 10) || 1;
+  const offset = (page - 1) * pageSize;
+
+  const name = req.query.name ? req.query.name.trim() : '';
+  const email = req.query.email ? req.query.email.trim() : '';
+  const startDate = req.query.startDate ? req.query.startDate.trim() : '';
+  const endDate = req.query.endDate ? req.query.endDate.trim() : '';
+
+  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+    return res.render('donations', {
+      donations: [],
+      totalAmount: 0,
+      error_message: 'No participant record is linked to this user.',
+      isAdmin,
+      Username: req.session.username,
+      name,
+      email,
+      startDate,
+      endDate,
+      currentPage: 1,
+      totalPages: 1,
+      csrfToken: req.csrfToken()
+    });
+  }
+
+  try {
+    const baseQuery = knex('donations as d')
+      .join('participants as p', 'd.participantid', 'p.participantid')
+      .select(
+        'd.donationid',
+        'd.donationdate',
+        'd.donationamount',
+        'p.participantid',
+        'p.participantfirstname',
+        'p.participantlastname',
+        'p.email'
+      );
+
+    if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+      baseQuery.where('p.participantid', sessionParticipantId);
+    }
+
+    if (name !== '') {
+      const lower = name.toLowerCase();
+      baseQuery.whereRaw(
+        "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+        [`%${lower}%`]
+      );
+    }
+
+    if (email !== '') {
+      baseQuery.whereILike('p.email', `%${email}%`);
+    }
+
+    if (startDate !== '') {
+      baseQuery.where('d.donationdate', '>=', startDate);
+    }
+    if (endDate !== '') {
+      baseQuery.where('d.donationdate', '<=', endDate);
+    }
+
+    const countQuery = knex('donations as d')
+      .join('participants as p', 'd.participantid', 'p.participantid')
+      .modify((q) => {
+        if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+          q.where('p.participantid', sessionParticipantId);
+        }
+        if (name !== '') {
+          const lower = name.toLowerCase();
+          q.whereRaw(
+            "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+            [`%${lower}%`]
+          );
+        }
+        if (email !== '') {
+          q.whereILike('p.email', `%${email}%`);
+        }
+        if (startDate !== '') {
+          q.where('d.donationdate', '>=', startDate);
+        }
+        if (endDate !== '') {
+          q.where('d.donationdate', '<=', endDate);
+        }
+      })
+      .countDistinct('d.donationid as total');
+
+    const sumQuery = knex('donations as d')
+      .join('participants as p', 'd.participantid', 'p.participantid')
+      .modify((q) => {
+        if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+          q.where('p.participantid', sessionParticipantId);
+        }
+        if (name !== '') {
+          const lower = name.toLowerCase();
+          q.whereRaw(
+            "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+            [`%${lower}%`]
+          );
+        }
+        if (email !== '') {
+          q.whereILike('p.email', `%${email}%`);
+        }
+        if (startDate !== '') {
+          q.where('d.donationdate', '>=', startDate);
+        }
+        if (endDate !== '') {
+          q.where('d.donationdate', '<=', endDate);
+        }
+      })
+      .sum({ total_amount: 'd.donationamount' });
+
+    const [donations, totalResult, sumResult] = await Promise.all([
+      baseQuery.orderBy('d.donationdate', 'desc').limit(pageSize).offset(offset),
+      countQuery,
+      sumQuery
+    ]);
+
+    const total = parseInt(totalResult[0].total, 10) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const totalAmount = sumResult && sumResult[0].total_amount
+      ? Number(sumResult[0].total_amount)
+      : 0;
+
+    return res.render('donations', {
+      donations,
+      totalAmount,
+      error_message: '',
+      isAdmin,
+      Username: req.session.username,
+      name,
+      email,
+      startDate,
+      endDate,
+      currentPage: page,
+      totalPages,
+      csrfToken: req.csrfToken()
+    });
+  } catch (err) {
+    console.error('Error loading donations:', err);
+    return res.render('donations', {
+      donations: [],
+      totalAmount: 0,
+      error_message: 'Error loading donations.',
+      isAdmin,
+      Username: req.session.username,
+      name,
+      email,
+      startDate,
+      endDate,
+      currentPage: 1,
+      totalPages: 1,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+// Donations - new (admin or self)
+app.get('/donations/new', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
+  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+    return res.render('login', {
+      error_message: 'You do not have permission to add donations.'
+    });
+  }
+
+  return res.render('donations_new', {
+    error_message: '',
+    isAdmin,
+    Username: req.session.username,
+    selfParticipantId: sessionParticipantId,
+    csrfToken: req.csrfToken(),
+    email: '',
+    donationamount: '',
+    donationdate: ''
+  });
+});
+
+app.post('/donations/new', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
+  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+    return res.render('login', {
+      error_message: 'You do not have permission to add donations.'
+    });
+  }
+
+  const { email, donationamount, donationdate } = req.body;
+
+  try {
+    let participantIdToUse = null;
+    if (isAdmin) {
+      const participant = await knex('participants')
+        .whereILike('email', (email || '').trim())
+        .first();
+      if (!participant) {
+        return res.render('donations_new', {
+          error_message: 'No participant found with that email.',
+          isAdmin,
+          Username: req.session.username,
+          selfParticipantId: sessionParticipantId,
+          csrfToken: req.csrfToken(),
+          email,
+          donationamount,
+          donationdate
+        });
+      }
+      participantIdToUse = participant.participantid;
+    } else {
+      participantIdToUse = sessionParticipantId;
+    }
+
+    await knex('donations').insert({
+      participantid: participantIdToUse,
+      donationamount: donationamount || null,
+      donationdate: donationdate || null
+    });
+
+    return res.redirect('/donations');
+  } catch (err) {
+    console.error('Error creating donation:', err);
+    return res.render('donations_new', {
+      error_message: 'Error creating donation.',
+      isAdmin,
+      Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
+      csrfToken: req.csrfToken(),
+      email,
+      donationamount,
+      donationdate
+    });
+  }
+});
+
+// Donations - edit (admin or self)
+app.get('/donations/:donationid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
+  const { donationid } = req.params;
+
+  try {
+    const donation = await knex('donations as d')
+      .join('participants as p', 'd.participantid', 'p.participantid')
+      .where('d.donationid', donationid)
+      .select(
+        'd.donationid',
+        'd.donationdate',
+        'd.donationamount',
+        'p.participantid',
+        'p.participantfirstname',
+        'p.participantlastname',
+        'p.email'
+      )
+      .first();
+
+    if (!donation) {
+      return res.render('donations_edit', {
+        donation: null,
+        error_message: 'Donation not found.',
+        isAdmin,
+        Username: req.session.username,
+        csrfToken: req.csrfToken()
+      });
+    }
+
+    if (!isAdmin && String(donation.participantid) !== String(sessionParticipantId || '')) {
+      return res.render('login', {
+        error_message: 'You do not have permission to edit this donation.'
+      });
+    }
+
+    return res.render('donations_edit', {
+      donation,
+      error_message: '',
+      isAdmin,
+      Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
+      csrfToken: req.csrfToken()
+    });
+  } catch (err) {
+    console.error('Error loading donation for edit:', err);
+    return res.render('donations_edit', {
+      donation: null,
+      error_message: 'Error loading donation.',
+      isAdmin,
+      Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+app.post('/donations/:donationid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
+  const { donationid } = req.params;
+  const { donationamount, donationdate, email } = req.body;
+
+  try {
+    const donationRow = await knex('donations').where({ donationid }).first('participantid');
+    if (!donationRow) {
+      return res.render('donations_edit', {
+        donation: null,
+        error_message: 'Donation not found.',
+        isAdmin,
+        Username: req.session.username,
+        selfParticipantId: sessionParticipantId,
+        csrfToken: req.csrfToken()
+      });
+    }
+
+    if (!isAdmin && String(donationRow.participantid) !== String(sessionParticipantId || '')) {
+      return res.render('login', {
+        error_message: 'You do not have permission to edit this donation.'
+      });
+    }
+
+    let participantIdToUse = donationRow.participantid;
+    if (isAdmin && email) {
+      const participant = await knex('participants')
+        .whereILike('email', email.trim())
+        .first();
+      if (!participant) {
+        const donation = await knex('donations as d')
+          .join('participants as p', 'd.participantid', 'p.participantid')
+          .where('d.donationid', donationid)
+          .select(
+            'd.donationid',
+            'd.donationdate',
+            'd.donationamount',
+            'p.participantid',
+            'p.participantfirstname',
+            'p.participantlastname',
+            'p.email'
+          )
+          .first();
+        return res.render('donations_edit', {
+          donation,
+          error_message: 'No participant found with that email.',
+          isAdmin,
+          Username: req.session.username,
+          selfParticipantId: sessionParticipantId,
+          csrfToken: req.csrfToken()
+        });
+      }
+      participantIdToUse = participant.participantid;
+    }
+
+    await knex('donations')
+      .where({ donationid })
+      .update({
+        participantid: participantIdToUse,
+        donationamount: donationamount || null,
+        donationdate: donationdate || null
+      });
+
+    return res.redirect('/donations');
+  } catch (err) {
+    console.error('Error updating donation:', err);
+    const donation = await knex('donations as d')
+      .join('participants as p', 'd.participantid', 'p.participantid')
+      .where('d.donationid', donationid)
+      .select(
+        'd.donationid',
+        'd.donationdate',
+        'd.donationamount',
+        'p.participantid',
+        'p.participantfirstname',
+        'p.participantlastname',
+        'p.email'
+      )
+      .first();
+
+    return res.render('donations_edit', {
+      donation,
+      error_message: 'Error updating donation.',
+      isAdmin,
+      Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+// Donations - delete (admin only)
+app.post('/donations/:donationid/delete', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to delete donations.'
+    });
+  }
+
+  const { donationid } = req.params;
+
+  try {
+    await knex('donations')
+      .where({ donationid })
+      .del();
+
+    return res.redirect('/donations');
+  } catch (err) {
+    console.error('Error deleting donation:', err);
+    return res.send('Error deleting donation.');
+  }
+});
+
 
 
 app.listen(port, () => {
