@@ -1080,7 +1080,417 @@ app.post('/events/:eventdetailsid/delete', async (req, res) => {
   }
 });
 
+// ===============================
+// Surveys - list (search + paging)
+// ===============================
+app.get('/surveys', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
 
+  const pageSize = 25;
+  const page = parseInt(req.query.page, 10) || 1;
+  const offset = (page - 1) * pageSize;
+
+  const eventName = req.query.eventName ? req.query.eventName.trim() : '';
+  const participantName = req.query.participantName ? req.query.participantName.trim() : '';
+
+  const rawStartDate = req.query.startDate || '';
+  const rawEndDate   = req.query.endDate || '';
+  const startDate = rawStartDate.trim();
+  const endDate   = rawEndDate.trim();
+
+  try {
+
+    // ============================
+    // 🚀 Base query with JOINs
+    // ============================
+    const baseQuery = knex('surveys as s')
+      .join('events as e', 's.eventid', 'e.eventid')
+      .join('participants as p', 's.participantid', 'p.participantid')
+      .join('eventdetails as ed', function () {
+        this.on('ed.eventid', '=', 's.eventid')
+            .andOn('ed.eventdatetimestart', '=', 's.eventdatetimestart');
+      })
+      .select(
+        's.surveyid',
+        'e.eventname',
+        's.eventdatetimestart',
+        'ed.eventlocation',             // ← now valid!
+        'p.participantfirstname',
+        'p.participantlastname',
+        's.surveysatisfactionscore',
+        's.surveyusefulnessscore',
+        's.surveyinstructorscore',
+        's.surveyrecommendationscore',
+        's.surveyoverallscore',
+        's.surveysubmissiondate'
+      );
+
+    // ============================
+    // Filters
+    // ============================
+    if (eventName !== '') {
+      baseQuery.whereILike('e.eventname', `%${eventName}%`);
+    }
+
+    if (participantName !== '') {
+      const lowerName = participantName.toLowerCase();
+      baseQuery.whereRaw(
+        "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+        [`%${lowerName}%`]
+      );
+    }
+
+    if (startDate !== '') {
+      baseQuery.where('s.surveysubmissiondate', '>=', startDate);
+    }
+    if (endDate !== '') {
+      baseQuery.where('s.surveysubmissiondate', '<=', endDate);
+    }
+
+
+    // ============================
+    // Count query also needs JOIN!
+    // ============================
+    const countQuery = knex('surveys as s')
+      .join('events as e', 's.eventid', 'e.eventid')
+      .join('participants as p', 's.participantid', 'p.participantid')
+      .join('eventdetails as ed', function () {
+        this.on('ed.eventid', '=', 's.eventid')
+            .andOn('ed.eventdatetimestart', '=', 's.eventdatetimestart');
+      })
+      .modify((q) => {
+        if (eventName !== '') {
+          q.whereILike('e.eventname', `%${eventName}%`);
+        }
+        if (participantName !== '') {
+          const lowerName = participantName.toLowerCase();
+          q.whereRaw(
+            "LOWER(p.participantfirstname || ' ' || p.participantlastname) LIKE ?",
+            [`%${lowerName}%`]
+          );
+        }
+        if (startDate !== '') {
+          q.where('s.surveysubmissiondate', '>=', startDate);
+        }
+        if (endDate !== '') {
+          q.where('s.surveysubmissiondate', '<=', endDate);
+        }
+      })
+      .countDistinct('s.surveyid as total');
+
+
+    // ============================
+    // Execute the queries
+    // ============================
+    const [surveys, totalResult] = await Promise.all([
+      baseQuery
+        .orderBy('s.surveysubmissiondate', 'desc')
+        .limit(pageSize)
+        .offset(offset),
+
+      countQuery
+    ]);
+
+    const total = parseInt(totalResult[0].total, 10) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    return res.render('survey', {
+      surveys,
+      error_message: '',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      eventName,
+      participantName,
+      startDate,
+      endDate,
+      currentPage: page,
+      totalPages
+    });
+
+  } catch (err) {
+    console.error('Error loading surveys:', err);
+    return res.render('survey', {
+      surveys: [],
+      error_message: 'Error loading surveys.',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      eventName,
+      participantName,
+      startDate,
+      endDate,
+      currentPage: 1,
+      totalPages: 1
+    });
+  }
+});
+
+
+// =======================================
+// Survey - show "new survey" form (admin)
+// =======================================
+app.get('/surveys/new', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to add surveys.'
+    });
+  }
+
+  try {
+    // For simplicity we just load basic lists
+    const events = await knex('events')
+      .select('eventid', 'eventname')
+      .orderBy('eventname', 'asc');
+
+    const participants = await knex('participants')
+      .select('participantid', 'participantfirstname', 'participantlastname', 'email')
+      .orderBy('participantlastname', 'asc');
+
+    return res.render('survey_new', {
+      events,
+      participants,
+      error_message: '',
+      isAdmin: true,
+      Username: req.session.username,
+      // csrfToken is already in res.locals
+    });
+  } catch (err) {
+    console.error('Error loading data for new survey:', err);
+    return res.render('survey_new', {
+      events: [],
+      participants: [],
+      error_message: 'Error loading data for new survey.',
+      isAdmin: true,
+      Username: req.session.username
+    });
+  }
+});
+
+// =====================================
+// Survey - create new survey (admin)
+// =====================================
+app.post('/surveys/new', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to add surveys.'
+    });
+  }
+
+  const {
+    participantid,
+    eventid,
+    eventdatetimestart,
+    surveysatisfactionscore,
+    surveyusefulnessscore,
+    surveyinstructorscore,
+    surveyrecommendationscore,
+    surveyoverallscore,
+    surveysubmissiondate
+  } = req.body;
+
+  try {
+    // Optional: auto-calc overall if not provided
+    let overall = surveyoverallscore;
+    if (
+      (!overall || overall === '') &&
+      surveysatisfactionscore &&
+      surveyusefulnessscore &&
+      surveyinstructorscore &&
+      surveyrecommendationscore
+    ) {
+      const vals = [
+        Number(surveysatisfactionscore),
+        Number(surveyusefulnessscore),
+        Number(surveyinstructorscore),
+        Number(surveyrecommendationscore)
+      ];
+      const sum = vals.reduce((acc, v) => acc + (isNaN(v) ? 0 : v), 0);
+      const count = vals.filter(v => !isNaN(v)).length;
+      if (count > 0) {
+        overall = (sum / count).toFixed(2);
+      }
+    }
+
+    await knex('surveys').insert({
+      participantid,
+      eventid,
+      eventdatetimestart: eventdatetimestart || null,
+      surveysatisfactionscore: surveysatisfactionscore || null,
+      surveyusefulnessscore: surveyusefulnessscore || null,
+      surveyinstructorscore: surveyinstructorscore || null,
+      surveyrecommendationscore: surveyrecommendationscore || null,
+      surveyoverallscore: overall || null,
+      surveysubmissiondate: surveysubmissiondate || knex.fn.now()
+    });
+
+    return res.redirect('/surveys');
+  } catch (err) {
+    console.error('Error inserting new survey:', err);
+    // You might want to reload lists and show error, but simple redirect is ok
+    return res.render('survey_new', {
+      events: [],
+      participants: [],
+      error_message: 'Error inserting new survey.',
+      isAdmin: true,
+      Username: req.session.username
+    });
+  }
+});
+
+
+// =====================================
+// Survey - show edit form (admin only)
+// =====================================
+app.get('/surveys/:surveyid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to edit surveys.'
+    });
+  }
+
+  const { surveyid } = req.params;
+
+  try {
+    const survey = await knex('surveys as s')
+      .join('events as e', 's.eventid', 'e.eventid')
+      .join('participants as p', 's.participantid', 'p.participantid')
+      .where('s.surveyid', surveyid)
+      .select(
+        's.surveyid',
+        's.participantid',
+        's.eventid',
+        's.eventdatetimestart',
+        's.surveysatisfactionscore',
+        's.surveyusefulnessscore',
+        's.surveyinstructorscore',
+        's.surveyrecommendationscore',
+        's.surveyoverallscore',
+        's.surveysubmissiondate',
+        'e.eventname',
+        'p.participantfirstname',
+        'p.participantlastname',
+        'p.email'
+      )
+      .first();
+
+    if (!survey) {
+      return res.send('Survey not found.');
+    }
+
+    return res.render('survey_edit', {
+      survey,
+      error_message: '',
+      isAdmin: req.session.role === 'admin',
+      Username: req.session.username,
+      csrfToken: req.csrfToken()  
+    });
+  } catch (err) {
+    console.error('Error loading survey for edit:', err);
+    return res.send('Error loading survey for edit.');
+  }
+});
+
+
+// =====================================
+// Survey - update existing survey (admin)
+// =====================================
+app.post('/surveys/:surveyid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to edit surveys.'
+    });
+  }
+
+  const { surveyid } = req.params;
+  const {
+    surveysatisfactionscore,
+    surveyusefulnessscore,
+    surveyinstructorscore,
+    surveyrecommendationscore,
+    surveyoverallscore,
+    surveysubmissiondate
+  } = req.body;
+
+  try {
+    let overall = surveyoverallscore;
+    if (
+      (!overall || overall === '') &&
+      surveysatisfactionscore &&
+      surveyusefulnessscore &&
+      surveyinstructorscore &&
+      surveyrecommendationscore
+    ) {
+      const vals = [
+        Number(surveysatisfactionscore),
+        Number(surveyusefulnessscore),
+        Number(surveyinstructorscore),
+        Number(surveyrecommendationscore)
+      ];
+      const sum = vals.reduce((acc, v) => acc + (isNaN(v) ? 0 : v), 0);
+      const count = vals.filter(v => !isNaN(v)).length;
+      if (count > 0) {
+        overall = (sum / count).toFixed(2);
+      }
+    }
+
+    await knex('surveys')
+      .where({ surveyid })
+      .update({
+        surveysatisfactionscore: surveysatisfactionscore || null,
+        surveyusefulnessscore: surveyusefulnessscore || null,
+        surveyinstructorscore: surveyinstructorscore || null,
+        surveyrecommendationscore: surveyrecommendationscore || null,
+        surveyoverallscore: overall || null,
+        surveysubmissiondate: surveysubmissiondate || null
+      });
+
+    return res.redirect('/surveys');
+  } catch (err) {
+    console.error('Error updating survey:', err);
+    return res.send('Error updating survey.');
+  }
+});
+
+
+// =====================================
+// Survey - delete (admin only)
+// =====================================
+app.post('/surveys/:surveyid/delete', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'admin') {
+    return res.render('login', {
+      error_message: 'You do not have permission to delete surveys.'
+    });
+  }
+
+  const { surveyid } = req.params;
+
+  try {
+    await knex('surveys')
+      .where({ surveyid })
+      .del();
+
+    return res.redirect('/surveys');
+  } catch (err) {
+    console.error('Error deleting survey:', err);
+    return res.send('Error deleting survey.');
+  }
+});
 
 
 
