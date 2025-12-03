@@ -150,7 +150,7 @@ app.use((req, res, next) => {
   
   //Login check
   app.use((req, res, next)=> {
-        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass'];
+        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass', '/signup'];
         if (openPaths.includes(req.path)) {
           return next();
         }
@@ -203,7 +203,7 @@ app.use((req, res, next) => {
   }
   
 
-const sr = process.env.SALT_ROUNDS;
+const sr = 10;
 
 app.get("/signup", (req, res) => {
   res.render("signup", {
@@ -215,7 +215,7 @@ app.get("/signup", (req, res) => {
 });
 
 app.post("/signup", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, first, last } = req.body;
 
   const renderError = (msg) => {
     return res.render("signup", {
@@ -260,8 +260,8 @@ app.post("/signup", async (req, res) => {
       const [newParticipant] = await knex("participants")
         .insert({
           email: normalizedEmail,
-          participantfirstname: "",
-          participantlastname: "",
+          participantfirstname: first.trim(),
+          participantlastname: last.trim(),
           participantrole: "participant"
         })
         .returning("*");
