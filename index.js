@@ -1339,6 +1339,11 @@ app.get('/surveys', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
+  const isAdmin = req.session.role === 'admin';
+  const participantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
   const pageSize = 25;
   const page = parseInt(req.query.page, 10) || 1;
   const offset = (page - 1) * pageSize;
@@ -1352,6 +1357,94 @@ app.get('/surveys', async (req, res) => {
   const endDate   = rawEndDate.trim();
 
   try {
+    // Participant view: show answered vs pending surveys for this participant only.
+    if (!isAdmin) {
+      if (!participantId || Number.isNaN(participantId)) {
+        return res.render('survey', {
+          surveys: [],
+          answeredSurveys: [],
+          pendingSurveys: [],
+          error_message: 'No participant record is linked to this user.',
+          isAdmin,
+          Username: req.session.username,
+          eventName,
+          participantName,
+          startDate,
+          endDate,
+          currentPage: 1,
+          totalPages: 1,
+          surveyFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdaqLFLzHmIaGtDwW7rkV8Wk2iok9PMk8t6ZXcylShk34YNGQ/viewform'
+        });
+      }
+
+      // Answered surveys: participant + has satisfaction score
+      const answeredSurveys = await knex('surveys as s')
+        .join('events as e', 's.eventid', 'e.eventid')
+        .join('eventdetails as ed', function () {
+          this.on('ed.eventid', '=', 's.eventid')
+              .andOn('ed.eventdatetimestart', '=', 's.eventdatetimestart');
+        })
+        .leftJoin('registrations as r', function () {
+          this.on('r.participantid', '=', 's.participantid')
+              .andOn('r.eventdetailsid', '=', 'ed.eventdetailsid');
+        })
+        .where('s.participantid', participantId)
+        .whereNotNull('s.surveysatisfactionscore')
+        .select(
+          's.surveyid',
+          'e.eventname',
+          's.eventdatetimestart',
+          'ed.eventlocation',
+          's.surveysatisfactionscore',
+          's.surveyusefulnessscore',
+          's.surveyinstructorscore',
+          's.surveyrecommendationscore',
+          's.surveyoverallscore',
+          's.surveysubmissiondate',
+          'r.registrationattendanceflag'
+        )
+        .orderBy('s.surveysubmissiondate', 'desc');
+
+      // Pending surveys: attended events with no submitted survey
+      const pendingSurveys = await knex('registrations as r')
+        .join('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
+        .join('events as e', 'ed.eventid', 'e.eventid')
+        .leftJoin('surveys as s', function () {
+          this.on('s.participantid', '=', 'r.participantid')
+              .andOn('s.eventid', '=', 'e.eventid')
+              .andOn('s.eventdatetimestart', '=', 'ed.eventdatetimestart');
+        })
+        .where('r.participantid', participantId)
+        .andWhere('r.registrationattendanceflag', true)
+        .andWhere(function () {
+          this.whereNull('s.surveyid')
+              .orWhereNull('s.surveysatisfactionscore');
+        })
+        .select(
+          'e.eventid',
+          'e.eventname',
+          'ed.eventdatetimestart',
+          'ed.eventlocation',
+          'r.registrationattendanceflag'
+        )
+        .orderBy('ed.eventdatetimestart', 'desc');
+
+      return res.render('survey', {
+        surveys: [],
+        answeredSurveys,
+        pendingSurveys,
+        error_message: '',
+        isAdmin,
+        Username: req.session.username,
+        eventName,
+        participantName,
+        startDate,
+        endDate,
+        currentPage: 1,
+        totalPages: 1,
+        surveyFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdaqLFLzHmIaGtDwW7rkV8Wk2iok9PMk8t6ZXcylShk34YNGQ/viewform'
+      });
+    }
 
     // ============================
     // 🚀 Base query with JOINs
@@ -1362,6 +1455,10 @@ app.get('/surveys', async (req, res) => {
       .join('eventdetails as ed', function () {
         this.on('ed.eventid', '=', 's.eventid')
             .andOn('ed.eventdatetimestart', '=', 's.eventdatetimestart');
+      })
+      .leftJoin('registrations as r', function () {
+        this.on('r.participantid', '=', 's.participantid')
+            .andOn('r.eventdetailsid', '=', 'ed.eventdetailsid');
       })
       .select(
         's.surveyid',
@@ -1375,7 +1472,8 @@ app.get('/surveys', async (req, res) => {
         's.surveyinstructorscore',
         's.surveyrecommendationscore',
         's.surveyoverallscore',
-        's.surveysubmissiondate'
+        's.surveysubmissiondate',
+        'r.registrationattendanceflag'
       );
 
     // ============================
@@ -1450,29 +1548,33 @@ app.get('/surveys', async (req, res) => {
     return res.render('survey', {
       surveys,
       error_message: '',
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       eventName,
       participantName,
       startDate,
       endDate,
       currentPage: page,
-      totalPages
+      totalPages,
+      surveyFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdaqLFLzHmIaGtDwW7rkV8Wk2iok9PMk8t6ZXcylShk34YNGQ/viewform'
     });
 
   } catch (err) {
     console.error('Error loading surveys:', err);
     return res.render('survey', {
       surveys: [],
+      answeredSurveys: [],
+      pendingSurveys: [],
       error_message: 'Error loading surveys.',
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       eventName,
       participantName,
       startDate,
       endDate,
       currentPage: 1,
-      totalPages: 1
+      totalPages: 1,
+      surveyFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdaqLFLzHmIaGtDwW7rkV8Wk2iok9PMk8t6ZXcylShk34YNGQ/viewform'
     });
   }
 });
@@ -1751,6 +1853,11 @@ app.get('/milestones', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
   const pageSize = 25;
   const page = parseInt(req.query.page, 10) || 1;
   const offset = (page - 1) * pageSize;
@@ -1774,6 +1881,10 @@ app.get('/milestones', async (req, res) => {
         'p.participantlastname',
         'p.email'
       );
+
+    if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+      baseQuery.where('p.participantid', sessionParticipantId);
+    }
 
     if (participantName !== '') {
       const lower = participantName.toLowerCase();
@@ -1801,6 +1912,9 @@ app.get('/milestones', async (req, res) => {
     const countQuery = knex('milestones as m')
       .join('participants as p', 'm.participantid', 'p.participantid')
       .modify((q) => {
+        if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+          q.where('p.participantid', sessionParticipantId);
+        }
         if (participantName !== '') {
           const lower = participantName.toLowerCase();
           q.whereRaw(
@@ -1837,7 +1951,8 @@ app.get('/milestones', async (req, res) => {
     return res.render('milestones', {
       milestones,
       error_message: '',
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
+      selfParticipantId: sessionParticipantId,
       Username: req.session.username,
       participantName,
       email,
@@ -1853,7 +1968,8 @@ app.get('/milestones', async (req, res) => {
     return res.render('milestones', {
       milestones: [],
       error_message: 'Error loading milestones.',
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
+      selfParticipantId: sessionParticipantId,
       Username: req.session.username,
       participantName,
       email,
@@ -1876,7 +1992,12 @@ app.get('/milestones/new', (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
+  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('login', {
       error_message: 'You do not have permission to add milestones.'
     });
@@ -1889,8 +2010,9 @@ app.get('/milestones/new', (req, res) => {
     milestonetitle: '',
     milestonedate: '',
     error_message: '',
-    isAdmin: true,
+    isAdmin,
     Username: req.session.username,
+    selfParticipantId: sessionParticipantId,
     csrfToken: req.csrfToken()
   });
 });
@@ -1904,7 +2026,11 @@ app.post('/milestones/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('login', {
       error_message: 'You do not have permission to add milestones.'
     });
@@ -1913,24 +2039,32 @@ app.post('/milestones/new', async (req, res) => {
   const { email, milestonetitle, milestonedate } = req.body;
 
   try {
-    const participant = await knex('participants')
-      .whereILike('email', email.trim())
-      .first();
+    let participantIdToUse = null;
 
-    if (!participant) {
-      return res.render('milestones_new', {
-        email,
-        milestonetitle,
-        milestonedate,
-        error_message: 'No participant found with that email.',
-        isAdmin: true,
-        Username: req.session.username,
-        csrfToken: req.csrfToken()
-      });
+    if (isAdmin) {
+      const participant = await knex('participants')
+        .whereILike('email', email.trim())
+        .first();
+
+      if (!participant) {
+        return res.render('milestones_new', {
+          email,
+          milestonetitle,
+          milestonedate,
+          error_message: 'No participant found with that email.',
+          isAdmin,
+          Username: req.session.username,
+          selfParticipantId: sessionParticipantId,
+          csrfToken: req.csrfToken()
+        });
+      }
+      participantIdToUse = participant.participantid;
+    } else {
+      participantIdToUse = sessionParticipantId;
     }
 
     await knex('milestones').insert({
-      participantid: participant.participantid,
+      participantid: participantIdToUse,
       milestonetitle: milestonetitle || null,
       milestonedate: milestonedate || null
     });
@@ -1943,8 +2077,9 @@ app.post('/milestones/new', async (req, res) => {
       milestonetitle,
       milestonedate,
       error_message: 'Error creating milestone.',
-      isAdmin: true,
+      isAdmin,
       Username: req.session.username,
+      selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
     });
   }
@@ -1956,11 +2091,10 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
-    return res.render('login', {
-      error_message: 'You do not have permission to edit milestones.'
-    });
-  }
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
 
   const { milestoneid } = req.params;
 
@@ -1979,22 +2113,41 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       )
       .first();
 
-    
-    const participants = await knex('participants')
-      .select(
-        'participantid',
-        'participantfirstname',
-        'participantlastname',
-        'email'
-      )
-      .orderBy('participantlastname', 'asc')
-      .orderBy('participantfirstname', 'asc');
+    if (!milestone) {
+      return res.render('milestones_edit', {
+        milestone: null,
+        participants: [],
+        error_message: 'Milestone not found.',
+        isAdmin,
+        Username: req.session.username,
+        csrfToken: req.csrfToken()
+      });
+    }
+
+    if (!isAdmin && String(milestone.participantid) !== String(sessionParticipantId || '')) {
+      return res.render('login', {
+        error_message: 'You do not have permission to edit milestones.'
+      });
+    }
+
+    let participants = [];
+    if (isAdmin) {
+      participants = await knex('participants')
+        .select(
+          'participantid',
+          'participantfirstname',
+          'participantlastname',
+          'email'
+        )
+        .orderBy('participantlastname', 'asc')
+        .orderBy('participantfirstname', 'asc');
+    }
 
     return res.render('milestones_edit', {
       milestone,
       participants,                      
-      error_message: milestone ? '' : 'Milestone not found.',
-      isAdmin: true,
+      error_message: '',
+      isAdmin,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -2004,7 +2157,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       milestone: null,
       participants: [],              
       error_message: 'Error loading milestone for edit.',
-      isAdmin: true,
+      isAdmin,
       Username: req.session.username,
       csrfToken: req.csrfToken()
     });
@@ -2019,16 +2172,27 @@ app.post('/milestones/:milestoneid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
-    return res.render('login', {
-      error_message: 'You do not have permission to edit milestones.'
-    });
-  }
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
 
   const { milestoneid } = req.params;
   const { milestonetitle, milestonedate } = req.body;
 
   try {
+    // Ensure ownership for participant users
+    if (!isAdmin) {
+      const row = await knex('milestones')
+        .where({ milestoneid })
+        .first('participantid');
+      if (!row || String(row.participantid) !== String(sessionParticipantId || '')) {
+        return res.render('login', {
+          error_message: 'You do not have permission to edit milestones.'
+        });
+      }
+    }
+
     await knex('milestones')
       .where({ milestoneid })
       .update({

@@ -21,16 +21,20 @@
 <form method="post" action="/milestones/new">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-  <div>
-    <!-- Email is used to find the participant -->
-    <label>
-      Participant Email:
-      <input type="email"
-             name="email"
-             value="<%= email || '' %>"
-             required>
-    </label>
-  </div>
+  <% if (isAdmin) { %>
+    <div>
+      <!-- Email is used to find the participant (admin only) -->
+      <label>
+        Participant Email:
+        <input type="email"
+               name="email"
+               value="<%= email || '' %>"
+               required>
+      </label>
+    </div>
+  <% } else { %>
+    <p>Adding milestone for your account.</p>
+  <% } %>
 
   <div>
     <label>
