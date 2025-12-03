@@ -2,6 +2,11 @@
 -- PostgreSQL database dump
 --
 
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = '312intex';
+DROP DATABASE IF EXISTS "312intex";
+
 -- Create database
 CREATE DATABASE "312intex";
 
@@ -474,17 +479,32 @@ ALTER SEQUENCE public.surveys_surveyid_seq OWNED BY public.surveys.surveyid;
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
 --
 
+
+
 CREATE TABLE public.users (
-    userid integer NOT NULL,
-    username text NOT NULL,
-    password text NOT NULL,
-    role text DEFAULT 'user'::text NOT NULL,
-    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updatedat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT users_password_check CHECK ((length(password) >= 8)),
-    CONSTRAINT users_role_check CHECK ((role = ANY (ARRAY['admin'::text, 'user'::text, 'moderator'::text]))),
-    CONSTRAINT users_username_check CHECK (((length(username) >= 3) AND (length(username) <= 50)))
+    userid                  SERIAL PRIMARY KEY,
+    email                   VARCHAR(255) NOT NULL UNIQUE,
+    role                    VARCHAR(50) DEFAULT 'user',
+    isverified              BOOLEAN NOT NULL DEFAULT FALSE,
+    magic_token             VARCHAR(255),
+    magic_token_expires_at  TIMESTAMPTZ,
+    createdat               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updatedat               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE OR REPLACE FUNCTION public.set_updatedat_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updatedat = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_set_users_updatedat
+BEFORE UPDATE ON public.users
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updatedat_timestamp();
+
 
 
 ALTER TABLE public.users OWNER TO postgres;
@@ -494,7 +514,7 @@ ALTER TABLE public.users OWNER TO postgres;
 -- Name: users_userid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
-CREATE SEQUENCE public.users_userid_seq
+CREATE SEQUENCE if not exists public.users_userid_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -8744,12 +8764,20 @@ COPY public.surveys (surveyid, participantid, eventid, eventdatetimestart, surve
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.users (userid, username, password, role, createdat, updatedat) FROM stdin;
-1	admin	adminpass	admin	2025-12-02 11:41:00.243144	2025-12-02 11:41:00.243144
-2	user	userpass	user	2025-12-02 11:41:00.243144	2025-12-02 11:41:00.243144
-3	moderator	moderatorpass	moderator	2025-12-02 11:41:00.243144	2025-12-02 11:41:00.243144
+COPY public.users (
+    userid,
+    email,
+    role,
+    isverified,
+    magic_token,
+    magic_token_expires_at,
+    createdat,
+    updatedat
+) FROM stdin WITH (FORMAT csv, NULL '\N', HEADER false);
+1,2025Intex312EllaRisesExampleUser@proton.me,user,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+2,2025Intex312EllaRisesExampleManager@proton.me,manager,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+3,2025Intex312EllaRisesExampleSecretary@proton.me,secretary,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
 \.
-
 
 --
 -- TOC entry 3759 (class 0 OID 0)
@@ -8930,23 +8958,6 @@ ALTER TABLE ONLY public.surveyrecommendationbuckets
 ALTER TABLE ONLY public.surveys
     ADD CONSTRAINT surveys_pkey PRIMARY KEY (surveyid);
 
-
---
--- TOC entry 3569 (class 2606 OID 19547)
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_pkey PRIMARY KEY (userid);
-
-
---
--- TOC entry 3571 (class 2606 OID 19549)
--- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_username_key UNIQUE (username);
 
 
 --

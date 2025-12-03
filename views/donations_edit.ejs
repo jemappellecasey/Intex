@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Donation</title>
+</head>
+<body>
+
+<h1>Edit Donation</h1>
+<p><a href="/donations">Back to Donations</a></p>
+
+<% if (error_message) { %>
+  <p style="color:red;"><%= error_message %></p>
+<% } %>
+
+<% if (!donation) { %>
+  <p>Donation not found.</p>
+<% } else { %>
+  <form method="post" action="/donations/<%= donation.donationid %>/edit">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <% if (isAdmin) { %>
+      <div>
+        <label>
+          Participant Email:
+          <input type="email" name="email" value="<%= donation.email || '' %>" required>
+        </label>
+      </div>
+    <% } else { %>
+      <p>Editing donation for your account.</p>
+    <% } %>
+
+    <div>
+      <label>
+        Donation Amount:
+        <input type="number" step="0.01" name="donationamount" value="<%= donation.donationamount || '' %>" required>
+      </label>
+    </div>
+
+    <div>
+      <label>
+        Donation Date:
+        <input type="date" name="donationdate" value="<%= donation.donationdate ? new Date(donation.donationdate).toISOString().slice(0,10) : '' %>" required>
+      </label>
+    </div>
+
+    <div>
+      <button type="submit">Save Changes</button>
+    </div>
+  </form>
+<% } %>
+
+</body>
+</html>

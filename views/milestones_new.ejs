@@ -1,0 +1,65 @@
+<!-- views/milestones_new.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add New Milestone</title>
+</head>
+<body>
+
+<h1>Add New Milestone</h1>
+
+<!-- Error message -->
+<% if (error_message) { %>
+  <p style="color:red;"><%= error_message %></p>
+<% } %>
+
+<p>
+  <a href="/milestones">Back to Milestones List</a>
+</p>
+
+<form method="post" action="/milestones/new">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <% if (isAdmin) { %>
+    <div>
+      <!-- Email is used to find the participant (admin only) -->
+      <label>
+        Participant Email:
+        <input type="email"
+               name="email"
+               value="<%= email || '' %>"
+               required>
+      </label>
+    </div>
+  <% } else { %>
+    <p>Adding milestone for your account.</p>
+  <% } %>
+
+  <div>
+    <label>
+      Milestone Title:
+      <input type="text"
+             name="milestonetitle"
+             value="<%= milestonetitle || '' %>"
+             required>
+    </label>
+  </div>
+
+  <div>
+    <label>
+      Milestone Date:
+      <input type="date"
+             name="milestonedate"
+             value="<%= milestonedate || '' %>"
+             required>
+    </label>
+  </div>
+
+  <div>
+    <button type="submit">Create Milestone</button>
+  </div>
+</form>
+
+</body>
+</html>
