@@ -162,6 +162,36 @@ app.use((req, res, next) => {
       }
   });
   
+  async function ensureParticipantId(req) {
+  if (!req.session || !req.session.isLoggedIn || !req.session.userId) {
+    return null;
+  }
+
+  // Already present and valid
+  if (req.session.participantId && !Number.isNaN(parseInt(req.session.participantId, 10))) {
+    return parseInt(req.session.participantId, 10);
+  }
+
+  try {
+    const userRow = await knex("users")
+      .select("participantid")
+      .where("userid", req.session.userId)
+      .first();
+
+    if (userRow && userRow.participantid) {
+      const pid = parseInt(userRow.participantid, 10);
+      if (!Number.isNaN(pid)) {
+        req.session.participantId = pid;
+        return pid;
+      }
+    }
+  } catch (err) {
+    console.error("Error reloading participantid for user", err);
+  }
+
+  return null;
+}
+
   
   
   //This is security for website if the user are manager or not.
