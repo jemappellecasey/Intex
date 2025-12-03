@@ -177,7 +177,7 @@ app.post('/login', async (req, res) => {
     try {
         // get the one username
         const user = await knex('users')
-            .select('userid', 'username', 'password', 'role')  
+            .select('userid', 'username', 'password', 'role', 'participantid')  
             .where('username', sName)
             .first();
 
@@ -198,6 +198,7 @@ app.post('/login', async (req, res) => {
         req.session.isLoggedIn = true;
         req.session.username = user.username;
         req.session.role = user.role;
+        req.session.participantId = user.participantid || null;
 
         return res.redirect('/dashboard');
 
@@ -233,6 +234,25 @@ app.get('/dashboard', (req, res) => {
 app.get('/participants', async (req, res) => {
   if (!req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
+  }
+
+  const isAdmin = req.session.role === 'admin';
+  const participantId = req.session.participantId;
+
+  // If a participant-level user lacks a linked participant record, stop early.
+  if (!isAdmin && !participantId) {
+    return res.render('participants', {
+      participants: [],
+      error_message: 'No participant record is linked to this user.',
+      isAdmin,
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1,
+      milestoneTitle: '',
+      name: '',
+      email: '',
+      phone: '',
+    });
   }
 
   const pageSize = 25;
@@ -276,6 +296,11 @@ app.get('/participants', async (req, res) => {
       baseQuery.whereILike('p.participantphone', `%${phone.trim()}%`);
     }
 
+    // Participant-level users only see their own record.
+    if (!isAdmin && participantId) {
+      baseQuery.where('p.participantid', participantId);
+    }
+
     // Same filters for total count
     const countQuery = knex('participants as p')
       .leftJoin('milestones as m', 'p.participantid', 'm.participantid')
@@ -296,6 +321,9 @@ app.get('/participants', async (req, res) => {
         if (phone && phone.trim() !== '') {
           q.whereILike('p.participantphone', `%${phone.trim()}%`);
         }
+        if (!isAdmin && participantId) {
+          q.where('p.participantid', participantId);
+        }
       })
       .countDistinct('p.participantid as total');
 
@@ -313,7 +341,7 @@ app.get('/participants', async (req, res) => {
     res.render('participants', {
       participants,
       error_message: '',
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       currentPage: page,
       totalPages,
@@ -327,7 +355,7 @@ app.get('/participants', async (req, res) => {
     res.render('participants', {
       participants: [],
       error_message: `Database error: ${error.message}`,
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       currentPage: 1,
       totalPages: 1,
@@ -346,6 +374,24 @@ app.get('/participants/:participantid', async (req, res) => {
   }
 
   const participantid = req.params.participantid;
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId;
+
+  // Participant-level users can only view their own record.
+  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
+    return res.status(403).render('participants', {
+      participants: [],
+      error_message: 'You can only view your own participant record.',
+      isAdmin,
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1,
+      milestoneTitle: '',
+      name: '',
+      email: '',
+      phone: '',
+    });
+  }
 
   try {
     // 1) Participant 基本情報 + Origin 情報
@@ -454,7 +500,7 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount,
       firstRegistration,
       lastRegistration,
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       error_message: ''
     });
@@ -470,7 +516,7 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount: 0,
       firstRegistration: null,
       lastRegistration: null,
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       error_message: 'Error loading participant details.'
     });
