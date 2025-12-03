@@ -53,10 +53,9 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-//app.use(helmet());
 
-
-// Replace the default helmet() with this configuration
+//this is secrity section for the external link. If you want to use tableau, 
+//or link, come to here to allow them.
 app.use(
   helmet({
     contentSecurityPolicy: {
