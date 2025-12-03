@@ -172,52 +172,6 @@ app.use((req, res, next) => {
       return res.render('login', { error_message: 'You do not have permission to view this page.' });
   }
   
-  // Helper: resolve and cache participantId for the logged-in user.
-  async function ensureParticipantId(req) {
-    if (!req.session || !req.session.userId) {
-      return null;
-    }
-
-    const cached = req.session.participantId;
-    if (cached && !Number.isNaN(parseInt(cached, 10))) {
-      return parseInt(cached, 10);
-    }
-
-    try {
-      // Read user row (email is required in the current schema)
-      const userRow = await knex('users')
-        .select('email')
-        .where('userid', req.session.userId)
-        .first();
-
-      let participantId = null;
-
-      // Fallback: map by email to participants.email
-      const lookupEmail = (userRow && userRow.email)
-        ? userRow.email
-        : (req.session.username && req.session.username.includes('@') ? req.session.username : null);
-
-      if (lookupEmail) {
-        const participantRow = await knex('participants')
-          .select('participantid')
-          .whereILike('email', lookupEmail)
-          .first();
-        if (participantRow && participantRow.participantid) {
-          participantId = parseInt(participantRow.participantid, 10);
-        }
-      }
-
-      if (participantId && !Number.isNaN(participantId)) {
-        req.session.participantId = participantId;
-        return participantId;
-      }
-    } catch (err) {
-      console.error('Error resolving participantId for session', err);
-    }
-
-    return null;
-  }
-  
 
 const sr = process.env.SALT_ROUNDS;
 
