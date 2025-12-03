@@ -183,9 +183,12 @@ app.post('/login', async (req, res) => {
 
         // If user cannot be finded, send the message to the login page-> Invalid Login
         if (!user) {
-            return res.render('login', { error_message: 'Invalid Login' });
+            return res.render('login', { error_message: 'Invalid Login no user' });
         }
 
+        // // Check plain text password
+        // const match = Boolean(sPassword === user.password)
+        // console.log(match)
         // It is going to check password by bccrypt 
         const match = await bcrypt.compare(sPassword, user.password);
 
@@ -479,6 +482,8 @@ app.get('/participants/:participantid', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
+  const isAdmin = req.session.role === 'admin';
+  const sessionParticipantId = req.session.participantId;
   const participantid = parseInt(req.params.participantid, 10);
 
   if (Number.isNaN(participantid)) {
@@ -492,9 +497,25 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount: 0,
       firstRegistration: null,
       lastRegistration: null,
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       error_message: 'Invalid participant id.'
+    });
+  }
+
+  // Participant-level users can only view their own record.
+  if (!isAdmin && String(participantid) !== String(sessionParticipantId || '')) {
+    return res.status(403).render('participants', {
+      participants: [],
+      error_message: 'You can only view your own participant record.',
+      isAdmin,
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1,
+      milestoneTitle: '',
+      name: '',
+      email: '',
+      phone: '',
     });
   }
 
@@ -522,7 +543,7 @@ app.get('/participants/:participantid', async (req, res) => {
         surveyCount: 0,
         firstRegistration: null,
         lastRegistration: null,
-        isAdmin: req.session.role === 'admin',
+        isAdmin,
         Username: req.session.username,
         error_message: 'Participant not found.'
       });
@@ -605,7 +626,7 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount,
       firstRegistration,
       lastRegistration,
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       error_message: ''
     });
@@ -621,7 +642,7 @@ app.get('/participants/:participantid', async (req, res) => {
       surveyCount: 0,
       firstRegistration: null,
       lastRegistration: null,
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       error_message: 'Error loading participant details.'
     });

@@ -1,0 +1,93 @@
+<!-- FILE: views/surveyForm.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= survey ? 'Edit Survey' : 'Add Survey' %> - Ella Rises</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">🎵 Ella Rises</div>
+      <ul class="nav-menu">
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/surveys">Surveys</a></li>
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="main-container">
+    <div class="container form-container">
+      <h1><%= survey ? 'Edit Survey' : 'Add New Survey' %></h1>
+      <form method="POST" action="<%= survey ? '/surveys/' + survey.id + '/edit' : '/surveys/add' %>" class="form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eventId">Event *</label>
+            <select id="eventId" name="eventId" required>
+              <option value="">-- Select Event --</option>
+              <% events.forEach(e => { %>
+                <option value="<%= e.id %>" <%= survey && survey.event_id === e.id ? 'selected' : '' %>><%= e.event_name %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="participantId">Participant *</label>
+            <select id="participantId" name="participantId" required>
+              <option value="">-- Select Participant --</option>
+              <% participants.forEach(p => { %>
+                <option value="<%= p.id %>" <%= survey && survey.participant_id === p.id ? 'selected' : '' %>><%= p.participant_first_name %> <%= p.participant_last_name %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+
+        <p class="form-section-title">Ratings (1-10)</p>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="satisfaction">Satisfaction</label>
+            <input type="number" id="satisfaction" name="satisfaction" min="1" max="10" value="<%= survey ? survey.survey_satisfaction_score : '' %>">
+          </div>
+          <div class="form-group">
+            <label for="usefulness">Usefulness</label>
+            <input type="number" id="usefulness" name="usefulness" min="1" max="10" value="<%= survey ? survey.survey_usefulness_score : '' %>">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="instructor">Instructor Rating</label>
+            <input type="number" id="instructor" name="instructor" min="1" max="10" value="<%= survey ? survey.survey_instructor_score : '' %>">
+          </div>
+          <div class="form-group">
+            <label for="recommendation">Would Recommend</label>
+            <input type="number" id="recommendation" name="recommendation" min="1" max="10" value="<%= survey ? survey.survey_recommendation_score : '' %>">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="overall">Overall Score (1-10)</label>
+          <input type="number" id="overall" name="overall" min="1" max="10" value="<%= survey ? survey.survey_overall_score : '' %>">
+        </div>
+
+        <div class="form-group">
+          <label for="comments">Comments</label>
+          <textarea id="comments" name="comments" rows="4"><%= survey ? survey.survey_comments : '' %></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a href="/surveys" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+  <footer class="footer">
+    <p>&copy; 2025 Ella Rises</p>
+  </footer>
+</body>
+</html>
