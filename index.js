@@ -177,7 +177,7 @@ app.post('/login', async (req, res) => {
     try {
         // get the one username
         const user = await knex('users')
-            .select('userid', 'username', 'password', 'role')  
+            .select('userid', 'username', 'password', 'role', 'participantid')
             .where('username', sName)
             .first();
 
@@ -198,6 +198,8 @@ app.post('/login', async (req, res) => {
         req.session.isLoggedIn = true;
         req.session.username = user.username;
         req.session.role = user.role;
+        req.session.userId = user.userid;
+        req.session.participantId = user.participantid ? parseInt(user.participantid, 10) : null;
 
         return res.redirect('/dashboard');
 
@@ -233,6 +235,43 @@ app.get('/dashboard', (req, res) => {
 app.get('/participants', async (req, res) => {
   if (!req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
+  }
+
+  const isAdmin = req.session.role === 'admin';
+  let participantId = req.session.participantId
+    ? parseInt(req.session.participantId, 10)
+    : null;
+
+  // セッションにparticipantIdが無い場合はDBから再取得してセッションに保存（参加者ロールのみ）
+  if (!isAdmin && (!participantId || Number.isNaN(participantId)) && req.session.userId) {
+    try {
+      const userRow = await knex('users')
+        .select('participantid')
+        .where('userid', req.session.userId)
+        .first();
+      if (userRow && userRow.participantid) {
+        participantId = parseInt(userRow.participantid, 10);
+        req.session.participantId = participantId;
+      }
+    } catch (lookupErr) {
+      console.error('Error reloading participantid for user', lookupErr);
+    }
+  }
+
+  // Participant権限なのに紐づくparticipantが無い場合は早期リターン
+  if (!isAdmin && (!participantId || Number.isNaN(participantId))) {
+    return res.render('participants', {
+      participants: [],
+      error_message: 'No participant record is linked to this user.',
+      isAdmin,
+      Username: req.session.username,
+      currentPage: 1,
+      totalPages: 1,
+      milestoneTitle: '',
+      name: '',
+      email: '',
+      phone: '',
+    });
   }
 
   const pageSize = 25;
@@ -276,6 +315,11 @@ app.get('/participants', async (req, res) => {
       baseQuery.whereILike('p.participantphone', `%${phone.trim()}%`);
     }
 
+    // 参加者ロールは自分のparticipantidに絞り込み
+    if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+      baseQuery.where('p.participantid', participantId);
+    }
+
     // Same filters for total count
     const countQuery = knex('participants as p')
       .leftJoin('milestones as m', 'p.participantid', 'm.participantid')
@@ -296,6 +340,9 @@ app.get('/participants', async (req, res) => {
         if (phone && phone.trim() !== '') {
           q.whereILike('p.participantphone', `%${phone.trim()}%`);
         }
+        if (!isAdmin && participantId && !Number.isNaN(participantId)) {
+          q.where('p.participantid', participantId);
+        }
       })
       .countDistinct('p.participantid as total');
 
@@ -304,16 +351,23 @@ app.get('/participants', async (req, res) => {
       countQuery,
     ]);
 
-    const total = parseInt(totalResult[0].total, 10) || 0;
+    // 念のため二重チェックで自分以外を除外
+    const scopedParticipants = (!isAdmin && participantId && !Number.isNaN(participantId))
+      ? participants.filter((p) => Number(p.participantid) === participantId)
+      : participants;
+
+    const total = (!isAdmin && participantId && !Number.isNaN(participantId))
+      ? scopedParticipants.length
+      : (parseInt(totalResult[0].total, 10) || 0);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     console.log('Participants length:', participants.length);
     console.log('Filter milestoneTitle:', milestoneTitle);
 
     res.render('participants', {
-      participants,
+      participants: scopedParticipants,
       error_message: '',
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       currentPage: page,
       totalPages,
@@ -327,7 +381,7 @@ app.get('/participants', async (req, res) => {
     res.render('participants', {
       participants: [],
       error_message: `Database error: ${error.message}`,
-      isAdmin: req.session.role === 'admin',
+      isAdmin,
       Username: req.session.username,
       currentPage: 1,
       totalPages: 1,
