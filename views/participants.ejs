@@ -1,8 +1,12 @@
-<!-- done, Lists all participants. (step 2 needs to work on.)On dropdown of participant show their attended and registered events as well as any corresponding survey results 
-(show the overall score or NPS bucket, on hover or drop down show every score) -->
-<!-- Include filters for event name and type. Then show only the participants for those things, (keep the dropdown showing their other attended events?) -->
-<!-- for each participant include a link to the view participant page -->
-
+<!-- Participants list page -->
+<!-- done, Lists all participants. 
+ (step 2 needs to work on.)On dropdown of participant show their attended 
+ and registered events as well as any corresponding survey results 
+ (show the overall score or NPS bucket, on hover or drop down show every score) --> 
+<!-- Include filters for event name and type. 
+ Then show only the participants for those things, 
+ (keep the dropdown showing their other attended events?) --> 
+ <!-- for each participant include a link to the view participant page -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,18 +22,45 @@
     <p style="color:red;"><%= error_message %></p>
   <% } %>
 
-  <!-- Simple filters (event name / type) - logic can be added later -->
-  <form method="get" action="/participants">
-    <label>
+  <!-- Filter form: event + basic participant info -->
+<form method="get" action="/participants">
+  <fieldset style="border:1px solid #ccc; padding:8px; margin-bottom:12px;">
+    <legend>Filter participants</legend>
+
+    <label style="display:block; margin-bottom:4px;">
+      First Name:
+      <input type="text" name="firstName"
+             value="<%= typeof firstName !== 'undefined' ? firstName : '' %>">
+    </label>
+
+    <label style="display:block; margin-bottom:4px;">
+      Email:
+      <input type="text" name="email"
+             value="<%= typeof email !== 'undefined' ? email : '' %>">
+    </label>
+
+    <label style="display:block; margin-bottom:4px;">
+      Phone:
+      <input type="text" name="phone"
+             value="<%= typeof phone !== 'undefined' ? phone : '' %>">
+    </label>
+
+    <label style="display:block; margin-bottom:4px;">
       Event Name:
-      <input type="text" name="eventName" value="<%= typeof eventName !== 'undefined' ? eventName : '' %>">
+      <input type="text" name="eventName"
+             value="<%= typeof eventName !== 'undefined' ? eventName : '' %>">
     </label>
-    <label>
+
+    <label style="display:block; margin-bottom:4px;">
       Event Type:
-      <input type="text" name="eventType" value="<%= typeof eventType !== 'undefined' ? eventType : '' %>">
+      <input type="text" name="eventType"
+             value="<%= typeof eventType !== 'undefined' ? eventType : '' %>">
     </label>
+
     <button type="submit">Filter</button>
-  </form>
+  </fieldset>
+</form>
+
 
   <hr>
 
@@ -41,77 +72,89 @@
         <th>Last Name</th>
         <th>Date of Birth</th>
         <th>Phone Number</th>
-        <th>City</th>
         <th>Field of Interest</th>
         <th>Actions</th>
       </tr>
     </thead>
-<tbody>
-  <% if (participants && participants.length > 0) { %>
+    <tbody>
+      <% if (participants && participants.length > 0) { %>
+        <% for (let iCount = 0; iCount < participants.length; iCount++) {
+            let p = participants[iCount];
+        %>
+          <tr>
+            <td><%= p.participantfirstname %></td>
+            <td><%= p.participantlastname %></td>
+            <td>
+              <% if (p.participantdob && p.participantdob.toISOString) { %>
+                <%= p.participantdob.toISOString().slice(0, 10) %>
+              <% } else { %>
+                <%= p.participantdob %>
+              <% } %>
+            </td>
+            <td><%= p.participantphone %></td>
+            <td><%= p.participantfieldofinterest %></td>
+            <td>
+              <% if (isAdmin) { %>
+                <a href="/participants/<%= p.participantid %>/edit">Edit</a>
+                |
+                <form action="/deleteparticipants/<%= p.participantid %>" method="POST"
+                      style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit"
+                          onclick="return confirm('Delete this participant?');">
+                    Delete
+                  </button>
+                </form>
+              <% } %>
 
-    <% for (let iCount = 0; iCount < participants.length; iCount++) { 
-         let p = participants[iCount];
-    %>
-      <tr>
-        <td><%= p.participantfirstname %></td>
-        <td><%= p.participantlastname %></td>
-        <td><%= p.participantdob.toISOString().slice(0, 10) %></td>
-        <td><%= p.participantphone %></td>
-        <td><%= p.participantcity %></td>
-        <td><%= p.participantfieldofinterest %></td>
-        <td>
-          <a href="/participants/<%= p.participantid %>">View</a>
-
-          <% if (isAdmin) { %>
-            |
-            <a href="/participants/<%= p.participantid %>/edit">Edit</a>
-            |
-            <form action="/deleteparticipants/<%= p.participantid %>" method="POST" style="display:inline;">
-              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-              <button type="submit" onclick="return confirm('Delete this participant?');">
-                Delete
-              </button>
-            </form>
-          <% } %>
-                      
-          <details style="margin-top: 4px;">
-            <summary>Quick view</summary>
-            <ul>
-              <li>Email:<%= p.email %></li>
-              <li>Role: <%= p.participantrole %></li>
-              <li>City/State: <%= p.participantcity %>, <%= p.participantstate %></li>
-            </ul>
-            <p style="margin-top: 4px;">
-              <a href="/participants/<%= p.participantid %>">Open full details →</a>
-            </p>
-          </details>          
-        </td>
-      </tr>
-    <% } %>
-
-  <% } else { %>
-    <tr>
-      <td colspan="11">No participants found.</td>
-    </tr>
-  <% } %>
-</tbody>
-
-
+              <details style="margin-top: 4px;">
+                <summary>Quick view</summary>
+                <ul>
+                  <li>Email: <%= p.email %></li>
+                  <li>Role: <%= p.participantrole %></li>
+                  <li>City/State: <%= p.participantcity %>, <%= p.participantstate %></li>
+                  <li>
+                    Events:
+                    <%= (p.attended_events && p.attended_events.trim() !== '')
+                          ? p.attended_events
+                          : 'No events yet' %>
+                  </li>
+                  <li>
+                    Event types:
+                    <%= (p.attended_event_types && p.attended_event_types.trim() !== '')
+                          ? p.attended_event_types
+                          : '-' %>
+                  </li>
+                </ul>
+                <p style="margin-top: 4px;">
+                  <a href="/participants/<%= p.participantid %>">Open full details →</a>
+                </p>
+              </details>
+            </td>
+          </tr>
+        <% } %>
+      <% } else { %>
+        <tr>
+          <td colspan="7">No participants found.</td>
+        </tr>
+      <% } %>
+    </tbody>
   </table>
 
-    <div style="margin-top: 16px;">
-    <% if (currentPage > 1) { %>
-      <a href="/participants?page=<%= currentPage - 1 %>">Prev</a>
-    <% } %>
+  <!-- Simple pagination -->
+<div style="margin-top: 16px;">
+  <% if (currentPage > 1) { %>
+    <a href="/participants?page=<%= currentPage - 1 %>">Prev</a>
+  <% } %>
 
-    <span>Page <%= currentPage %> of <%= totalPages %></span>
+  <span>Page <%= currentPage %> of <%= totalPages %></span>
 
-    <% if (currentPage < totalPages) { %>
-      <a href="/participants?page=<%= currentPage + 1 %>">Next</a>
-    <% } %>
-  </div>
-  
-  <!-- Manager-only: Add new participant -->
+  <% if (currentPage < totalPages) { %>
+    <a href="/participants?page=<%= currentPage + 1 %>">Next</a>
+  <% } %>
+</div>
+
+  <!-- Admin-only: Add new participant -->
   <% if (isAdmin) { %>
     <p>
       <a href="/participants/add">Add New Participant</a>

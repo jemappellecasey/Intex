@@ -235,58 +235,105 @@ app.get('/participants', async (req, res) => {
     return res.render('login', { error_message: null });
   }
 
-  const pageSize = 25;  // Number of participants per page
-  let page = parseInt(req.query.page, 10) || 1;  // Start at page 1 by default
+  const pageSize = 25;
+  const page = parseInt(req.query.page, 10) || 1;
+  const offset = (page - 1) * pageSize;
 
-  // Prevent invalid page numbers (negative or zero)
-  if (page < 1) page = 1;
+  // filters from query string
+  const {
+    firstName,
+    email,
+    phone,
+    eventName,
+    eventType
+  } = req.query;
 
   try {
-    // --- Step 1: Count total number of participants ---
-    const totalResult = await knex('participants')
-      .count('* as total');
+    // ----- base query (JOIN to events through registrations -> eventdetails) -----
+    const baseQuery = knex('participants as p')
+      .leftJoin('registrations as r', 'p.participantid', 'r.participantid')
+      .leftJoin('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
+      .leftJoin('events as e', 'ed.eventid', 'e.eventid');
 
-    const total = parseInt(totalResult[0].total, 10);
-    const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+    // ----- apply filters (only when input exists) -----
+    if (firstName && firstName.trim() !== '') {
+      baseQuery.whereILike('p.participantfirstname', `%${firstName.trim()}%`);
+    }
+    if (email && email.trim() !== '') {
+      baseQuery.whereILike('p.email', `%${email.trim()}%`);
+    }
+    if (phone && phone.trim() !== '') {
+      baseQuery.whereILike('p.participantphone', `%${phone.trim()}%`);
+    }
+    if (eventName && eventName.trim() !== '') {
+      baseQuery.whereILike('e.eventname', `%${eventName.trim()}%`);
+    }
+    if (eventType && eventType.trim() !== '') {
+      baseQuery.whereILike('e.eventtype', `%${eventType.trim()}%`);
+    }
 
-    // If the page number is too large, set it to the last page
-    if (page > totalPages) page = totalPages;
-
-    // --- Step 2: Calculate OFFSET for SQL query ---
-    const offset = (page - 1) * pageSize;
-
-    // --- Step 3: Fetch participants for the selected page ---
-    const participants = await knex('participants')
-      .select('*')
+    // ----- data query: participants + aggregated events -----
+    const participantsQuery = baseQuery
+      .clone()
+      .groupBy('p.participantid')
+      .select('p.*')
+      .select(
+        knex.raw(
+          "COALESCE(string_agg(DISTINCT e.eventname, ', '), '') AS attended_events"
+        ),
+        knex.raw(
+          "COALESCE(string_agg(DISTINCT e.eventtype, ', '), '') AS attended_event_types"
+        )
+      )
       .limit(pageSize)
       .offset(offset);
 
-    console.log(`participants length (page ${page}):`, participants.length);
+    // ----- count query for pagination (count DISTINCT participants) -----
+    const countQuery = baseQuery
+      .clone()
+      .countDistinct('p.participantid as total');
 
-    // --- Step 4: Render the page with pagination values ---
+    const [participants, totalResult] = await Promise.all([
+      participantsQuery,
+      countQuery
+    ]);
+
+    const total = parseInt(totalResult[0].total, 10) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
     res.render('participants', {
       participants,
       error_message: '',
       isAdmin: req.session.role === 'admin',
       Username: req.session.username,
       currentPage: page,
-      totalPages
+      totalPages,
+      // keep filter values in the form
+      firstName: firstName || '',
+      email: email || '',
+      phone: phone || '',
+      eventName: eventName || '',
+      eventType: eventType || ''
     });
 
   } catch (error) {
     console.error('Error loading participants:', error);
-
-    // Render error page if something goes wrong
     res.render('participants', {
       participants: [],
       error_message: `Database error: ${error.message}`,
       isAdmin: req.session.role === 'admin',
       Username: req.session.username,
       currentPage: 1,
-      totalPages: 1
+      totalPages: 1,
+      firstName: '',
+      email: '',
+      phone: '',
+      eventName: '',
+      eventType: ''
     });
   }
 });
+
 
 
 // View a single participant (details page)
