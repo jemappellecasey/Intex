@@ -135,94 +135,95 @@ app.use((req, res, next) => {
     res.locals.csrfToken = req.csrfToken();
     const flashError = req.flash("error");
     if (!res.locals.error_message) {
-        res.locals.error_message = flashError[0] || null;
+      res.locals.error_message = flashError[0] || null;
     }
     next();
-});
+  });
 
-//checking the CSFR login error
-app.use((err, req, res, next) => {
+  //checking the CSFR login error
+  app.use((err, req, res, next) => {
     if (err.code === "EBADCSRFTOKEN") {
-        return res.status(403).send("Invalid CSRF token.");
+      return res.status(403).send("Invalid CSRF token.");
     }
     next(err);
-});
-
-
-//Login check
-app.use((req, res, next)=> {
-    if(req.path === '/' || req.path === '/login' || req.path === '/logout'){
-        return next();
-    }
-    if (req.session.isLoggedIn){
-        next();
-    }
-    else{
-        res.render('login', {error_message: 'Please log in the access this page'})
-    }
-});
-
-
-
-//This is security for website if the user are manager or not.
-function requireManager(req, res, next) {
-    if (req.session.isLoggedIn && req.session.role === 'manager') {
-        return next();
-    }
-    return res.render('login', { error_message: 'You do not have permission to view this page.' });
-}
-
-// GET /signup
-app.get("/signup", (req, res) => {
+  });
+  
+  
+  //Login check
+  app.use((req, res, next)=> {
+        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass'];
+        if (openPaths.includes(req.path)) {
+          return next();
+        }
+        if (req.session.isLoggedIn) {
+          return next();
+        }
+      else{
+          res.render('login', {error_message: 'Please log in the access this page'})
+      }
+  });
+  
+  
+  
+  //This is security for website if the user are manager or not.
+  function requireManager(req, res, next) {
+      if (req.session.isLoggedIn && req.session.role === 'manager') {
+          return next();
+      }
+      return res.render('login', { error_message: 'You do not have permission to view this page.' });
+  }
+  
+  // GET /signup
+  app.get("/signup", (req, res) => {
   res.render("signup", { csrfToken: req.csrfToken() });
 });
 
 // POST /signup
 app.post("/signup", async (req, res) => {
   const { email } = req.body;
-
+  
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     req.flash("error", "Please enter a valid email address.");
     return res.redirect("/signup");
   }
-
+  
   try {
     const normalizedEmail = email.trim().toLowerCase();
-
+    
     let user = await knex("users").where({ email: normalizedEmail }).first();
-
+    
     if (!user) {
       const [newUser] = await knex("users")
-        .insert({
-          email: normalizedEmail,
-          role: "user",
-          isverified: false,
-        })
-        .returning("*");
+      .insert({
+        email: normalizedEmail,
+        role: "user",
+        isverified: false,
+      })
+      .returning("*");
       user = newUser;
     }
-
+    
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
+    
     await knex("users")
-      .where({ userid: user.userid })
-      .update({
-        magic_token: token,
-        magic_token_expires_at: expiresAt,
-      });
-
+    .where({ userid: user.userid })
+    .update({
+      magic_token: token,
+      magic_token_expires_at: expiresAt,
+    });
+    
     const baseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
     const verifyUrl = `${baseUrl}/verify-email/${token}`;
-
+    
     await transporter.sendMail({
       from: process.env.SES_FROM || process.env.EMAIL_FROM,
       to: normalizedEmail,
       subject: "Verify your email",
       html: `<p>Click this link to verify your email and log in:</p>
-             <p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+      <p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
     });
-
+    
     req.flash("info", "Check your email for a verification link.");
     res.redirect("/check-email");
   } catch (err) {
@@ -240,15 +241,15 @@ app.get("/check-email", (req, res) => {
 // GET /verify-email/:token
 app.get("/verify-email/:token", async (req, res) => {
   const { token } = req.params;
-
+  
   try {
     const user = await knex("users").where({ magic_token: token }).first();
-
+    
     if (!user) {
       req.flash("error", "Invalid or expired verification link.");
       return res.redirect("/signup");
     }
-
+    
     if (
       !user.magic_token_expires_at ||
       new Date(user.magic_token_expires_at) < new Date()
@@ -342,6 +343,7 @@ app.post('/login', async (req, res) => {
 });
 
 app.post("/dev-login-bypass", async (req, res) => {
+  console.log("post received")
   const { role } = req.body;
 
   // Only allow known roles
@@ -349,6 +351,7 @@ app.post("/dev-login-bypass", async (req, res) => {
   if (!allowedRoles.includes(role)) {
     return res.status(400).send("Invalid role");
   }
+
 
   try {
     // Find a user with this role; you can adjust this query to match your schema
@@ -370,7 +373,7 @@ app.post("/dev-login-bypass", async (req, res) => {
     req.session.participantId = user.participantid
       ? parseInt(user.participantid, 10)
       : null;
-
+    console.log("sdfsfd")
     return res.redirect("/dashboard");
   } catch (err) {
     console.error("dev-login-bypass error", err);
@@ -2408,14 +2411,14 @@ app.post('/milestones/:milestoneid/delete', async (req, res) => {
 
 
 // ===============================
-// Donations - list (admin or self)
+// Donations - list (manager or self)
 // ===============================
 app.get('/donations', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
 
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -2429,12 +2432,12 @@ app.get('/donations', async (req, res) => {
   const startDate = req.query.startDate ? req.query.startDate.trim() : '';
   const endDate = req.query.endDate ? req.query.endDate.trim() : '';
 
-  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('donations', {
       donations: [],
       totalAmount: 0,
       error_message: 'No participant record is linked to this user.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       name,
       email,
@@ -2459,7 +2462,7 @@ app.get('/donations', async (req, res) => {
         'p.email'
       );
 
-    if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+    if (!isManager && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
       baseQuery.where('p.participantid', sessionParticipantId);
     }
 
@@ -2485,7 +2488,7 @@ app.get('/donations', async (req, res) => {
     const countQuery = knex('donations as d')
       .join('participants as p', 'd.participantid', 'p.participantid')
       .modify((q) => {
-        if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+        if (!isManager && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
           q.where('p.participantid', sessionParticipantId);
         }
         if (name !== '') {
@@ -2510,7 +2513,7 @@ app.get('/donations', async (req, res) => {
     const sumQuery = knex('donations as d')
       .join('participants as p', 'd.participantid', 'p.participantid')
       .modify((q) => {
-        if (!isAdmin && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
+        if (!isManager && sessionParticipantId && !Number.isNaN(sessionParticipantId)) {
           q.where('p.participantid', sessionParticipantId);
         }
         if (name !== '') {
@@ -2548,7 +2551,7 @@ app.get('/donations', async (req, res) => {
       donations,
       totalAmount,
       error_message: '',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       name,
       email,
@@ -2564,7 +2567,7 @@ app.get('/donations', async (req, res) => {
       donations: [],
       totalAmount: 0,
       error_message: 'Error loading donations.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       name,
       email,
@@ -2577,17 +2580,17 @@ app.get('/donations', async (req, res) => {
   }
 });
 
-// Donations - new (admin or self)
+// Donations - new (manager or self)
 app.get('/donations/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
 
-  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('login', {
       error_message: 'You do not have permission to add donations.'
     });
@@ -2595,7 +2598,7 @@ app.get('/donations/new', async (req, res) => {
 
   return res.render('donations_new', {
     error_message: '',
-    isAdmin,
+    isManager,
     Username: req.session.username,
     selfParticipantId: sessionParticipantId,
     csrfToken: req.csrfToken(),
@@ -2609,12 +2612,12 @@ app.post('/donations/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
 
-  if (!isAdmin && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
+  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
     return res.render('login', {
       error_message: 'You do not have permission to add donations.'
     });
@@ -2624,14 +2627,14 @@ app.post('/donations/new', async (req, res) => {
 
   try {
     let participantIdToUse = null;
-    if (isAdmin) {
+    if (isManager) {
       const participant = await knex('participants')
         .whereILike('email', (email || '').trim())
         .first();
       if (!participant) {
         return res.render('donations_new', {
           error_message: 'No participant found with that email.',
-          isAdmin,
+          isManager,
           Username: req.session.username,
           selfParticipantId: sessionParticipantId,
           csrfToken: req.csrfToken(),
@@ -2656,7 +2659,7 @@ app.post('/donations/new', async (req, res) => {
     console.error('Error creating donation:', err);
     return res.render('donations_new', {
       error_message: 'Error creating donation.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken(),
@@ -2667,12 +2670,12 @@ app.post('/donations/new', async (req, res) => {
   }
 });
 
-// Donations - edit (admin or self)
+// Donations - edit (manager or self)
 app.get('/donations/:donationid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -2698,13 +2701,13 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       return res.render('donations_edit', {
         donation: null,
         error_message: 'Donation not found.',
-        isAdmin,
+        isManager,
         Username: req.session.username,
         csrfToken: req.csrfToken()
       });
     }
 
-    if (!isAdmin && String(donation.participantid) !== String(sessionParticipantId || '')) {
+    if (!isManager && String(donation.participantid) !== String(sessionParticipantId || '')) {
       return res.render('login', {
         error_message: 'You do not have permission to edit this donation.'
       });
@@ -2713,7 +2716,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
     return res.render('donations_edit', {
       donation,
       error_message: '',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
@@ -2723,7 +2726,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
     return res.render('donations_edit', {
       donation: null,
       error_message: 'Error loading donation.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
@@ -2735,7 +2738,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  const isAdmin = req.session.role === 'admin';
+  const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId
     ? parseInt(req.session.participantId, 10)
     : null;
@@ -2749,21 +2752,21 @@ app.post('/donations/:donationid/edit', async (req, res) => {
       return res.render('donations_edit', {
         donation: null,
         error_message: 'Donation not found.',
-        isAdmin,
+        isManager,
         Username: req.session.username,
         selfParticipantId: sessionParticipantId,
         csrfToken: req.csrfToken()
       });
     }
 
-    if (!isAdmin && String(donationRow.participantid) !== String(sessionParticipantId || '')) {
+    if (!isManager && String(donationRow.participantid) !== String(sessionParticipantId || '')) {
       return res.render('login', {
         error_message: 'You do not have permission to edit this donation.'
       });
     }
 
     let participantIdToUse = donationRow.participantid;
-    if (isAdmin && email) {
+    if (isManager && email) {
       const participant = await knex('participants')
         .whereILike('email', email.trim())
         .first();
@@ -2784,7 +2787,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
         return res.render('donations_edit', {
           donation,
           error_message: 'No participant found with that email.',
-          isAdmin,
+          isManager,
           Username: req.session.username,
           selfParticipantId: sessionParticipantId,
           csrfToken: req.csrfToken()
@@ -2821,7 +2824,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
     return res.render('donations_edit', {
       donation,
       error_message: 'Error updating donation.',
-      isAdmin,
+      isManager,
       Username: req.session.username,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
@@ -2829,12 +2832,12 @@ app.post('/donations/:donationid/edit', async (req, res) => {
   }
 });
 
-// Donations - delete (admin only)
+// Donations - delete (manager only)
 app.post('/donations/:donationid/delete', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
-  if (req.session.role !== 'admin') {
+  if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to delete donations.'
     });
