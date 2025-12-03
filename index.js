@@ -2797,15 +2797,16 @@ app.post('/donations/new', async (req, res) => {
   }
 });
 
-// Donations - edit (manager or self)
+// Donations - edit (manager only)
 app.get('/donations/:donationid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
   const isManager = req.session.role === 'manager';
-  const sessionParticipantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
+  if (!isManager) {
+    return res.render('login', { error_message: 'You do not have permission to edit donations.' });
+  }
+  const sessionParticipantId = await ensureParticipantId(req);
 
   const { donationid } = req.params;
 
@@ -2830,13 +2831,8 @@ app.get('/donations/:donationid/edit', async (req, res) => {
         error_message: 'Donation not found.',
         isManager,
         Username: req.session.username,
+        selfParticipantId: sessionParticipantId,
         csrfToken: req.csrfToken()
-      });
-    }
-
-    if (!isManager && String(donation.participantid) !== String(sessionParticipantId || '')) {
-      return res.render('login', {
-        error_message: 'You do not have permission to edit this donation.'
       });
     }
 
@@ -2866,9 +2862,10 @@ app.post('/donations/:donationid/edit', async (req, res) => {
     return res.render('login', { error_message: null });
   }
   const isManager = req.session.role === 'manager';
-  const sessionParticipantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
+  if (!isManager) {
+    return res.render('login', { error_message: 'You do not have permission to edit donations.' });
+  }
+  const sessionParticipantId = await ensureParticipantId(req);
 
   const { donationid } = req.params;
   const { donationamount, donationdate, email } = req.body;
@@ -2883,12 +2880,6 @@ app.post('/donations/:donationid/edit', async (req, res) => {
         Username: req.session.username,
         selfParticipantId: sessionParticipantId,
         csrfToken: req.csrfToken()
-      });
-    }
-
-    if (!isManager && String(donationRow.participantid) !== String(sessionParticipantId || '')) {
-      return res.render('login', {
-        error_message: 'You do not have permission to edit this donation.'
       });
     }
 

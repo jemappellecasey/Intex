@@ -3,8 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <title>Donations</title>
+  <style>
+    .layout { display: flex; gap: 16px; min-height: 100vh; }
+    .sidebar { min-width: 180px; border-right: 1px solid #ddd; padding: 12px 16px; }
+    .sidebar h2 { margin-top: 0; font-size: 18px; }
+    .sidebar a { display: block; margin: 6px 0; color: #333; text-decoration: none; }
+    .sidebar a.active { font-weight: bold; }
+    .main-content { flex: 1; padding: 16px; }
+  </style>
 </head>
 <body>
+<div class="layout">
+  <aside class="sidebar">
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations" class="active">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+  <main class="main-content">
 
 <h1>Donations</h1>
 <p><a href="/dashboard">Back to Dashboard</a></p>
@@ -74,29 +99,37 @@
           <% } %>
           <th>Donation Date</th>
           <th>Amount</th>
-          <th>Actions</th>
+          <% if (isManager) { %>
+            <th>Actions</th>
+          <% } %>
         </tr>
       </thead>
       <tbody>
       <% donations.forEach(function(d) { %>
         <tr>
           <% if (isManager) { %>
-            <td><%= d.participantfirstname %> <%= d.participantlastname %></td>
+            <td>
+              <% if (d.participantid) { %>
+                <a href="/participants/<%= d.participantid %>">
+                  <%= d.participantfirstname %> <%= d.participantlastname %>
+                </a>
+              <% } else { %>
+                <%= d.participantfirstname %> <%= d.participantlastname %>
+              <% } %>
+            </td>
             <td><%= d.email || 'N/A' %></td>
           <% } %>
           <td><%= d.donationdate ? new Date(d.donationdate).toISOString().slice(0,10) : 'N/A' %></td>
           <td>$<%= d.donationamount ? Number(d.donationamount).toFixed(2) : '0.00' %></td>
-          <td>
-            <% if (isManager || (selfParticipantId && Number(selfParticipantId) === Number(d.participantid))) { %>
+          <% if (isManager) { %>
+            <td>
               <a href="/donations/<%= d.donationid %>/edit"><button type="button">Edit</button></a>
-              <% if (isManager) { %>
-                <form method="post" action="/donations/<%= d.donationid %>/delete" style="display:inline;">
-                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                  <button type="submit" onclick="return confirm('Delete this donation?');">Delete</button>
-                </form>
-              <% } %>
-            <% } %>
-          </td>
+              <form method="post" action="/donations/<%= d.donationid %>/delete" style="display:inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" onclick="return confirm('Delete this donation?');">Delete</button>
+              </form>
+            </td>
+          <% } %>
         </tr>
       <% }); %>
       </tbody>
@@ -104,5 +137,7 @@
   <% } %>
 </section>
 
+  </main>
+</div>
 </body>
 </html>
