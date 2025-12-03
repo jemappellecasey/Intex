@@ -151,8 +151,8 @@
 
     <hr>
 
-    <!-- Delete button (admin only) -->
-    <% if (isAdmin) { %>
+    <!-- Delete button (manager only) -->
+    <% if (isManager) { %>
       <section>
         <h2>Delete This Survey</h2>
         <form method="post" action="/surveys/<%= survey.surveyid %>/delete">

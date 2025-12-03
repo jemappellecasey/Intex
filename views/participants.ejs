@@ -95,9 +95,9 @@
             <td><%= p.participantphone %></td>
             <td><%= p.participantfieldofinterest %></td>
             <td>
-              <% if (isAdmin || (selfParticipantId && Number(selfParticipantId) === Number(p.participantid))) { %>
+              <% if (isManager || (selfParticipantId && Number(selfParticipantId) === Number(p.participantid))) { %>
                 <a href="/participants/<%= p.participantid %>/edit">Edit</a>
-                <% if (isAdmin) { %>
+                <% if (isManager) { %>
                   |
                   <form action="/deleteparticipants/<%= p.participantid %>" method="POST"
                         style="display:inline;">
@@ -153,8 +153,8 @@
   <% } %>
 </div>
 
-  <!-- Admin-only: Add new participant -->
-  <% if (isAdmin) { %>
+  <!-- Manager-only: Add new participant -->
+  <% if (isManager) { %>
     <p>
       <a href="/participants/add">Add New Participant</a>
     </p>

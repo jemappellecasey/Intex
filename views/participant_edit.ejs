@@ -16,7 +16,7 @@
     <p style="color:green;"><%= success_message %></p>
   <% } %>
 
-  <!-- Editable participant information (only for admin users) -->
+  <!-- Editable participant information (only for manager users) -->
   <section>
     <h2>Basic Information</h2>
 
@@ -154,7 +154,7 @@
           <th>Check-in Time</th>
           <th>Attendance Flag</th>
           <th>Registration Created At</th>
-          <% if (isAdmin) { %><th>Actions</th><% } %>
+          <% if (isManager) { %><th>Actions</th><% } %>
         </tr>
       </thead>
 
@@ -172,7 +172,7 @@
           </td>
 
           <td>
-            <% if (isAdmin) { %>
+            <% if (isManager) { %>
               <form method="post" action="/participants/<%= participant.participantid %>/registrations/<%= ev.registrationid %>">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <input type="text" name="registrationstatus" value="<%= ev.registrationstatus || '' %>">
@@ -189,7 +189,7 @@
           </td>
 
           <td>
-              <% if (isAdmin) { %>
+              <% if (isManager) { %>
                 <input
                   type="checkbox"
                   name="registrationattendanceflag"
@@ -208,7 +208,7 @@
             <% } else { %> N/A <% } %>
           </td>
 
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <td>
                 <button type="submit">Save</button>
               </form>
@@ -241,7 +241,7 @@
           <th>Recommendation</th>
           <th>Overall</th>
           <th>Submission Date</th>
-          <% if (isAdmin) { %><th>Actions</th><% } %>
+          <% if (isManager) { %><th>Actions</th><% } %>
         </tr>
       </thead>
 
@@ -257,7 +257,7 @@
             <% } else { %> N/A <% } %>
           </td>
 
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <form method="post" action="/participants/<%= participant.participantid %>/surveys/<%= s.surveyid %>">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
@@ -327,14 +327,14 @@
         <tr>
           <th>Title</th>
           <th>Date</th>
-          <% if (isAdmin) { %><th>Actions</th><% } %>
+          <% if (isManager) { %><th>Actions</th><% } %>
         </tr>
       </thead>
 
       <tbody>
       <% milestones.forEach(function(m) { %>
         <tr>
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <form method="post" action="/participants/<%= participant.participantid %>/milestones/<%= m.milestoneid %>">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
@@ -386,14 +386,14 @@
         <tr>
           <th>Date</th>
           <th>Amount</th>
-          <% if (isAdmin) { %><th>Actions</th><% } %>
+          <% if (isManager) { %><th>Actions</th><% } %>
         </tr>
       </thead>
 
       <tbody>
       <% donations.forEach(function(d) { %>
         <tr>
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <form method="post" action="/participants/<%= participant.participantid %>/donations/<%= d.donationid %>">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 

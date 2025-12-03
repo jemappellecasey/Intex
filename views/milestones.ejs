@@ -57,7 +57,7 @@
 <!-- ============================= -->
 <section>
   <h2>Milestones List</h2>
-  <% if (isAdmin || selfParticipantId) { %>
+  <% if (isManager || selfParticipantId) { %>
     <p>
       <a href="/milestones/new"><button type="button">Add Milestone</button></a>
     </p>
@@ -90,7 +90,7 @@
         <th>Email</th>
         <th>Milestone Title</th>
         <th>Milestone Date</th>
-        <% if (isAdmin || selfParticipantId) { %>
+        <% if (isManager || selfParticipantId) { %>
           <th>Actions</th>
         <% } %>
       </tr>
@@ -121,13 +121,13 @@
             <% } %>
           </td>
 
-          <% if (isAdmin || (selfParticipantId && Number(selfParticipantId) === Number(m.participantid))) { %>
+          <% if (isManager || (selfParticipantId && Number(selfParticipantId) === Number(m.participantid))) { %>
             <td>
               <a href="/milestones/<%= m.milestoneid %>/edit">
                 <button type="button">Edit</button>
               </a>
 
-              <% if (isAdmin) { %>
+              <% if (isManager) { %>
                 <form method="post"
                       action="/milestones/<%= m.milestoneid %>/delete"
                       style="display:inline;">

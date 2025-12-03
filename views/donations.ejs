@@ -13,13 +13,13 @@
   <p style="color:red;"><%= error_message %></p>
 <% } %>
 
-<% if (!isAdmin) { %>
+<% if (!isManager) { %>
   <p>Thank you for your donations!</p>
 <% } %>
 
 <p><strong>Total Amount:</strong> $<%= (totalAmount || 0).toFixed(2) %></p>
 
-<% if (isAdmin) { %>
+<% if (isManager) { %>
   <section>
     <h2>Search Donations</h2>
     <form method="get" action="/donations">
@@ -68,7 +68,7 @@
     <table border="1" cellspacing="0" cellpadding="4">
       <thead>
         <tr>
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <th>Donor</th>
             <th>Email</th>
           <% } %>
@@ -80,16 +80,16 @@
       <tbody>
       <% donations.forEach(function(d) { %>
         <tr>
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <td><%= d.participantfirstname %> <%= d.participantlastname %></td>
             <td><%= d.email || 'N/A' %></td>
           <% } %>
           <td><%= d.donationdate ? new Date(d.donationdate).toISOString().slice(0,10) : 'N/A' %></td>
           <td>$<%= d.donationamount ? Number(d.donationamount).toFixed(2) : '0.00' %></td>
           <td>
-            <% if (isAdmin || (selfParticipantId && Number(selfParticipantId) === Number(d.participantid))) { %>
+            <% if (isManager || (selfParticipantId && Number(selfParticipantId) === Number(d.participantid))) { %>
               <a href="/donations/<%= d.donationid %>/edit"><button type="button">Edit</button></a>
-              <% if (isAdmin) { %>
+              <% if (isManager) { %>
                 <form method="post" action="/donations/<%= d.donationid %>/delete" style="display:inline;">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <button type="submit" onclick="return confirm('Delete this donation?');">Delete</button>

@@ -21,9 +21,9 @@
 <form method="post" action="/milestones/new">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-  <% if (isAdmin) { %>
+  <% if (isManager) { %>
     <div>
-      <!-- Email is used to find the participant (admin only) -->
+      <!-- Email is used to find the participant (manager only) -->
       <label>
         Participant Email:
         <input type="email"
