@@ -239,40 +239,40 @@ app.get('/participants', async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const offset = (page - 1) * pageSize;
 
-  // filters from query string
-  const {
-    firstName,
-    email,
-    phone,
-    eventName,
-    eventType
-  } = req.query;
+  // read filters from query string
+  const { firstName, email, phone, eventName, eventType } = req.query;
+
+    console.log("Received filters:", req.query);
+
 
   try {
-    // ----- base query (JOIN to events through registrations -> eventdetails) -----
+    // base query with joins (for events)
     const baseQuery = knex('participants as p')
       .leftJoin('registrations as r', 'p.participantid', 'r.participantid')
       .leftJoin('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
       .leftJoin('events as e', 'ed.eventid', 'e.eventid');
 
-    // ----- apply filters (only when input exists) -----
+    // apply filters only when user typed something
     if (firstName && firstName.trim() !== '') {
+      console.log("Applying filter: firstName =", firstName);
       baseQuery.whereILike('p.participantfirstname', `%${firstName.trim()}%`);
     }
     if (email && email.trim() !== '') {
+      console.log("Applying filter: email =", email);
       baseQuery.whereILike('p.email', `%${email.trim()}%`);
     }
     if (phone && phone.trim() !== '') {
       baseQuery.whereILike('p.participantphone', `%${phone.trim()}%`);
     }
     if (eventName && eventName.trim() !== '') {
+      console.log("Applying filter: eventName =", eventName);
       baseQuery.whereILike('e.eventname', `%${eventName.trim()}%`);
     }
     if (eventType && eventType.trim() !== '') {
       baseQuery.whereILike('e.eventtype', `%${eventType.trim()}%`);
     }
 
-    // ----- data query: participants + aggregated events -----
+    // data query (participants + aggregated events)
     const participantsQuery = baseQuery
       .clone()
       .groupBy('p.participantid')
@@ -288,7 +288,7 @@ app.get('/participants', async (req, res) => {
       .limit(pageSize)
       .offset(offset);
 
-    // ----- count query for pagination (count DISTINCT participants) -----
+    // count query (for pagination)
     const countQuery = baseQuery
       .clone()
       .countDistinct('p.participantid as total');
@@ -301,6 +301,10 @@ app.get('/participants', async (req, res) => {
     const total = parseInt(totalResult[0].total, 10) || 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+    console.log("Participants returned:", participants.length);
+    console.log("Pagination:", { page, totalPages });
+
+
     res.render('participants', {
       participants,
       error_message: '',
@@ -308,7 +312,7 @@ app.get('/participants', async (req, res) => {
       Username: req.session.username,
       currentPage: page,
       totalPages,
-      // keep filter values in the form
+      // keep filter values so the form shows what you typed
       firstName: firstName || '',
       email: email || '',
       phone: phone || '',
@@ -333,6 +337,7 @@ app.get('/participants', async (req, res) => {
     });
   }
 });
+
 
 
 
