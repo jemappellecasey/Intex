@@ -405,9 +405,9 @@ app.post("/signup", async (req, res) => {
 
 
 
-// GET /check-email
-app.get("/check-email", (req, res) => {
-  res.render("check-email");
+// GET /checkEmail
+app.get("/checkEmail", (req, res) => {
+  res.render("checkEmail");
 });
 
 // GET /verify-email/:token
@@ -458,7 +458,7 @@ app.get('/admin/settings', requireManager, async (req, res) => {
       .select('userid', 'email', 'role', 'isverified')
       .orderBy('userid', 'asc');
 
-    return res.render('admin_settings', {
+    return res.render('adminSettings', {
       users,
       error_message: '',
       isManager: true,
@@ -467,7 +467,7 @@ app.get('/admin/settings', requireManager, async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading admin settings:', err);
-    return res.render('admin_settings', {
+    return res.render('adminSettings', {
       users: [],
       error_message: 'Error loading users.',
       isManager: true,
@@ -486,7 +486,7 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
     const users = await knex('users')
       .select('userid', 'email', 'role', 'isverified')
       .orderBy('userid', 'asc');
-    return res.render('admin_settings', {
+    return res.render('adminSettings', {
       users,
       error_message: 'Invalid role.',
       isManager: true,
@@ -505,7 +505,7 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
     const users = await knex('users')
       .select('userid', 'email', 'role', 'isverified')
       .orderBy('userid', 'asc');
-    return res.render('admin_settings', {
+    return res.render('adminSettings', {
       users,
       error_message: 'Error updating user role.',
       isManager: true,
@@ -530,7 +530,7 @@ app.post('/admin/users/:userid/delete', requireManager, async (req, res) => {
     const users = await knex('users')
       .select('userid', 'email', 'role', 'isverified')
       .orderBy('userid', 'asc');
-    return res.render('admin_settings', {
+    return res.render('adminSettings', {
       users,
       error_message: 'Error deleting user.',
       isManager: true,
@@ -822,7 +822,7 @@ app.get('/participants/add', (req, res) => {
     return res.render('login', { error_message: 'You do not have permission to add participants.' });
   }
 
-  res.render('participant_add', {
+  res.render('participantAdd', {
     error_message: '',
     isManager: true,
     Username: req.session.username,
@@ -881,7 +881,7 @@ app.post('/participants/add', async (req, res) => {
     console.error('Error inserting participant:', err);
 
     // Re-render the form with an error message
-    return res.render('participant_add', {
+    return res.render('participantAdd', {
       error_message: 'Error creating participant.',
       isManager: true,
       Username: req.session.username,
@@ -1092,7 +1092,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
 
     if (!participant) {
       console.error('Edit: participant not found for id =', participantid);
-      return res.render('participant_edit', {
+      return res.render('participantEdit', {
         participant: null,
         events: [],
         milestones: [],
@@ -1189,7 +1189,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
 
     console.log('Edit page loaded for participantid =', participantid);
 
-    return res.render('participant_edit', {
+    return res.render('participantEdit', {
       participant,
       events,
       milestones,
@@ -1207,7 +1207,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading participant (edit route):', err);
-    return res.render('participant_edit', {
+    return res.render('participantEdit', {
       participant: null,
       events: [],
       milestones: [],
@@ -1263,7 +1263,7 @@ app.post('/participants/:participantid/edit', async (req, res) => {
       .update(updated);
 
     if (rows === 0) {
-      return res.render('participant_edit', {
+      return res.render('participantEdit', {
         participant: null,
         events: [],
         milestones: [],
@@ -1284,7 +1284,7 @@ app.post('/participants/:participantid/edit', async (req, res) => {
     return res.redirect(`/participants/${participantid}/edit?updated=1`);
   } catch (err) {
     console.error("Error updating participant:", err);
-    return res.render('participant_edit', {
+    return res.render('participantEdit', {
       participant: null,
       events: [],
       milestones: [],
@@ -1646,7 +1646,7 @@ app.get('/events/:eventdetailsid/edit', async (req, res) => {
       return res.send('Event not found.');
     }
 
-    res.render('event_edit', {
+    res.render('eventEdit', {
       event,
       error_message: '',
       isManager: req.session.role === 'manager',
@@ -2020,7 +2020,7 @@ app.get('/surveys/new', async (req, res) => {
       .select('participantid', 'participantfirstname', 'participantlastname', 'email')
       .orderBy('participantlastname', 'asc');
 
-    return res.render('survey_new', {
+    return res.render('surveyNew', {
       events,
       participants,
       error_message: '',
@@ -2030,7 +2030,7 @@ app.get('/surveys/new', async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading data for new survey:', err);
-    return res.render('survey_new', {
+    return res.render('surveyNew', {
       events: [],
       participants: [],
       error_message: 'Error loading data for new survey.',
@@ -2104,7 +2104,7 @@ app.post('/surveys/new', async (req, res) => {
   } catch (err) {
     console.error('Error inserting new survey:', err);
     // You might want to reload lists and show error, but simple redirect is ok
-    return res.render('survey_new', {
+    return res.render('surveyNew', {
       events: [],
       participants: [],
       error_message: 'Error inserting new survey.',
@@ -2157,7 +2157,7 @@ app.get('/surveys/:surveyid/edit', async (req, res) => {
       return res.send('Survey not found.');
     }
 
-    return res.render('survey_edit', {
+    return res.render('surveyEdit', {
       survey,
       error_message: '',
       isManager: req.session.role === 'manager',
@@ -2436,7 +2436,7 @@ app.get('/milestones/new', async (req, res) => {
 
   const prefillEmail = req.query.email || '';
 
-  return res.render('milestones_new', {
+  return res.render('milestonesNew', {
     email: prefillEmail,
     milestonetitle: '',
     milestonedate: '',
@@ -2478,7 +2478,7 @@ app.post('/milestones/new', async (req, res) => {
         .first();
 
       if (!participant) {
-        return res.render('milestones_new', {
+        return res.render('milestonesNew', {
           email,
           milestonetitle,
           milestonedate,
@@ -2503,7 +2503,7 @@ app.post('/milestones/new', async (req, res) => {
     return res.redirect('/milestones');
   } catch (err) {
     console.error('Error creating milestone:', err);
-    return res.render('milestones_new', {
+    return res.render('milestonesNew', {
       email,
       milestonetitle,
       milestonedate,
@@ -2545,7 +2545,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       .first();
 
     if (!milestone) {
-      return res.render('milestones_edit', {
+      return res.render('milestonesEdit', {
         milestone: null,
         participants: [],
         error_message: 'Milestone not found.',
@@ -2574,7 +2574,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
         .orderBy('participantfirstname', 'asc');
     }
 
-    return res.render('milestones_edit', {
+    return res.render('milestonesEdit', {
       milestone,
       participants,                      
       error_message: '',
@@ -2584,7 +2584,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading milestone for edit:', err);
-    return res.render('milestones_edit', {
+    return res.render('milestonesEdit', {
       milestone: null,
       participants: [],              
       error_message: 'Error loading milestone for edit.',
@@ -2856,7 +2856,7 @@ app.get('/donations/new', async (req, res) => {
     });
   }
 
-  return res.render('donations_new', {
+  return res.render('donationsNew', {
     error_message: '',
     isManager,
     Username: req.session.username,
@@ -2892,7 +2892,7 @@ app.post('/donations/new', async (req, res) => {
         .whereILike('email', (email || '').trim())
         .first();
       if (!participant) {
-        return res.render('donations_new', {
+        return res.render('donationsNew', {
           error_message: 'No participant found with that email.',
           isManager,
           Username: req.session.username,
@@ -2917,7 +2917,7 @@ app.post('/donations/new', async (req, res) => {
     return res.redirect('/donations');
   } catch (err) {
     console.error('Error creating donation:', err);
-    return res.render('donations_new', {
+    return res.render('donationsNew', {
       error_message: 'Error creating donation.',
       isManager,
       Username: req.session.username,
@@ -2959,7 +2959,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       .first();
 
     if (!donation) {
-      return res.render('donations_edit', {
+      return res.render('donationsEdit', {
         donation: null,
         error_message: 'Donation not found.',
         isManager,
@@ -2969,7 +2969,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       });
     }
 
-    return res.render('donations_edit', {
+    return res.render('donationsEdit', {
       donation,
       error_message: '',
       isManager,
@@ -2979,7 +2979,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading donation for edit:', err);
-    return res.render('donations_edit', {
+    return res.render('donationsEdit', {
       donation: null,
       error_message: 'Error loading donation.',
       isManager,
@@ -3006,7 +3006,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
   try {
     const donationRow = await knex('donations').where({ donationid }).first('participantid');
     if (!donationRow) {
-      return res.render('donations_edit', {
+      return res.render('donationsEdit', {
         donation: null,
         error_message: 'Donation not found.',
         isManager,
@@ -3035,7 +3035,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
             'p.email'
           )
           .first();
-        return res.render('donations_edit', {
+        return res.render('donationsEdit', {
           donation,
           error_message: 'No participant found with that email.',
           isManager,
@@ -3072,7 +3072,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
       )
       .first();
 
-    return res.render('donations_edit', {
+    return res.render('donationsEdit', {
       donation,
       error_message: 'Error updating donation.',
       isManager,
