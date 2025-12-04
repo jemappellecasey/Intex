@@ -144,9 +144,7 @@
                               && ev.eventcapacity !== undefined
                               && Number(ev.registeredcount) >= Number(ev.eventcapacity); %>
 
-            <% if (isFull) { %>
-              <strong style="color:red;">This event is fully booked</strong>
-            <% } else if (ev.isregisteredforcurrentuser) { %>
+            <% if (ev.isregisteredforcurrentuser) { %>
               <div class="mt-1">
                 <span class="text-muted">You are registered</span>
                 <form method="post" action="/events/<%= ev.eventdetailsid %>/unregister" style="display:inline;">
@@ -154,6 +152,9 @@
                   <button type="submit" class="btn" style="margin-left:6px;">Unregister</button>
                 </form>
               </div>
+            <% } else if (isFull) { %>
+              <strong style="color:red;">This event is fully booked</strong>
+            
             <% } else { %>
               <form method="get" action="/events/<%= ev.eventdetailsid %>/register">
                 <button type="submit">Register</button>
