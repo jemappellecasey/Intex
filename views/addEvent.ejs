@@ -18,79 +18,61 @@
       <div class="alert alert-error"><%= error_message %></div>
     <% } %>
 
-    <form method="post" action="/events/new" class="form-card">
+    <form method="post" action="/events/new" class="form-card form-shell">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-      <div>
-        <label>
-          Event Name*
-          <input type="text" name="eventname" value="<%= eventname || '' %>" required>
-        </label>
-      </div>
+      <table>
+        <tr>
+          <th>Event*</th>
+          <td>
+            <select name="eventid" required>
+              <option value="">Select an event</option>
+              <% if (eventsList && eventsList.length) { %>
+                <% eventsList.forEach(function(ev) { %>
+                  <option value="<%= ev.eventid %>" <%= String(selectedEventId) === String(ev.eventid) ? 'selected' : '' %>>
+                    <%= ev.eventname %> (<%= ev.eventtype || 'No type' %>)
+                  </option>
+                <% }); %>
+              <% } %>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>Location</th>
+          <td><input type="text" name="eventlocation" value="<%= eventlocation || '' %>"></td>
+        </tr>
+        <tr>
+          <th>Occurrence</th>
+          <td>
+            <select name="eventrecurrencepattern">
+              <option value="" <%= !eventrecurrencepattern ? 'selected' : '' %>></option>
+              <option value="Weekly"  <%= eventrecurrencepattern === 'Weekly'  ? 'selected' : '' %>>Weekly</option>
+              <option value="Monthly" <%= eventrecurrencepattern === 'Monthly' ? 'selected' : '' %>>Monthly</option>
+              <option value="Annually"<%= eventrecurrencepattern === 'Annually'? 'selected' : '' %>>Annually</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>Start Date / Time</th>
+          <td><input type="datetime-local" name="eventdatetimestart" required></td>
+        </tr>
+        <tr>
+          <th>End Date / Time</th>
+          <td><input type="datetime-local" name="eventdatetimeend"></td>
+        </tr>
+        <tr>
+          <th>Capacity</th>
+          <td><input type="number" min="0" name="eventcapacity" value="<%= eventcapacity || '' %>"></td>
+        </tr>
+        <tr>
+          <th>Registration Deadline</th>
+          <td><input type="datetime-local" name="eventregistrationdeadline"></td>
+        </tr>
+      </table>
 
-      <div>
-        <label>
-          Event Type*
-          <input type="text" name="eventtype" value="<%= eventtype || '' %>" required>
-        </label>
-      </div>
-
-      <div>
-        <label>
-          Description
-          <textarea name="eventdescription" rows="3"><%= eventdescription || '' %></textarea>
-        </label>
-      </div>
-
-      <div>
-        <label>
-          Location
-          <input type="text" name="eventlocation" value="<%= eventlocation || '' %>">
-        </label>
-      </div>
-
-      <div>
-        <label>
-          Occurrence
-          <select name="eventrecurrencepattern">
-            <option value="Weekly"  <%= eventrecurrencepattern === 'Weekly'  ? 'selected' : '' %>>Weekly</option>
-            <option value="Monthly" <%= eventrecurrencepattern === 'Monthly' ? 'selected' : '' %>>Monthly</option>
-            <option value="Annually"<%= eventrecurrencepattern === 'Annually'? 'selected' : '' %>>Annually</option>
-          </select>
-        </label>
-      </div>
-
-      <div>
-        <label>
-          Start Date / Time
-          <input type="datetime-local" name="eventdatetimestart" required>
-        </label>
-      </div>
-
-      <div>
-        <label>
-          End Date / Time
-          <input type="datetime-local" name="eventdatetimeend">
-        </label>
-      </div>
-
-      <div>
-        <label>
-          Capacity
-          <input type="number" min="0" name="eventcapacity" value="<%= eventcapacity || '' %>">
-        </label>
-      </div>
-
-      <div>
-        <label>
-          Registration Deadline
-          <input type="datetime-local" name="eventregistrationdeadline">
-        </label>
-      </div>
-
-      <p class="mt-2">
+      <div class="form-actions">
         <button type="submit">Create Event</button>
-      </p>
+      </div>
     </form>
   </main>
 </div>

@@ -1689,8 +1689,14 @@ app.post('/deleteparticipants/:participantid', (req, res) => {
 // Events list (search + paging)
 // =========================
 
+async function loadEventDefinitions() {
+  return knex('events')
+    .select('eventid', 'eventname', 'eventtype', 'eventdescription')
+    .orderBy('eventname');
+}
+
 // Show "Add New Event" form (manager only)
-app.get('/events/new', (req, res) => {
+app.get('/events/new', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
@@ -1700,17 +1706,18 @@ app.get('/events/new', (req, res) => {
     });
   }
 
+  const eventsList = await loadEventDefinitions();
+
   res.render('addEvent', {
     isManager: true,
     Username: req.session.useremail,
     csrfToken: req.csrfToken(),
     error_message: '',
-    eventname: '',
-    eventtype: '',
-    eventdescription: '',
     eventlocation: '',
-    eventrecurrencepattern: '',
     eventcapacity: '',
+    eventrecurrencepattern: '',
+    selectedEventId: '',
+    eventsList
   });
 });
 
@@ -1726,9 +1733,7 @@ app.post('/events/new', async (req, res) => {
   }
 
   const {
-    eventname,
-    eventtype,
-    eventdescription,
+    eventid,
     eventlocation,
     eventdatetimestart,
     eventdatetimeend,
@@ -1738,47 +1743,39 @@ app.post('/events/new', async (req, res) => {
   } = req.body;
 
   const renderBack = (msg) => {
-    return res.render('addEvent', {
-      isManager: true,
-      Username: req.session.useremail,
-      csrfToken: req.csrfToken(),
-      error_message: msg || '',
-      eventname,
-      eventtype,
-      eventdescription,
-      eventlocation,
-      eventrecurrencepattern,
-      eventcapacity
-    });
+    return loadEventDefinitions().then((eventsList) =>
+      res.render('addEvent', {
+        isManager: true,
+        Username: req.session.useremail,
+        csrfToken: req.csrfToken(),
+        error_message: msg || '',
+        eventlocation,
+        eventcapacity,
+        eventrecurrencepattern,
+        selectedEventId: eventid,
+        eventsList
+      })
+    );
   };
 
-  if (!eventname || !eventtype || !eventdatetimestart) {
-    return renderBack('Event name, type, and start date/time are required.');
+  if (!eventid || Number.isNaN(parseInt(eventid, 10))) {
+    return renderBack('Please select an event.');
+  }
+  if (!eventdatetimestart) {
+    return renderBack('Start date/time is required.');
   }
 
   try {
-    // 1) Insert or reuse event (name/type/description/recurrence/default capacity)
-    const [newEvent] = await knex('events')
-    .insert({
-      eventname: eventname.trim(),
-      eventtype: eventtype.trim(),
-      eventdescription:
-        eventdescription && eventdescription.trim() !== ''
-          ? eventdescription.trim()
-          : null,
-      eventrecurrencepattern:
-        eventrecurrencepattern && eventrecurrencepattern.trim() !== ''
-          ? eventrecurrencepattern.trim()
-          : null,
-      eventdefaultcapacity:
-        eventcapacity && eventcapacity !== '' ? Number(eventcapacity) : null
-    })
-    .returning('*');
+    const baseEvent = await knex('events')
+      .where({ eventid: parseInt(eventid, 10) })
+      .first();
 
+    if (!baseEvent) {
+      return renderBack('Selected event not found.');
+    }
 
-    // 2) Insert eventdetails row
     await knex('eventdetails').insert({
-      eventid: newEvent.eventid,
+      eventid: baseEvent.eventid,
       eventdatetimestart: new Date(eventdatetimestart),
       eventlocation: eventlocation && eventlocation.trim() !== '' ? eventlocation.trim() : null,
       eventdatetimeend: eventdatetimeend && eventdatetimeend !== '' ? new Date(eventdatetimeend) : null,
