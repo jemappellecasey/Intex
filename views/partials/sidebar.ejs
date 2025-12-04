@@ -1,0 +1,23 @@
+<%
+  const _path = typeof currentPath !== 'undefined' && currentPath ? currentPath : '';
+%>
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <a href="/dashboard" aria-label="Back to dashboard">
+      <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+    </a>
+  </div>
+  <h2>Ella Rises</h2>
+  <nav>
+    <a href="/dashboard" class="<%= active === 'dashboard' || _path.startsWith('/dashboard') ? 'active' : '' %>">Dashboard</a>
+    <a href="/participants" class="<%= active === 'participants' || _path.startsWith('/participants') ? 'active' : '' %>">Participants</a>
+    <a href="/events" class="<%= active === 'events' || _path.startsWith('/events') ? 'active' : '' %>">Events</a>
+    <a href="/surveys" class="<%= active === 'surveys' || _path.startsWith('/surveys') ? 'active' : '' %>">Surveys</a>
+    <a href="/milestones" class="<%= active === 'milestones' || _path.startsWith('/milestones') ? 'active' : '' %>">Milestones</a>
+    <a href="/donations" class="<%= active === 'donations' || _path.startsWith('/donations') ? 'active' : '' %>">Donations</a>
+    <% if (isManager) { %>
+      <hr />
+      <a href="/admin/settings" class="<%= active === 'admin' || _path.startsWith('/admin') ? 'active' : '' %>">Admin Settings</a>
+    <% } %>
+  </nav>
+</aside>

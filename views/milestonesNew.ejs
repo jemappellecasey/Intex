@@ -8,6 +8,10 @@
   <title>Add New Milestone</title>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'milestones' }) %>
+  <main class="main">
 
 <h1>Add New Milestone</h1>
 
@@ -63,5 +67,7 @@
   </div>
 </form>
 
+  </main>
+</div>
 </body>
 </html>

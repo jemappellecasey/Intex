@@ -7,6 +7,10 @@
   <title>Edit Survey</title>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'surveys' }) %>
+  <main class="main">
 
   <h1>Edit Survey</h1>
 
@@ -170,5 +174,7 @@
 
   <% } %>
 
+  </main>
+</div>
 </body>
 </html>

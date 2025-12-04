@@ -14,6 +14,10 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
   <title>Participant Details</title>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'participants' }) %>
+  <main class="main">
 
   <h1>Participant Details</h1>
 
@@ -292,5 +296,7 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
     </p>
 
   <% } %>
+  </main>
+</div>
 </body>
 </html>

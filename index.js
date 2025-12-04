@@ -166,6 +166,18 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+// Shared locals for views
+app.use((req, res, next) => {
+  res.locals.currentPath = req.path || "";
+  res.locals.isLoggedIn = !!(req.session && req.session.isLoggedIn);
+  res.locals.Username = (req.session && req.session.username) || res.locals.Username || "";
+  res.locals.isManager =
+    typeof res.locals.isManager !== "undefined"
+      ? res.locals.isManager
+      : (req.session && req.session.role === "manager");
+  next();
+});
+
 
 
 // Public visitor donations (no login required, uses participants + donations tables)

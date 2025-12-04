@@ -68,7 +68,7 @@ h1, h2, h3 {
 /* Sidebar */
 
 .sidebar {
-  width: 260px;
+  width: 300px;
   padding: 24px 20px;
   background-color: var(--color-charcoal);
   color: #ffffff;
@@ -85,7 +85,7 @@ h1, h2, h3 {
 }
 
 .sidebar .brand-logo {
-  max-width: 160px;
+  max-width: 240px;
   height: auto;
 }
 
@@ -154,6 +154,36 @@ h1, h2, h3 {
   color: var(--color-charcoal);
 }
 
+.user-bar {
+  position: fixed;
+  top: 12px;
+  right: 20px;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.user-chip {
+  background: #ffffff;
+  border: 1px solid rgba(58, 63, 59, 0.15);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  box-shadow: var(--shadow-soft);
+  color: var(--color-charcoal);
+}
+
+.secondary-btn {
+  background-color: var(--color-sage);
+  color: var(--color-charcoal);
+}
+
+.secondary-btn:hover {
+  background-color: var(--color-peach);
+  color: var(--color-charcoal);
+}
+
 /* =========
    Cards & Sections
    ========= */
@@ -216,6 +246,11 @@ h1, h2, h3 {
   box-shadow: var(--shadow-soft);
 }
 
+.card h3 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+}
+
 .section {
   margin-top: 20px;
 }
@@ -234,6 +269,7 @@ h1, h2, h3 {
   border-radius: var(--radius-card);
   padding: 16px 18px;
   box-shadow: var(--shadow-soft);
+  text-align: center;
 }
 
 .kpi-card h3 {
@@ -245,6 +281,12 @@ h1, h2, h3 {
   font-size: 1.6rem;
   font-weight: 600;
   color: var(--color-raspberry);
+}
+
+.kpi-value h1 {
+  font-size: 2.6rem;
+  margin: 0;
+  line-height: 1.1;
 }
 
 /* Grid layout helpers */
@@ -347,6 +389,7 @@ button,
   font-weight: 500;
   cursor: pointer;
   transition: background-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  text-decoration: none;
 }
 
 button:hover,
@@ -372,6 +415,15 @@ table {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow-soft);
+}
+
+.form-table {
+  width: 100%;
+  max-width: 820px;
+}
+
+.form-table.compact {
+  max-width: 680px;
 }
 
 thead {

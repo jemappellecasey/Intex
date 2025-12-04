@@ -6,6 +6,10 @@
   <title>Register for Event</title>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'events' }) %>
+  <main class="main">
 <div class="page-card narrow">
   <h1>Register for <%= event.eventname %></h1>
 
@@ -36,6 +40,8 @@
       <a href="/events" class="btn" style="margin-left:8px;">Cancel</a>
     </form>
   <% } %>
+</div>
+  </main>
 </div>
 </body>
 </html>

@@ -7,14 +7,16 @@
   <title>New Survey</title>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'surveys' }) %>
+  <main class="main">
 
 <h1>Create New Survey</h1>
 
 <% if (error_message) { %>
   <div class="alert alert-error"><%= error_message %></div>
 <% } %>
-
-<p>Logged in as: <%= Username %></p>
 
 <form method="post" action="/surveys/new">
   <!-- CSRF token -->
@@ -112,5 +114,7 @@
   <a href="/surveys">Back to Surveys List</a>
 </p>
 
+  </main>
+</div>
 </body>
 </html>

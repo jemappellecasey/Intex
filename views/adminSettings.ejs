@@ -7,6 +7,10 @@
   <title>Admin Settings</title>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'admin' }) %>
+  <main class="main">
   <div class="page-card">
     <h1>Admin Settings</h1>
 
@@ -74,5 +78,7 @@
       </table>
     </section>
   </div>
+  </main>
+</div>
 </body>
 </html>
