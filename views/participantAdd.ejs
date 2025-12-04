@@ -33,11 +33,11 @@
 
   <!-- Back to participant list -->
   <p>
-    <a href="/participants">Back to Participants List</a>
+    <a href="/participants" class="btn secondary-btn">Back to Participants List</a>
   </p>
 
   <!-- Form for creating a new participant -->
-  <form method="post" action="/participants/add">
+  <form method="post" action="/participants/add" class="form-card form-shell">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
     <table>
@@ -83,9 +83,9 @@
       </tr>
     </table>
 
-    <p style="margin-top: 12px;">
+    <div class="form-actions">
       <button type="submit">Create Participant</button>
-    </p>
+    </div>
   </form>
 
   </main>
