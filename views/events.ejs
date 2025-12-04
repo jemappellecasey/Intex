@@ -37,6 +37,9 @@
 <% if (error_message) { %>
   <div class="alert alert-error"><%= error_message %></div>
 <% } %>
+<% if (typeof success_message !== 'undefined' && success_message) { %>
+  <div class="alert alert-success"><%= success_message %></div>
+<% } %>
 
 <!-- ============================= -->
 <!-- SEARCH / FILTER SECTION       -->
