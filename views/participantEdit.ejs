@@ -132,16 +132,16 @@
       <div class="summary-card">
         <p class="summary-label">First Registration</p>
         <p class="summary-value">
-          <% if (firstRegistration) { %>
-            <%= (new Date(firstRegistration)).toISOString().slice(0, 10) %>
+          <% if (firstRegistration && firstRegistration.eventdatetimestart) { %>
+            <%= new Date(firstRegistration.eventdatetimestart).toISOString().slice(0, 10) %>
           <% } else { %> N/A <% } %>
         </p>
       </div>
       <div class="summary-card">
         <p class="summary-label">Latest Registration</p>
         <p class="summary-value">
-          <% if (lastRegistration) { %>
-            <%= (new Date(lastRegistration)).toISOString().slice(0, 10) %>
+          <% if (lastRegistration && lastRegistration.eventdatetimestart) { %>
+            <%= new Date(lastRegistration.eventdatetimestart).toISOString().slice(0, 10) %>
           <% } else { %> N/A <% } %>
         </p>
       </div>
