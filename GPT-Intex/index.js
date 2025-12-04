@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// 3-12 | Hirohito Mizuno, Casey Black, Hector Casablanca, Karie Ward
+// We built this server entry to run the Ella Rises app with auth, CSRF, sessions, and routing for the older layout.
+// 3-12 | Hirohito Mizuno, Casey Black, Hector Casablanca, Karie Ward
+// I built this server entry to run the Ella Rises app with auth, CSRF, sessions, and routing for the older layout.
 
 /**
  * ELLA RISES - Event & Participant Management System
