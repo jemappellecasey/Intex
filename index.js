@@ -33,6 +33,7 @@ const transporter = nodemailer.createTransport({
 });
 
 
+const port = process.env.PORT || 3000;
 
 //We need to fix it before deploying the AWS!!
 const knex = require("knex")({
@@ -46,7 +47,6 @@ const knex = require("knex")({
     }
 });
 const app = express();
-const port = process.env.PORT || 3000;
 
 const multer = require('multer');
 const uploadRoot = path.join(__dirname, "images");
