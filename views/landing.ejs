@@ -2,41 +2,914 @@
 <html lang="en">
 <head>
   <title>Ella Rises – Empowering Young Women</title>
+
+  <!-- DM Serif + Montserrat -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- TT Milk Script: update src URLs to your actual licensed webfont files -->
+  <style>
+    @font-face {
+      font-family: 'TT Milk Script';
+      src: url('/fonts/TT-Milk-Script.woff2') format('woff2'),
+           url('/fonts/TT-Milk-Script.woff') format('woff');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
+
   <%- include('partials/head') %>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Top brand bar */
+    header.top-banner {
+      background-color: #3A3F3A;
+      color: #FDF7F0;
+      padding: 1.1rem 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .top-banner__brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .top-banner__brand-logo {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+    }
+
+    .top-banner__nav {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .top-banner__nav a {
+      font-size: 0.9rem;
+      color: #FDF7F0;
+      text-decoration: none;
+      opacity: 0.9;
+    }
+
+    .top-banner__nav a:hover {
+      opacity: 1;
+    }
+
+    .top-banner__login {
+      padding: 0.45rem 0.95rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: #FDF7F0;
+      background: transparent;
+    }
+
+    .top-banner__login:hover {
+      background: rgba(255,255,255,0.09);
+    }
+/* Full-width hero image with overlay text, no card */
+.hero {
+  position: relative;
+}
+
+.hero-image-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.hero-image {
+  width: 100%;
+  height: 75vh;
+  min-height: 620px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Darken image slightly for readability */
+.hero-image-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  z-index: 1; /* <<< make sure overlay is BELOW the text */
+}
+
+
+/* HERO OVERLAY — back to original structure but improved */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;  /* <<< ensures text is above the dark overlay */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 3.5rem;
+  align-items: center;
+  text-align: center;
+  color: #FFFFFF; 
+  text-shadow: none;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2; 
+}
+
+
+/* Main hero title — bigger + brighter */
+.hero-lead {
+  max-width: 780px;
+  font-size: clamp(1.2rem, 1.6vw + 0.8rem, 1.8rem) !important;
+  line-height: 1.3;
+  margin: 0 0 2.8rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+
+
+/* Keep the three items in a horizontal row */
+.hero-why-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+  max-width: 1000px;
+  width: 100%;
+}
+.hero-why-item {
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 1rem;
+  padding: 1.2rem 1rem;
+  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.08);
+  color: #FFFFFF !important;
+}
+.hero-why-item h3 {
+  color: #FFFFFF !important;
+  margin: 0 0 0.4rem;
+}
+.hero-why-item p {
+  color: #FFFFFF !important;
+  margin: 0;
+}
+
+    /* Sections base */
+    section.section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.75rem 3rem 2.5rem;
+    }
+    /* Override for full-bleed events */
+    section.section.events {
+      max-width: none;
+      margin: 0;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    #programs h2,
+    #events h2,
+    #donate h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+    /* Ensure donor headings stay light on dark background */
+    #donate h2,
+    #donate h3 {
+      color: #FDF7F0;
+    }
+    /* Hero-style emphasis for donor title */
+    #donate h2 {
+      font-size: 2.6rem;
+      letter-spacing: 0.03em;
+      line-height: 1.1;
+      white-space: nowrap;
+      margin-bottom: 0.6rem;
+    }
+    #donate h3 {
+      font-size: 1.05rem;
+    }
+
+    .text-muted {
+      color: #555;
+      max-width: 640px;
+    }
+
+    /* Programs: 2x2 grid, minimal styling */
+    .programs h2 {
+      margin-bottom: 1.5rem;
+    }
+
+    .programs-grid {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .program-card {
+      flex: 1 1 220px;
+      min-width: 220px;
+      padding: 1.2rem;
+      border-radius: 1rem;
+      background: rgba(0,0,0,0.02);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .program-card h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      margin: 0 0 0.4rem;
+    }
+
+    .program-age,
+    .program-time {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .program-time {
+      margin-bottom: 0.4rem;
+    }
+
+    .program-desc {
+      margin-top: 0.4rem;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      max-width: 460px;
+    }
+
+    /* STEAM strip in Programs: big, easy to read */
+    .steam-strip {
+      margin-top: 1.8rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .steam-strip--large .steam-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 0.9rem;
+      flex: 1 1 160px;
+      min-width: 160px;
+      max-width: none;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .steam-strip--large .steam-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+      filter: saturate(1.15);
+    }
+
+    .steam-strip--large .steam-card__label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'TT Milk Script', cursive;
+      font-size: 2.1rem;
+      color: #FFFFFF;
+      text-align: center;
+      padding: 0 0.5rem;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.35),
+        rgba(0,0,0,0.75)
+      );
+    }
+
+    .steam-strip--large .steam-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+    }
+
+    /* Events section: week planner */
+    .events {
+      position: relative;
+      width: 100vw;
+      max-width: none;
+      margin-left: calc(-50vw + 50%);
+      margin-right: calc(-50vw + 50%);
+      padding: 3.5rem 0 3.25rem;
+      background: #FFD8D0;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .events-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 3rem;
+    }
+
+    .events h2 {
+      margin-bottom: 0.4rem;
+      text-align: left;
+      letter-spacing: 0.02em;
+    }
+    .events-subtitle {
+      text-align: left;
+      margin: 0 0 1.6rem;
+      color: #3A3F3A;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.95rem;
+    }
+
+    .events-week {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+    }
+
+    .event-day-card {
+      background: transparent;
+      border: 2px solid rgba(255,255,255,0.85);
+      border-radius: 1rem;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-height: 200px;
+      box-shadow: none;
+      color: #2f2f2f;
+    }
+
+    .event-day-name {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 0.95rem;
+      color: #2f2f2f;
+    }
+
+    .event-day-empty {
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    .event-pill {
+      display: inline-block;
+      margin-top: 0.35rem;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #2f2f2f;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      position: relative;
+      padding-left: 0.9rem;
+    }
+
+    .event-pill + .event-pill {
+      margin-top: 0.25rem;
+    }
+
+    .event-pill span {
+      display: block;
+    }
+
+    .event-pill-title {
+      font-weight: 700;
+      position: relative;
+    }
+
+    .event-pill-time {
+      opacity: 0.9;
+    }
+
+    .event-pill::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #2f2f2f;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    /* Donation section with combined title */
+    #donate {
+      margin-top: 2rem;
+      margin-bottom: 3rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 2.5rem;
+      align-items: center;
+      padding: 2.5rem 3rem;
+      border-radius: 1.5rem;
+      background: #3A3F3A;
+      color: #FDF7F0;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    }
+
+    .donate-copy {
+      max-width: 500px;
+    }
+
+    .donate-copy h2 {
+      margin-top: 0;
+      margin-bottom: 0.4rem;
+    }
+
+    .donate-copy h3 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 600;
+    }
+
+    .donate-copy p {
+      max-width: none;
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    .donate-cta-row {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .donate-cta-row .btn-primary {
+      display: inline-block;
+      padding: 0.9rem 1.8rem;
+      border-radius: 999px;
+      border: none;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+      background: #FDF7F0;
+      color: #2B2B2B;
+    }
+
+    .donate-cta-row .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .donate-note {
+      font-size: 0.9rem;
+      max-width: 320px;
+    }
+
+    .donate-visual {
+      position: relative;
+      border-radius: 1.25rem;
+      overflow: hidden;
+    }
+
+    .donate-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .donate-visual::after {
+      position: absolute;
+      left: 1rem;
+      bottom: 1rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Static image collage / gallery */
+    .section.gallery {
+      margin: 0 auto 3rem;
+      max-width: none;
+      width: 100%;
+      padding: 0 1.5rem;
+    }
+
+    .gallery h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .gallery-grid img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 900px) {
+      .hero-image {
+        height: 480px;
+        min-height: 0;
+      }
+      #donate {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header.top-banner {
+        padding: 0.9rem 1.5rem;
+      }
+      .top-banner__brand {
+        font-size: 1.6rem;
+      }
+      .hero-overlay {
+        padding: 2rem 1.5rem;
+      }
+      section.section {
+        padding: 2rem 1.5rem;
+      }
+      .programs-grid {
+        flex-direction: column;
+      }
+      #donate {
+        padding: 2rem 1.5rem;
+      }
+      /* Let events pink stay edge-to-edge with smaller inset */
+      .events {
+        padding: 2rem 0;
+      }
+      .events-inner {
+        padding: 0 1.5rem;
+      }
+      /* Allow donor title to wrap on small screens */
+      #donate h2 {
+        white-space: normal;
+      }
+      .section.gallery {
+        padding: 0 1.25rem 0;
+      }
+      .gallery-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .programs-grid {
+        grid-template-columns: 1fr;
+      }
+      .program-card--steam {
+        grid-column: span 1;
+      }
+      .events-week {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .hero-why-row {
+        grid-template-columns: 1fr;
+      }
+      .events-week {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+      }
+      .gallery-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 580px) {
+      header.top-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+      }
+      .top-banner__nav {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        row-gap: 0.4rem;
+      }
+      .gallery-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    .footer {
+  background: #3A3F3A;
+  color: #FDF7F0;
+  padding: 2.5rem 2rem;
+  margin-top: 4rem;
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.footer-brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.12em;
+  margin-bottom: 1rem;
+}
+
+.footer-brand img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.footer-nav {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.footer-nav a {
+  color: #FDF7F0;
+  text-decoration: none;
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.footer-nav a:hover {
+  opacity: 1;
+}
+
+.footer-copy {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin-top: 0.5rem;
+}
+
+  </style>
 </head>
 <body>
-  <main class="page-card">
+  <!-- Top brand banner with smaller heart logo and subtle login -->
+  <header class="top-banner">
+    <div class="top-banner__brand">
+      ELLA
+      <img class="top-banner__brand-logo" src="/images/heart.png" alt="Ella Rises heart logo">
+      RISES
+    </div>
+    <nav class="top-banner__nav">
+      <a href="#programs">Programs</a>
+      <a href="#events">Events</a>
+      <a href="#donate">Donate</a>
+      <a href="/login" class="top-banner__login">Staff / Participant Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Full-width hero image with overlay text (no title text, just description + bullets) -->
     <section class="hero">
-      <h1>Ella Rises</h1>
-      <p>
-        Inviting young women to pursue higher education, celebrate their heritage,
-        and explore STEAM through culturally rooted programs and immersive experiences.
-      </p>
-      <div class="pill-links">
-        <a href="#why">Why it matters</a>
-        <a href="#supporters">For supporters</a>
-        <a href="/donate">Make a Donation</a>
-        <a href="/login">Staff / Participant Login</a>
+      <div class="hero-image-wrap">
+        <img src="/images/tour.jpg" alt="Ella Rises participants" class="hero-image">
+        <div class="hero-overlay">
+          <p class="hero-lead">
+            Inviting young women to pursue higher education, celebrate their heritage,
+            and explore STEAM through culturally rooted programs and immersive experiences.
+          </p>
+
+          <div class="hero-why-row">
+            <div class="hero-why-item">
+              <h3>Pursue STEAM</h3>
+              <p>Encouraging girls to pursue STEAM education and dream bigger.</p>
+            </div>
+            <div class="hero-why-item">
+              <h3>Build confidence</h3>
+              <p>Growing identity, leadership, and a strong sense of belonging.</p>
+            </div>
+            <div class="hero-why-item">
+              <h3>Connect with mentors</h3>
+              <p>Linking participants with role models and real-world pathways.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section id="why" class="card section">
-      <h2>Why this matters</h2>
-      <ul>
-        <li>Encouraging girls to pursue STEAM education</li>
-        <li>Building confidence, identity, and leadership skills</li>
-        <li>Connecting students with role models and mentors</li>
-      </ul>
+    <section id="programs" class="section programs">
+      <h2>Programs</h2>
+
+      <div class="programs-grid">
+        <article class="program-card">
+          <h3>Ballet Folklórico</h3>
+          <p class="program-age">Girls ages 11–18</p>
+          <p class="program-time">Mondays at 7:00 pm</p>
+          <p class="program-desc">
+            Traditional Mexican folk dance that celebrates culture, movement, and confidence on stage.
+          </p>
+        </article>
+
+        <article class="program-card">
+          <h3>Mariachi</h3>
+          <p class="program-age">Girls ages 11–18</p>
+          <p class="program-time">Mondays 5:30 – 6:45 pm</p>
+          <p class="program-desc">
+            Music class for violin, trumpet, guitarrón, vihuela, and guitar with ensemble performance opportunities.
+          </p>
+        </article>
+
+        <!-- Big STEAM tile -->
+        <article class="program-card">
+          <h3>STEAM Workshops</h3>
+          <p class="program-age">Virtual &amp; in-person</p>
+          <p class="program-desc">
+            Virtual and in-person workshops to develop and guide participant inquiry, discussion,
+            and critical thinking about STEAM-related careers.
+          </p>
+        </article>
+
+        <article class="program-card">
+          <h3>Summit + Education Pathways</h3>
+          <p class="program-age">Girls ages 11–18</p>
+          <p class="program-time">Seasonal day camp</p>
+          <p class="program-desc">
+            A day camp packed with activities that gives a glimpse of the Ella Rises experience
+            and future education pathways.
+          </p>
+        </article>
+      </div>
+      <div class="steam-strip steam-strip--large">
+        <div class="steam-card">
+          <img src="/images/science.jpg" alt="Science">
+          <div class="steam-card__label">Science</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/technology.jpg" alt="Technology">
+          <div class="steam-card__label">Technology</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/engineering.JPG" alt="Engineering">
+          <div class="steam-card__label">Engineering</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/art.jpg" alt="Art">
+          <div class="steam-card__label">Art</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/mathematics.jpg" alt="Mathematics">
+          <div class="steam-card__label">Mathematics</div>
+        </div>
+      </div>
     </section>
 
-    <section id="supporters" class="card section">
-      <h2>For donors & supporters</h2>
-      <p class="text-muted">
-        This portal helps our team track program effectiveness, milestones, and donations
-        so we can report impact back to you with clarity.
-      </p>
-      <a class="btn" href="/login">Access the portal</a>
+    <section id="events" class="section events">
+      <div class="events-inner">
+        <h2>Upcoming Events</h2>
+        <p class="events-subtitle">Week at a glance</p>
+
+        <div class="events-week">
+          <div class="event-day-card">
+            <div class="event-day-name">Mon</div>
+            <div class="event-pill">
+              <span class="event-pill-title">Mariachi</span>
+              <span class="event-pill-time">5:30–6:45 pm</span>
+            </div>
+            <div class="event-pill">
+              <span class="event-pill-title">Ballet Folklórico</span>
+              <span class="event-pill-time">7:00 pm</span>
+            </div>
+          </div>
+
+          <div class="event-day-card">
+            <div class="event-day-name">Tue</div>
+            <div class="event-day-empty">No events</div>
+          </div>
+
+          <div class="event-day-card">
+            <div class="event-day-name">Wed</div>
+            <div class="event-day-empty">No events</div>
+          </div>
+
+          <div class="event-day-card">
+            <div class="event-day-name">Thu</div>
+            <div class="event-day-empty">No events</div>
+          </div>
+
+          <div class="event-day-card">
+            <div class="event-day-name">Fri</div>
+            <div class="event-pill">
+              <span class="event-pill-title">BYU Tour</span>
+              <span class="event-pill-time">10:00 am</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
+
+    <!-- Combined For Donors & Supporters + donation -->
+    <section id="donate" class="section">
+      <div class="donate-copy">
+        <h2>For Donors and Supporters</h2>
+        <h3>Make a Donation</h3>
+        <p>
+          Your generosity opens doors for girls to explore science, technology, engineering, art,
+          and mathematics in spaces where their culture and stories are centered.
+          Every contribution helps fund hands-on programs, mentors, and immersive experiences.
+        </p>
+
+        <div class="donate-cta-row">
+          <a class="btn-primary" href="/donate">Donate now</a>
+        
+        </div>
+      </div>
+      <div class="donate-visual">
+        <img src="/images/donation.jpeg" alt="Girls participating in Ella Rises programs">
+      </div>
+    </section>
+
+    <!-- Static collage / gallery of all the filenames you provided -->
+    <section class="section gallery">
+
+      <div class="gallery-grid">
+        <img src="/images/2.jpeg" alt="2">
+        <img src="/images/3.JPG" alt="3">
+        <img src="/images/4.jpg" alt="4">
+        <img src="/images/6.jpeg" alt="6">
+        <img src="/images/7.jpeg" alt="7">
+        <img src="/images/8.jpeg" alt="8">
+        <img src="/images/10.jpeg" alt="10">
+        <img src="/images/11.jpeg" alt="11">
+        <img src="/images/12.jpeg" alt="12">
+        <img src="/images/13.jpeg" alt="13">
+        <img src="/images/14.jpeg" alt="14">
+        <img src="/images/15.jpeg" alt="15">
+        <img src="/images/16.jpeg" alt="16">
+        <img src="/images/alone.NEF.jpg" alt="alone">
+        <img src="/images/art.jpg" alt="art">
+        <img src="/images/donation.jpeg" alt="donation">
+        <img src="/images/engineering.JPG" alt="engineering">
+        <img src="/images/science.jpg" alt="science">
+        <img src="/images/studytogether.jpg" alt="studytogether">
+        <img src="/images/murla.jpg" alt="murla">
+        <img src="/images/2022.jpg" alt="2022">
+        <img src="/images/selfie.jpg" alt="selfie">
+        <img src="/images/workshop.jpg" alt="workshop">
+        <img src="/images/curly.jpg" alt="curly">
+        <img src="/images/build.jpg" alt="build">
+        <img src="/images/work.jpg" alt="work">
+        <img src="/images/show.jpg" alt="show">
+        <img src="/images/tour.jpg" alt="tour">
+        <img src="/images/look.jpg" alt="look">
+        <img src="/images/pic.jpg" alt="pic">
+      </div>
+    </section>
+    <footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="/images/heart.png" alt="Ella Rises heart logo">
+      <span>Ella Rises</span>
+    </div>
+
+    <nav class="footer-nav">
+      <a href="#programs">Programs</a>
+      <a href="#events">Events</a>
+      <a href="#donate">Donate</a>
+      <a href="/login">Login</a>
+    </nav>
+
+    <p class="footer-copy">© <%= new Date().getFullYear() %> Ella Rises. All rights reserved.</p>
+  </div>
+</footer>
+
   </main>
 </body>
 </html>
