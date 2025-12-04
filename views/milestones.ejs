@@ -32,6 +32,12 @@
 
 <h1>Milestones</h1>
 
+<% if (isManager || selfParticipantId) { %>
+  <div class="add-milestone-actions">
+    <a href="/milestones/new"><button type="button">Add Milestone</button></a>
+  </div>
+<% } %>
+
 <!-- Error message -->
 <% if (error_message) { %>
   <div class="alert alert-error"><%= error_message %></div>
@@ -42,8 +48,7 @@
 <!-- ============================= -->
 <% if (isManager) { %>
   <section>
-    <h2 class="centered-title">Search Milestones</h2>
-    <form method="get" action="/milestones" class="milestones-filter">
+    <form method="get" action="/milestones" class="milestones-filter filter-form">
       <div class="compact-field">
         <label>
           Participant Name:
@@ -82,7 +87,7 @@
       </div>
 
       <div class="filter-actions">
-        <button type="submit">Search</button>
+        <button type="submit">Search Milestones</button>
       </div>
     </form>
   </section>
@@ -94,12 +99,6 @@
 <!-- LIST + PAGINATION             -->
 <!-- ============================= -->
 <section>
-  <h2 class="centered-title">Milestones List</h2>
-  <% if (isManager || selfParticipantId) { %>
-    <div class="add-milestone-actions">
-      <a href="/milestones/new"><button type="button">Add Milestone</button></a>
-    </div>
-  <% } %>
 
   <% if (!milestones || milestones.length === 0) { %>
     <p>No milestones found.</p>

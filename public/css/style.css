@@ -412,7 +412,7 @@ textarea {
 /* Keep date/time inputs compact so labels and fields stay close on wide screens */
 form input[type="date"],
 form input[type="datetime-local"] {
-  max-width: 260px;
+  max-width: 500px;
 }
 
 .date-range {
@@ -425,8 +425,18 @@ form input[type="datetime-local"] {
 .date-field {
   display: flex;
   flex-direction: column;
-  min-width: 180px;
-  max-width: 220px;
+  min-width: 220px;
+  max-width: 500px;
+}
+
+.filter-form .date-field {
+  flex: 0 1 500px;
+  width: 100%;
+}
+
+.filter-form .date-range {
+  justify-content: center;
+  flex-wrap: nowrap;
 }
 
 .date-field label {
@@ -537,26 +547,30 @@ tbody tr:hover {
 
 .donation-total {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  column-gap: 24px;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  row-gap: 10px;
   background: #ffffff;
   border: 1px solid rgba(206, 50, 91, 0.14);
   border-radius: 14px;
-  padding: 14px 18px;
+  padding: 22px 26px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-  max-width: 360px;
+  width: 100%;
+  max-width: 460px;
+  min-width: 260px;
   margin: 12px auto 18px;
 }
 
 .donation-total__label {
-  font-weight: 600;
+  font-weight: 700;
   color: #8a3b52;
+  font-size: 1.1rem;
 }
 
 .donation-total__value {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 2.8rem;
+  font-weight: 800;
   color: var(--color-raspberry);
 }
 
@@ -601,9 +615,45 @@ tbody tr:hover {
   text-align: center;
 }
 
-.add-milestone-actions {
+.add-milestone-actions,
+.page-actions {
+  text-align: left;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin: 12px 0 16px;
+}
+
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px 18px;
+  max-width: 960px;
+  margin: 0 auto 18px;
+}
+
+.filter-form .filter-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+
+.filter-form .compact-field {
+  max-width: 460px;
+  min-width: 260px;
+  width: 100%;
+}
+
+.filter-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
   text-align: center;
-  margin-bottom: 12px;
 }
 
 .table-responsive {
