@@ -62,6 +62,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.set("view engine", "ejs");
+// Disable EJS view caching in non-production so template changes show up immediately
+if (app.get("env") !== "production") {
+  app.disable("view cache");
+}
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));

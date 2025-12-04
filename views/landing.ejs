@@ -97,7 +97,8 @@
 
 .hero-image {
   width: 100%;
-  height: 500px;
+  height: 75vh;
+  min-height: 620px;
   object-fit: cover;
   display: block;
 }
@@ -134,9 +135,9 @@
 
 /* Main hero title — bigger + brighter */
 .hero-lead {
-  max-width: 900px;
-  font-size: 5rem;
-  line-height: 1.32;
+  max-width: 780px;
+  font-size: clamp(1.2rem, 1.6vw + 0.8rem, 1.8rem) !important;
+  line-height: 1.3;
   margin: 0 0 2.8rem;
   font-weight: 700;
   color: #FFFFFF;
@@ -152,12 +153,35 @@
   max-width: 1000px;
   width: 100%;
 }
+.hero-why-item {
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 1rem;
+  padding: 1.2rem 1rem;
+  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.08);
+  color: #FFFFFF !important;
+}
+.hero-why-item h3 {
+  color: #FFFFFF !important;
+  margin: 0 0 0.4rem;
+}
+.hero-why-item p {
+  color: #FFFFFF !important;
+  margin: 0;
+}
 
     /* Sections base */
     section.section {
       max-width: 1100px;
       margin: 0 auto;
       padding: 2.75rem 3rem 2.5rem;
+    }
+    /* Override for full-bleed events */
+    section.section.events {
+      max-width: none;
+      margin: 0;
+      padding-left: 0;
+      padding-right: 0;
     }
 
     #programs h2,
@@ -195,13 +219,18 @@
     }
 
     .programs-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 2rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
     }
 
     .program-card {
-      padding: 0;
+      flex: 1 1 220px;
+      min-width: 220px;
+      padding: 1.2rem;
+      border-radius: 1rem;
+      background: rgba(0,0,0,0.02);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
     .program-card h3 {
@@ -228,14 +257,9 @@
       max-width: 460px;
     }
 
-    .program-card--steam {
-      grid-column: span 2;
-      margin-top: 0.5rem;
-    }
-
     /* STEAM strip in Programs: big, easy to read */
     .steam-strip {
-      margin-top: 1.3rem;
+      margin-top: 1.8rem;
       display: flex;
       gap: 1rem;
       flex-wrap: wrap;
@@ -287,72 +311,82 @@
 
     /* Events section: week planner */
     .events {
-      background: #FFD8D0;
+      position: relative;
       width: 100vw;
       max-width: none;
       margin-left: calc(-50vw + 50%);
       margin-right: calc(-50vw + 50%);
-      padding-left: 3rem;
-      padding-right: 3rem;
-      padding-top: 2.75rem;
-      padding-bottom: 2.5rem;
+      padding: 3.5rem 0 3.25rem;
+      background: #FFD8D0;
       border-radius: 0;
       box-shadow: none;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .events-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 3rem;
     }
 
     .events h2 {
-      margin-bottom: 1.2rem;
+      margin-bottom: 0.4rem;
+      text-align: left;
+      letter-spacing: 0.02em;
     }
-
-    .events-calendar {
-      border-radius: 1rem;
-      border: 1px solid rgba(0,0,0,0.08);
-      overflow: hidden;
-      background: #FDF7F0;
-    }
-
-    .events-header-row {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      background: rgba(0,0,0,0.04);
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-    }
-
-    .events-header-cell {
-      padding: 0.5rem 0.6rem;
-      text-align: center;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #555;
+    .events-subtitle {
+      text-align: left;
+      margin: 0 0 1.6rem;
+      color: #3A3F3A;
       font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.95rem;
     }
 
-    .events-body-row {
+    .events-week {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
     }
 
-    .events-day-cell {
-      min-height: 80px;
-      padding: 0.5rem 0.6rem;
-      border-right: 1px solid rgba(0,0,0,0.04);
-      background: #FDF7F0;
+    .event-day-card {
+      background: transparent;
+      border: 2px solid rgba(255,255,255,0.85);
+      border-radius: 1rem;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-height: 200px;
+      box-shadow: none;
+      color: #2f2f2f;
     }
 
-    .events-day-cell:last-child {
-      border-right: none;
+    .event-day-name {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 0.95rem;
+      color: #2f2f2f;
+    }
+
+    .event-day-empty {
+      color: #555;
+      font-size: 0.9rem;
     }
 
     .event-pill {
       display: inline-block;
-      margin-top: 0.3rem;
-      padding: 0.25rem 0.45rem;
-      border-radius: 0.75rem;
-      background: #3A3F3A;
-      color: #FDF7F0;
-      font-size: 0.8rem;
+      margin-top: 0.35rem;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #2f2f2f;
+      font-size: 0.9rem;
       line-height: 1.4;
+      position: relative;
+      padding-left: 0.9rem;
     }
 
     .event-pill + .event-pill {
@@ -364,11 +398,22 @@
     }
 
     .event-pill-title {
-      font-weight: 600;
+      font-weight: 700;
+      position: relative;
     }
 
     .event-pill-time {
       opacity: 0.9;
+    }
+
+    .event-pill::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #2f2f2f;
+      font-weight: 700;
+      line-height: 1.2;
     }
 
     /* Donation section with combined title */
@@ -376,14 +421,18 @@
       margin-top: 2rem;
       margin-bottom: 3rem;
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-      gap: 2rem;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 2.5rem;
       align-items: center;
       padding: 2.5rem 3rem;
       border-radius: 1.5rem;
       background: #3A3F3A;
       color: #FDF7F0;
       box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    }
+
+    .donate-copy {
+      max-width: 500px;
     }
 
     .donate-copy h2 {
@@ -400,7 +449,7 @@
     }
 
     .donate-copy p {
-      max-width: 520px;
+      max-width: none;
       font-size: 1rem;
       line-height: 1.7;
     }
@@ -492,7 +541,8 @@
     /* Responsive tweaks */
     @media (max-width: 900px) {
       .hero-image {
-        height: 380px;
+        height: 480px;
+        min-height: 0;
       }
       #donate {
         grid-template-columns: 1fr;
@@ -512,15 +562,18 @@
       section.section {
         padding: 2rem 1.5rem;
       }
+      .programs-grid {
+        flex-direction: column;
+      }
       #donate {
         padding: 2rem 1.5rem;
       }
       /* Let events pink stay edge-to-edge with smaller inset */
       .events {
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
+        padding: 2rem 0;
+      }
+      .events-inner {
+        padding: 0 1.5rem;
       }
       /* Allow donor title to wrap on small screens */
       #donate h2 {
@@ -538,19 +591,17 @@
       .program-card--steam {
         grid-column: span 1;
       }
-      .events-header-row,
-      .events-body-row {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
-      .events-header-cell:nth-child(n+5),
-      .events-day-cell:nth-child(n+5) {
-        display: none; /* collapse Thu–Sat on small screens */
+      .events-week {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 600px) {
       .hero-why-row {
         grid-template-columns: 1fr;
+      }
+      .events-week {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
       }
       .gallery-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -658,7 +709,7 @@
 
           <div class="hero-why-row">
             <div class="hero-why-item">
-              <h3>Pursue in STEAM</h3>
+              <h3>Pursue STEAM</h3>
               <p>Encouraging girls to pursue STEAM education and dream bigger.</p>
             </div>
             <div class="hero-why-item">
@@ -697,36 +748,13 @@
         </article>
 
         <!-- Big STEAM tile -->
-        <article class="program-card program-card--steam">
+        <article class="program-card">
           <h3>STEAM Workshops</h3>
           <p class="program-age">Virtual &amp; in-person</p>
           <p class="program-desc">
             Virtual and in-person workshops to develop and guide participant inquiry, discussion,
             and critical thinking about STEAM-related careers.
           </p>
-
-          <div class="steam-strip steam-strip--large">
-            <div class="steam-card">
-              <img src="/images/science.png" alt="Science">
-              <div class="steam-card__label">Science</div>
-            </div>
-            <div class="steam-card">
-              <img src="/images/technology.png" alt="Technology">
-              <div class="steam-card__label">Technology</div>
-            </div>
-            <div class="steam-card">
-              <img src="/images/engineering.JPG" alt="Engineering">
-              <div class="steam-card__label">Engineering</div>
-            </div>
-            <div class="steam-card">
-              <img src="/images/art.jpg" alt="Art">
-              <div class="steam-card__label">Art</div>
-            </div>
-            <div class="steam-card">
-              <img src="/images/mathematics.jpg" alt="Mathematics">
-              <div class="steam-card__label">Mathematics</div>
-            </div>
-          </div>
         </article>
 
         <article class="program-card">
@@ -739,29 +767,38 @@
           </p>
         </article>
       </div>
+      <div class="steam-strip steam-strip--large">
+        <div class="steam-card">
+          <img src="/images/science.jpg" alt="Science">
+          <div class="steam-card__label">Science</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/technology.jpg" alt="Technology">
+          <div class="steam-card__label">Technology</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/engineering.JPG" alt="Engineering">
+          <div class="steam-card__label">Engineering</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/art.jpg" alt="Art">
+          <div class="steam-card__label">Art</div>
+        </div>
+        <div class="steam-card">
+          <img src="/images/mathematics.jpg" alt="Mathematics">
+          <div class="steam-card__label">Mathematics</div>
+        </div>
+      </div>
     </section>
 
     <section id="events" class="section events">
-      <h2>Upcoming Events</h2>
+      <div class="events-inner">
+        <h2>Upcoming Events</h2>
+        <p class="events-subtitle">Week at a glance</p>
 
-      <div class="events-calendar">
-        <div class="events-header-row">
-          <div class="events-header-cell">Sun</div>
-          <div class="events-header-cell">Mon</div>
-          <div class="events-header-cell">Tue</div>
-          <div class="events-header-cell">Wed</div>
-          <div class="events-header-cell">Thu</div>
-          <div class="events-header-cell">Fri</div>
-          <div class="events-header-cell">Sat</div>
-        </div>
-        <div class="events-body-row">
-          <!-- Sunday -->
-          <div class="events-day-cell">
-            <!-- no events -->
-          </div>
-
-          <!-- Monday -->
-          <div class="events-day-cell">
+        <div class="events-week">
+          <div class="event-day-card">
+            <div class="event-day-name">Mon</div>
             <div class="event-pill">
               <span class="event-pill-title">Mariachi</span>
               <span class="event-pill-time">5:30–6:45 pm</span>
@@ -772,24 +809,27 @@
             </div>
           </div>
 
-          <!-- Tuesday -->
-          <div class="events-day-cell"></div>
+          <div class="event-day-card">
+            <div class="event-day-name">Tue</div>
+            <div class="event-day-empty">No events</div>
+          </div>
 
-          <!-- Wednesday -->
-          <div class="events-day-cell"></div>
+          <div class="event-day-card">
+            <div class="event-day-name">Wed</div>
+            <div class="event-day-empty">No events</div>
+          </div>
 
-          <!-- Thursday -->
-          <div class="events-day-cell"></div>
+          <div class="event-day-card">
+            <div class="event-day-name">Thu</div>
+            <div class="event-day-empty">No events</div>
+          </div>
 
-          <!-- Friday -->
-          <div class="events-day-cell"></div>
-          <div class="event-pill">
+          <div class="event-day-card">
+            <div class="event-day-name">Fri</div>
+            <div class="event-pill">
               <span class="event-pill-title">BYU Tour</span>
               <span class="event-pill-time">10:00 am</span>
             </div>
-
-          <!-- Saturday -->
-          <div class="events-day-cell">
           </div>
         </div>
       </div>
