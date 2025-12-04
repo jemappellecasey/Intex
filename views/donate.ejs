@@ -20,19 +20,26 @@
     <form method="post" action="/donate" class="form-card">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-      <div>
-        <label>
-          Name (optional)<br>
-          <input type="text" name="name">
-        </label>
-      </div>
+      <% if (isLoggedIn) { %>
+        <input type="hidden" name="name" value="<%= prefillName || '' %>">
+        <input type="hidden" name="email" value="<%= prefillEmail || '' %>">
+        <p><strong>Name:</strong> <%= prefillName || '(from account)' %></p>
+        <p><strong>Email:</strong> <%= prefillEmail || '(from account)' %></p>
+      <% } else { %>
+        <div>
+          <label>
+            Name (optional)<br>
+            <input type="text" name="name" value="<%= prefillName || '' %>">
+          </label>
+        </div>
 
-      <div>
-        <label>
-          Email<br>
-          <input type="email" name="email" required>
-        </label>
-      </div>
+        <div>
+          <label>
+            Email<br>
+            <input type="email" name="email" value="<%= prefillEmail || '' %>" required>
+          </label>
+        </div>
+      <% } %>
 
       <div>
         <label>

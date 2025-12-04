@@ -29,6 +29,41 @@
     </nav>
   </aside>
 
+<!-- Drop down for event name (include at the bottom the option to add a new Event name) -->
+ <!-- Event description field, type, recurrance pattern, capacity, location, autofilled (but editable) from event name unless it's a new event -->
+ <!-- Event start, end, and registration deadline are always blank -->
+
+
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="/css/style.css">
+  <meta charset="UTF-8">
+  <title>Add New Event</title>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/dashboard" aria-label="Back to dashboard">
+        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+      </a>
+    </div>
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events" class="active">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+
   <main class="main-content">
     <h1>Add New Event</h1>
     <p><a href="/events">Back to Events</a></p>
@@ -37,61 +72,68 @@
       <div class="alert alert-error"><%= error_message %></div>
     <% } %>
 
-    <form method="post" action="/events/new">
+    <form method="post" action="/events/new" class="form-card">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-      <label>
-        Event Name (required):
-        <input type="text" name="eventname" value="<%= event.eventname || '' %>" required>
-      </label>
-
-      <label>
-        Event Type:
-        <input type="text" name="eventtype" value="<%= event.eventtype || '' %>">
-      </label>
-
-      <label>
-        Description:
-        <textarea name="eventdescription" rows="4"><%= event.eventdescription || '' %></textarea>
-      </label>
-
-      <label>
-        Location:
-        <input type="text" name="eventlocation" value="<%= event.eventlocation || '' %>">
-      </label>
-
-      <label>
-        Capacity:
-        <input type="number" name="eventcapacity" min="0" value="<%= event.eventcapacity || '' %>">
-      </label>
-
-      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-        <label style="flex:1; min-width:200px;">
-          Start (required):
-          <% const startVal = event.eventdatetimestart
-                ? new Date(event.eventdatetimestart).toISOString().slice(0,16)
-                : ''; %>
-          <input type="datetime-local" name="eventdatetimestart" value="<%= startVal %>" required>
-        </label>
-
-        <label style="flex:1; min-width:200px;">
-          End:
-          <% const endVal = event.eventdatetimeend
-                ? new Date(event.eventdatetimeend).toISOString().slice(0,16)
-                : ''; %>
-          <input type="datetime-local" name="eventdatetimeend" value="<%= endVal %>">
-        </label>
-
-        <label style="flex:1; min-width:200px;">
-          Registration Deadline:
-          <% const deadlineVal = event.eventregistrationdeadline
-                ? new Date(event.eventregistrationdeadline).toISOString().slice(0,16)
-                : ''; %>
-          <input type="datetime-local" name="eventregistrationdeadline" value="<%= deadlineVal %>">
+      <div>
+        <label>
+          Event Name
+          <input type="text" name="eventname" value="<%= eventname || '' %>" required>
         </label>
       </div>
 
-      <button type="submit">Create Event</button>
+      <div>
+        <label>
+          Event Type
+          <input type="text" name="eventtype" value="<%= eventtype || '' %>" required>
+        </label>
+      </div>
+
+      <div>
+        <label>
+          Description
+          <textarea name="eventdescription" rows="3"><%= eventdescription || '' %></textarea>
+        </label>
+      </div>
+
+      <div>
+        <label>
+          Location
+          <input type="text" name="eventlocation" value="<%= eventlocation || '' %>">
+        </label>
+      </div>
+
+      <div>
+        <label>
+          Start Date / Time
+          <input type="datetime-local" name="eventdatetimestart" required>
+        </label>
+      </div>
+
+      <div>
+        <label>
+          End Date / Time
+          <input type="datetime-local" name="eventdatetimeend">
+        </label>
+      </div>
+
+      <div>
+        <label>
+          Capacity
+          <input type="number" min="0" name="eventcapacity" value="<%= eventcapacity || '' %>">
+        </label>
+      </div>
+
+      <div>
+        <label>
+          Registration Deadline
+          <input type="datetime-local" name="eventregistrationdeadline">
+        </label>
+      </div>
+
+      <p class="mt-2">
+        <button type="submit">Create Event</button>
+      </p>
     </form>
   </main>
 </div>

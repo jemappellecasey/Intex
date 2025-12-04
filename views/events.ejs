@@ -28,7 +28,7 @@
       <% } %>
     </nav>
   </aside>
-  <main class="main-content">
+<main class="main-content">
 
 <h1>Events</h1>
 
@@ -158,22 +158,24 @@
                               && ev.eventcapacity !== undefined
                               && Number(ev.registeredcount) >= Number(ev.eventcapacity); %>
 
-            <% if (isManager) { %>
-              <span>—</span>
-            <% } else if (ev.selfregistrationstatus) { %>
-              <form method="post" action="/events/<%= ev.eventdetailsid %>/cancel">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <button type="submit">Cancel</button>
-              </form>
+            <% if (ev.isregisteredforcurrentuser) { %>
+              <div class="mt-1">
+                <span class="text-muted">You are registered</span>
+                <form method="post" action="/events/<%= ev.eventdetailsid %>/unregister" style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="btn" style="margin-left:6px;">Unregister</button>
+                </form>
+              </div>
             <% } else if (isFull) { %>
-              <strong class="alert alert-error">This event is fully booked</strong>
+              <strong style="color:red;">This event is fully booked</strong>
+            
             <% } else { %>
-              <!-- 🔹 Register button: go to registration form page -->
               <form method="get" action="/events/<%= ev.eventdetailsid %>/register">
                 <button type="submit">Register</button>
               </form>
             <% } %>
           </td>
+
 
           <% if (isManager) { %>
             <!-- Edit button (manager only) -->

@@ -9141,3 +9141,60 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- Fix events_eventid_seq so it is higher than the current max eventid
+SELECT setval(
+  pg_get_serial_sequence('public.events', 'eventid'),
+  COALESCE((SELECT MAX(eventid) FROM public.events), 0) + 1,
+  false
+);
+
+-- Fix eventdetails_eventdetailsid_seq so it is higher than the current max eventdetailsid
+SELECT setval(
+  pg_get_serial_sequence('public.eventdetails', 'eventdetailsid'),
+  COALESCE((SELECT MAX(eventdetailsid) FROM public.eventdetails), 0) + 1,
+  false
+);
+
+-- Participants
+SELECT setval(
+  pg_get_serial_sequence('public.participants', 'participantid'),
+  COALESCE((SELECT MAX(participantid) FROM public.participants), 0) + 1,
+  false
+);
+
+-- Milestones
+SELECT setval(
+  pg_get_serial_sequence('public.milestones', 'milestoneid'),
+  COALESCE((SELECT MAX(milestoneid) FROM public.milestones), 0) + 1,
+  false
+);
+
+-- Donations
+SELECT setval(
+  pg_get_serial_sequence('public.donations', 'donationid'),
+  COALESCE((SELECT MAX(donationid) FROM public.donations), 0) + 1,
+  false
+);
+
+-- Users (if users table uses a sequence on userid)
+SELECT setval(
+  pg_get_serial_sequence('public.users', 'userid'),
+  COALESCE((SELECT MAX(userid) FROM public.users), 0) + 1,
+  false
+);
+
+-- Surveys (if applicable)
+SELECT setval(
+  pg_get_serial_sequence('public.surveys', 'surveyid'),
+  COALESCE((SELECT MAX(surveyid) FROM public.surveys), 0) + 1,
+  false
+);
+
+-- Registrations (if applicable)
+SELECT setval(
+  pg_get_serial_sequence('public.registrations', 'registrationid'),
+  COALESCE((SELECT MAX(registrationid) FROM public.registrations), 0) + 1,
+  false
+);
+
