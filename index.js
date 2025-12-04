@@ -245,30 +245,30 @@ app.get('/donate', async (req, res) => {
 
 // POST /donate – process visitor donation
 app.post('/donate', async (req, res) => {
-  const isLoggedIn = !!(req.session && req.session.isLoggedIn);
-  const sessionEmail = isLoggedIn ? (req.session.username || '') : '';
+  const { name, email, donationamount } = req.body;
+  const errors = [];
 
-  const { name, email, donationamount, from } = req.body;
-  const cameFromDonationsList = (from === 'donations') || (req.query.from === 'donations');
-
-  const renderBack = (msgError, msgSuccess) => {
-    return res.render('donate', {
-      csrfToken: req.csrfToken(),
-      error_message: msgError || '',
-      success_message: cameFromDonationsList ? '' : (msgSuccess || ''),
-      prefillEmail: email || sessionEmail,
-      prefillName: name || '',
-      isLoggedIn,
-      backToDonations: cameFromDonationsList
-    });
-  };
-  const effectiveEmail = (email && email.trim()) || sessionEmail;
-  if (!effectiveEmail || !donationamount) {
-    return renderBack('Email and amount are required.', '');
+  if (!email || !email.trim() || !email.includes('@')) {
+    errors.push('Please enter a valid email address.');
   }
+
   const amountNumber = Number(donationamount);
   if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-    return renderBack('Donation amount must be greater than 0.', '');
+    errors.push('Donation amount must be greater than 0.');
+  } else if (amountNumber > 10000) {
+    errors.push('Online donations are limited to $10,000. For larger gifts, please contact Ella Rises directly.');
+  }
+
+  if (errors.length > 0) {
+    return res.render('donate', {
+      csrfToken: req.csrfToken(),
+      error_message: '',
+      success_message: '',
+      validationErrors: errors,
+      name,
+      email,
+      donationamount
+    });
   }
   try {
     const normalizedEmail = effectiveEmail.trim().toLowerCase();
@@ -322,7 +322,15 @@ app.post('/donate', async (req, res) => {
     return renderBack('', 'Thank you for your donation!');
   } catch (err) {
     console.error('Visitor donation error:', err);
-    return renderBack('Error processing donation. Please try again.', '');
+    return res.render('donate', {
+      csrfToken: req.csrfToken(),
+      error_message: 'Error processing donation. Please check your information and try again.',
+      success_message: '',
+      validationErrors: [],
+      name,
+      email,
+      donationamount
+    });
   }
 });
   
@@ -1417,20 +1425,31 @@ app.post('/participants/:participantid/edit', async (req, res) => {
     return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
   }
 
-  const zipRaw = (req.body.participantzip || '').trim();
-  let participantzip = null;
-  if (zipRaw !== '') {
-    // optional: basic validation – only digits and length 5
-    if (/^\d{5}$/.test(zipRaw)) {
-      participantzip = zipRaw;
-    } else {
-      // if invalid, you can either reject or leave it null
+    const errors = [];
+
+    if (!req.body.email || !req.body.email.includes('@')) {
+      errors.push('Please enter a valid email address.');
+    }
+    if (!req.body.participantfirstname || !req.body.participantlastname) {
+      errors.push('First and last name are required.');
+    }
+
+    // ZIP normalization like before
+    const zipRaw = (req.body.participantzip || '').trim();
+    let participantzip = null;
+    if (zipRaw !== '') {
+      if (/^\d{5}$/.test(zipRaw)) {
+        participantzip = zipRaw;
+      } else {
+        errors.push('ZIP code must be 5 digits or left blank.');
+      }
+    }
+
+    if (errors.length > 0) {
+      const participant = await knex('participants').where({ participantid }).first();
       return res.render('participantEdit', {
-        participant: await knex('participants').where({ participantid }).first(),
-        events: [], // or reload full data if you prefer
-        milestones: [],
-        surveys: [],
-        donations: [],
+        participant,
+        events: [], milestones: [], surveys: [], donations: [],
         avgOverallScore: null,
         surveyCount: 0,
         firstRegistration: null,
@@ -1439,23 +1458,23 @@ app.post('/participants/:participantid/edit', async (req, res) => {
         isManager,
         Username: req.session.username,
         success_message: '',
-        error_message: 'ZIP code must be 5 digits or left blank.'
+        error_message: '',
+        validationErrors: errors
       });
     }
-  }
 
-  const updated = {
-    email: req.body.email,
-    participantfirstname: req.body.participantfirstname,
-    participantlastname: req.body.participantlastname,
-    participantdob: req.body.participantdob || null,
-    participantrole: req.body.participantrole,
-    participantphone: req.body.participantphone,
-    participantcity: req.body.participantcity,
-    participantstate: req.body.participantstate,
-    participantzip,                     // use normalized value here
-    participantfieldofinterest: req.body.participantfieldofinterest
-  };
+    const updated = {
+      email: req.body.email.trim(),
+      participantfirstname: req.body.participantfirstname.trim(),
+      participantlastname: req.body.participantlastname.trim(),
+      participantdob: req.body.participantdob || null,
+      participantrole: req.body.participantrole,
+      participantphone: req.body.participantphone,
+      participantcity: req.body.participantcity,
+      participantstate: req.body.participantstate,
+      participantzip,
+      participantfieldofinterest: req.body.participantfieldofinterest
+    };
 
 
   try {
@@ -1472,31 +1491,16 @@ app.post('/participants/:participantid/edit', async (req, res) => {
 
     return res.redirect(`/participants/${participantid}/edit?updated=1`);
   } catch (err) {
-      console.error("Error updating participant:", err);
+    console.error("Error updating participant:", err);
+    let friendly = 'Error updating participant. Please check your values.';
 
-      // Try to reload participant and its related info so the view has data
-      try {
-        const participant = await knex('participants')
-          .where({ participantid })
-          .first();
-
-        if (!participant) {
-          req.flash('error', 'Error updating participant.');
-          return res.redirect('/participants');
-        }
-
-        // If you want the full detail view (events, milestones, etc.),
-        // you can either duplicate the SELECTs from the GET /participants/:id/edit
-        // route, or simply redirect back to that route:
-        req.flash('error', 'Update error.');
-        return res.redirect(`/participants/${participantid}/edit`);
-      } catch (innerErr) {
-        console.error('Error reloading participant after update failure:', innerErr);
-        req.flash('error', 'Update error.');
-        return res.redirect('/participants');
-      }
+    if (err.code === '23514' && err.constraint === 'participants_participantzip_check') {
+      friendly = 'ZIP code did not meet the required format. Please use 5 digits or leave blank.';
     }
 
+    req.flash('error', friendly);
+    return res.redirect(`/participants/${participantid}/edit`);
+  }
 });
 
 

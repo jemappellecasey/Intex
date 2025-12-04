@@ -41,9 +41,20 @@
   <h1>Participants</h1>
 
   <!-- Error / flash message (optional) -->
-  <% if (typeof error_message !== "undefined" && error_message) { %>
+  <% if (validationErrors && validationErrors.length) { %>
+    <div class="alert alert-error">
+      <ul>
+        <% validationErrors.forEach(function(msg) { %>
+          <li><%= msg %></li>
+        <% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <% if (error_message) { %>
     <div class="alert alert-error"><%= error_message %></div>
   <% } %>
+
 
   <!-- Filter form: event + basic participant info -->
   <% if (isManager) { %>

@@ -13,9 +13,20 @@
   <h1>Edit Participant</h1>
   <p><a href="/participants" class="btn">Back to Participants</a></p>
 
-  <% if (error_message && error_message !== '') { %>
+  <% if (validationErrors && validationErrors.length) { %>
+    <div class="alert alert-error">
+      <ul>
+        <% validationErrors.forEach(function(msg) { %>
+          <li><%= msg %></li>
+        <% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <% if (error_message) { %>
     <div class="alert alert-error"><%= error_message %></div>
   <% } %>
+
   <% if (typeof success_message !== 'undefined' && success_message) { %>
     <div class="alert alert-success"><%= success_message %></div>
   <% } %>
