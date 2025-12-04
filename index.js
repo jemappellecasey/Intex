@@ -255,6 +255,9 @@ async function syncParticipantSession(req, user) {
   try {
     const normalizedEmail = (user.email || "").trim().toLowerCase();
 
+    const defaultFirst = "Participant";
+    const defaultLast = "Ella";
+
     if (!participantId && normalizedEmail) {
       const existingParticipant = await knex("participants")
         .whereILike("email", normalizedEmail)
@@ -266,8 +269,8 @@ async function syncParticipantSession(req, user) {
         const [newParticipant] = await knex("participants")
           .insert({
             email: normalizedEmail,
-            participantfirstname: "",
-            participantlastname: "",
+            participantfirstname: defaultFirst,
+            participantlastname: defaultLast,
             participantrole: "participant",
           })
           .returning("participantid");
