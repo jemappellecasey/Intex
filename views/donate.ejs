@@ -54,10 +54,8 @@
     </form>
 
     <p class="mt-2">
-      <% if (typeof backToDonations !== 'undefined' && backToDonations) { %>
+      <% if ((typeof backToDonations !== 'undefined' && backToDonations) || isLoggedIn) { %>
         <a href="/donations">Back to Donations</a>
-      <% } else if (isLoggedIn) { %>
-        <a href="/dashboard">Back to Dashboard</a>
       <% } else { %>
         <a href="/landing">Back to Landing</a>
       <% } %>
