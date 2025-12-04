@@ -2575,7 +2575,7 @@ app.get('/surveys', async (req, res) => {
     const baseQuery = knex('surveys as s')
       .join('events as e', 's.eventid', 'e.eventid')
       .join('participants as p', 's.participantid', 'p.participantid')
-      .join('eventdetails as ed', function () {
+      .leftJoin('eventdetails as ed', function () {
         this.on('ed.eventid', '=', 's.eventid')
             .andOn('ed.eventdatetimestart', '=', 's.eventdatetimestart');
       })
@@ -2628,7 +2628,7 @@ app.get('/surveys', async (req, res) => {
     const countQuery = knex('surveys as s')
       .join('events as e', 's.eventid', 'e.eventid')
       .join('participants as p', 's.participantid', 'p.participantid')
-      .join('eventdetails as ed', function () {
+      .leftJoin('eventdetails as ed', function () {
         this.on('ed.eventid', '=', 's.eventid')
             .andOn('ed.eventdatetimestart', '=', 's.eventdatetimestart');
       })

@@ -6,6 +6,12 @@
 </head>
 <body>
   <div class="page-card narrow">
+    <div class="signup-header">
+      <a href="/login" class="btn secondary-btn">← Back to Login</a>
+      <span></span>
+    </div>
+    <h1 class="signup-title">Sign up</h1>
+
     <% if (error && error.length) { %>
       <div class="alert alert-error">
         <% error.forEach(function(msg) { %>
@@ -29,13 +35,6 @@
         <% }); %>
       </div>
     <% } %>
-
-    <p>
-      <a href="/">Back to Landing</a> •
-      <a href="/login">Back to Login</a>
-    </p>
-
-    <h1>Sign up</h1>
 
     <form method="POST" action="/signup" class="form-card">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -81,7 +80,9 @@
       <input type="text" id="zip" name="zip">
     </div>
 
-    <button type="submit">Create account</button>
+    <div class="form-actions centered">
+      <button type="submit">Create account</button>
+    </div>
     </form>
   </div>
 </body>

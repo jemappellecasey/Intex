@@ -5,16 +5,18 @@
   <%- include('partials/head') %>
 </head>
 <body>
-  <a href="/">Back to Landing</a>
 
-  <div class="page-card narrow">
-    <div class="login-card">
-      <h3>Login</h3>
-      <p>Please enter your credentials to continue.</p>
-      <% if (error_message && error_message !== '') { %>
-        <div class="alert alert-error"><%= error_message %></div>
-      <% } %>
-    </div>
+  <div class="login-layout">
+    <a href="/" class="btn secondary-btn back-link-outside">Back to Landing</a>
+
+    <div class="page-card narrow">
+      <div class="login-card">
+        <h3>Login</h3>
+        <p>Please enter your credentials to continue.</p>
+        <% if (error_message && error_message !== '') { %>
+          <div class="alert alert-error"><%= error_message %></div>
+        <% } %>
+      </div>
 
     <form action="/login" method="POST" class="form-card">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -26,14 +28,14 @@
             <label for="password" class="form-label">Password*</label>
             <input type="password" id="password" name="password" class="form-control" required>
         </div>
-        <div>
+          <div class="centered-actions">
             <button type="submit" class="btn">Login</button>
-        </div>
-    </form>
-
-    <button type="button" class="btn mt-2" onclick="window.location.href='/signup'">
-      Sign up
-    </button>
+            <div class="or-divider">or</div>
+            <button type="button" class="btn secondary-btn" onclick="window.location.href='/signup'">
+              Sign up
+            </button>
+          </div>
+      </form>
 
     <div class="form-card mt-3">
         <p>Temporary role bypass (dev only):</p>
@@ -54,6 +56,7 @@
             <input type="hidden" name="role" value="secretary">
             <button type="submit" class="btn">Login as Secretary</button>
         </form>
+    </div>
     </div>
   </div>
 </body>
