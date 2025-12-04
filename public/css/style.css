@@ -539,12 +539,22 @@ tbody tr:hover {
 
 .surveys-table {
   width: 100%;
-  min-width: 1100px;
+  min-width: 0;
+  table-layout: fixed;
 }
 
 .surveys-table th,
 .surveys-table td {
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .surveys-table th,
+  .surveys-table td {
+    padding: 6px 8px;
+    font-size: 0.9rem;
+  }
 }
 
 /* Pagination */
