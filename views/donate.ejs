@@ -23,40 +23,31 @@
       <div class="alert alert-error"><%= error_message %></div>
     <% } %>
 
-    <% if (success_message && !backToDonations) { %>
+    <% if (success_message && (typeof backToDonations === 'undefined' || !backToDonations)) { %>
       <div class="alert alert-success"><%= success_message %></div>
     <% } %>
 
     <form method="post" action="/donate" class="form-card">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <% if (backToDonations) { %>
+      <% if (typeof backToDonations !== 'undefined' && backToDonations) { %>
         <input type="hidden" name="from" value="donations">
       <% } %>
 
       <% if (isLoggedIn) { %>
-        <input type="hidden" name="name" value="<%= prefillName || '' %>">
-        <input type="hidden" name="email" value="<%= prefillEmail || '' %>">
-        <p><strong>Name:</strong> <%= prefillName || '(from account)' %></p>
-        <p><strong>Email:</strong> <%= prefillEmail || '(from account)' %></p>
+        <input type="hidden" name="email" value="<%= prefillemail || '' %>">
+        <p><strong>Email:</strong> <%= prefillemail || '(from account)' %></p>
       <% } else { %>
         <div>
           <label>
-            Name (optional)<br>
-            <input type="text" name="name" value="<%= prefillName || '' %>">
-          </label>
-        </div>
-
-        <div>
-          <label>
-            Email<br>
-            <input type="email" name="email" value="<%= prefillEmail || '' %>" required>
+            Email*<br>
+            <input type="email" name="email" value="<%= prefillemail || '' %>" required>
           </label>
         </div>
       <% } %>
 
       <div>
         <label>
-          Donation Amount<br>
+          Donation Amount*<br>
           <input type="number" step="0.01" name="donationamount" required>
         </label>
       </div>

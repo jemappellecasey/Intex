@@ -170,7 +170,7 @@ app.use((err, req, res, next) => {
 app.use((req, res, next) => {
   res.locals.currentPath = req.path || "";
   res.locals.isLoggedIn = !!(req.session && req.session.isLoggedIn);
-  res.locals.Username = (req.session && req.session.username) || res.locals.Username || "";
+  res.locals.Username = (req.session && req.session.useremail) || res.locals.Username || "";
   res.locals.isManager =
     typeof res.locals.isManager !== "undefined"
       ? res.locals.isManager
@@ -199,14 +199,14 @@ async function ensureDonationSequenceInSync() {
     console.error('Could not sync donations sequence', err);
   }
 }
-
+ 
 // Public donate page – works for logged-in and anonymous users
 app.get('/donate', (req, res) => {
   const isLoggedIn = !!(req.session && req.session.isLoggedIn);
-  const prefillName =
-    isLoggedIn && req.session.username ? req.session.username : '';
-  const prefillEmail =
-    isLoggedIn && req.session.userEmail ? req.session.userEmail : '';
+  const prefillemail =
+    isLoggedIn && req.session.useremail ? req.session.useremail : '';
+
+  const backToDonations = req.query.from === 'donations';
 
   res.render('donate', {
     csrfToken: req.csrfToken(),
@@ -214,25 +214,26 @@ app.get('/donate', (req, res) => {
     success_message: '',
     validationErrors: [],
     isLoggedIn,
-    prefillName,
-    prefillEmail,
+    prefillemail,
     name: '',
     email: '',
-    donationamount: ''
+    donationamount: '',
+    backToDonations
   });
 });
 
+
 // Handle public donation submit – logged-in or not
 app.post('/donate', async (req, res) => {
-  const { name, email, donationamount } = req.body;
+  const { name, email, donationamount, from } = req.body;
 
   const isLoggedIn = !!(req.session && req.session.isLoggedIn);
-  const prefillName =
-    isLoggedIn && req.session.username ? req.session.username : '';
-  const prefillEmail =
-    isLoggedIn && req.session.userEmail ? req.session.userEmail : '';
+  const prefillemail =
+    isLoggedIn && req.session.useremail ? req.session.useremail : '';
 
-  const errors = [];
+  const backToDonations = from === 'donations';
+
+    const errors = [];
 
   // Email validation
   if (!email || !email.trim() || !email.includes('@')) {
@@ -256,8 +257,7 @@ app.post('/donate', async (req, res) => {
       success_message: '',
       validationErrors: errors,
       isLoggedIn,
-      prefillName,
-      prefillEmail,
+      prefillemail,
       name,
       email,
       donationamount
@@ -297,8 +297,7 @@ app.post('/donate', async (req, res) => {
       success_message: 'Thank you for your donation!',
       validationErrors: [],
       isLoggedIn,
-      prefillName,
-      prefillEmail,
+      prefillemail,
       name: '',
       email: '',
       donationamount: ''
@@ -320,14 +319,14 @@ app.post('/donate', async (req, res) => {
       success_message: '',
       validationErrors: [],
       isLoggedIn,
-      prefillName,
-      prefillEmail,
+      prefillemail,
       name,
       email,
       donationamount
     });
   }
 });
+
 
   
   
@@ -369,7 +368,7 @@ async function ensureParticipantId(req) {
 
     if (!participantId) {
       const email =
-        (req.session.username && req.session.username.trim().toLowerCase()) ||
+        (req.session.useremail && req.session.useremail.trim().toLowerCase()) ||
         (await knex("users")
           .where("userid", req.session.userId)
           .first()
@@ -563,7 +562,7 @@ app.post("/signup", async (req, res) => {
     // 5) Log them in
     req.session.isLoggedIn = true;
     req.session.userId = user.userid;
-    req.session.username = user.email;
+    req.session.useremail = user.email;
     req.session.role = user.role;
     req.session.participantId = participantId;
 
@@ -644,7 +643,7 @@ app.get('/admin/settings', requireManager, async (req, res) => {
       users,
       error_message: '',
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       email: email || '',
       role: role || ''
@@ -655,7 +654,7 @@ app.get('/admin/settings', requireManager, async (req, res) => {
       users: [],
       error_message: 'Error loading users.',
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       email: '',
       role: ''
@@ -677,7 +676,7 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
       users,
       error_message: 'Invalid role.',
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       email: '',
       role: ''
@@ -698,7 +697,7 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
       users,
       error_message: 'Error updating user role.',
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken()
     });
   }
@@ -723,7 +722,7 @@ app.post('/admin/users/:userid/delete', requireManager, async (req, res) => {
       users,
       error_message: 'Error deleting user.',
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken()
     });
   }
@@ -773,7 +772,7 @@ app.post("/login", async (req, res) => {
     }
 
     req.session.isLoggedIn = true;
-    req.session.username = user.email;
+    req.session.useremail = user.email;
     req.session.role = user.role;
     req.session.userId = user.userid;
     await syncParticipantSession(req, user);
@@ -819,7 +818,7 @@ app.post("/dev-login-bypass", async (req, res) => {
 
     // Set session as if logged in
     req.session.isLoggedIn = true;
-    req.session.username = user.username || user.email; // depending on your schema
+    req.session.useremail = user.email;
     req.session.role = user.role;
     req.session.userId = user.userid;
     await syncParticipantSession(req, user);
@@ -851,7 +850,7 @@ app.get('/dashboard', (req, res) => {
     res.render('dashboard', { 
         error_message: null,
         isManager: req.session.role === 'manager',
-        Username: req.session.username
+        Username: req.session.useremail
     });
 });
 
@@ -872,7 +871,7 @@ app.get('/participants', async (req, res) => {
       participants: [],
       error_message: 'No participant record is linked to this user.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: participantId,
       currentPage: 1,
       totalPages: 1,
@@ -978,7 +977,7 @@ app.get('/participants', async (req, res) => {
       participants: scopedParticipants,
       error_message: '',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: participantId,
       currentPage: page,
       totalPages,
@@ -994,7 +993,7 @@ app.get('/participants', async (req, res) => {
       participants: [],
       error_message: `Database error: ${error.message}`,
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: participantId,
       currentPage: 1,
       totalPages: 1,
@@ -1023,7 +1022,7 @@ app.get('/participants/add', (req, res) => {
     success_message: '',
     validationErrors: [],
     isManager: true,
-    Username: req.session.username,
+    Username: req.session.useremail,
     csrfToken: req.csrfToken(),
     // form values so we can repopulate on error
     email: '',
@@ -1095,7 +1094,7 @@ app.post('/participants/add', async (req, res) => {
       success_message: '',
       validationErrors: errors,
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       email,
       participantfirstname,
@@ -1140,7 +1139,7 @@ app.post('/participants/add', async (req, res) => {
       success_message: '',
       validationErrors: [],
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       email,
       participantfirstname,
@@ -1179,7 +1178,7 @@ app.get('/participants/:participantid', async (req, res) => {
       firstRegistration: null,
       lastRegistration: null,
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       error_message: 'Invalid participant id.'
     });
   }
@@ -1190,7 +1189,7 @@ app.get('/participants/:participantid', async (req, res) => {
       participants: [],
       error_message: 'You can only view your own participant record.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       currentPage: 1,
       totalPages: 1,
       milestoneTitle: '',
@@ -1225,7 +1224,7 @@ app.get('/participants/:participantid', async (req, res) => {
         firstRegistration: null,
         lastRegistration: null,
         isManager,
-        Username: req.session.username,
+        Username: req.session.useremail,
         error_message: 'Participant not found.'
       });
     }
@@ -1308,7 +1307,7 @@ app.get('/participants/:participantid', async (req, res) => {
       firstRegistration,
       lastRegistration,
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       error_message: ''
     });
   } catch (err) {
@@ -1324,7 +1323,7 @@ app.get('/participants/:participantid', async (req, res) => {
       firstRegistration: null,
       lastRegistration: null,
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       error_message: 'Error loading participant details.'
     });
   }
@@ -1428,7 +1427,7 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       lastRegistration,
       csrfToken: req.csrfToken(),
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       error_message: '',
       success_message: successMessage,
       validationErrors: []
@@ -1536,7 +1535,7 @@ app.post('/participants/:participantid/edit', async (req, res) => {
         lastRegistration: null,
         csrfToken: req.csrfToken(),
         isManager,
-        Username: req.session.username,
+        Username: req.session.useremail,
         error_message: '',
         success_message: '',
         validationErrors: errors
@@ -1703,7 +1702,7 @@ app.get('/events/new', (req, res) => {
 
   res.render('addEvent', {
     isManager: true,
-    Username: req.session.username,
+    Username: req.session.useremail,
     csrfToken: req.csrfToken(),
     error_message: '',
     eventname: '',
@@ -1741,7 +1740,7 @@ app.post('/events/new', async (req, res) => {
   const renderBack = (msg) => {
     return res.render('addEvent', {
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       error_message: msg || '',
       eventname,
@@ -1969,7 +1968,7 @@ function buildPastQuery() {
     return res.render('events', {
       error_message: '',
       isManager: req.session.role === 'manager',
-      Username: req.session.username,
+      Username: req.session.useremail,
 
       name: name || '',
       startDate: startDate || '',
@@ -1989,7 +1988,7 @@ function buildPastQuery() {
     return res.render('events', {
       error_message: 'Error loading events.',
       isManager: req.session.role === 'manager',
-      Username: req.session.username,
+      Username: req.session.useremail,
 
       name: name || '',
       startDate: startDate || '',
@@ -2053,7 +2052,7 @@ app.get('/events/:eventdetailsid/register', async (req, res) => {
     return res.render('events', {
       error_message: 'No participant record is linked to this user.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       name: '',
       startDate: '',
       endDate: '',
@@ -2072,7 +2071,7 @@ app.get('/events/:eventdetailsid/register', async (req, res) => {
       return res.status(404).render('events', {
         error_message: 'Event not found.',
         isManager,
-        Username: req.session.username,
+        Username: req.session.useremail,
         name: '',
         startDate: '',
         endDate: '',
@@ -2120,7 +2119,7 @@ app.get('/events/:eventdetailsid/register', async (req, res) => {
       existingRegistration,
       alreadyRegistered: !!existingRegistration,
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       isFull,
       isClosed,
@@ -2132,7 +2131,7 @@ app.get('/events/:eventdetailsid/register', async (req, res) => {
     return res.render('events', {
       error_message: 'Error loading registration form.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       name: '',
       startDate: '',
       endDate: '',
@@ -2158,7 +2157,7 @@ app.get('/events/:eventdetailsid/register', async (req, res) => {
     return res.render('events', {
       error_message: 'No participant record is linked to this user.',
       isManager: req.session.role === 'manager',
-      Username: req.session.username,
+      Username: req.session.useremail,
       name: '',
       startDate: '',
       endDate: '',
@@ -2201,7 +2200,7 @@ app.get('/events/:eventdetailsid/register', async (req, res) => {
       event: ev,
       alreadyRegistered: !!existing,
       isManager: req.session.role === 'manager',
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       error_message: ''
     });
@@ -2339,7 +2338,7 @@ app.get('/events/:eventdetailsid/edit', async (req, res) => {
         (successFlash && successFlash.length ? successFlash[0] : '') ||
         (req.query.saved ? 'Saved successfully.' : ''),
       isManager: req.session.role === 'manager',
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken()
     });
   } catch (err) {
@@ -2478,7 +2477,7 @@ app.get('/surveys', async (req, res) => {
           pendingSurveys: [],
           error_message: 'No participant record is linked to this user.',
           isManager,
-          Username: req.session.username,
+          Username: req.session.useremail,
           success_message: successMessage,
           eventName,
           participantName,
@@ -2548,7 +2547,7 @@ app.get('/surveys', async (req, res) => {
         pendingSurveys,
         error_message: '',
         isManager,
-        Username: req.session.username,
+        Username: req.session.useremail,
         success_message: successMessage,
         eventName,
         participantName,
@@ -2663,7 +2662,7 @@ app.get('/surveys', async (req, res) => {
       surveys,
       error_message: '',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       success_message: successMessage,
       eventName,
       participantName,
@@ -2682,7 +2681,7 @@ app.get('/surveys', async (req, res) => {
       pendingSurveys: [],
       error_message: 'Error loading surveys.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       eventName,
       participantName,
       startDate,
@@ -2723,7 +2722,7 @@ app.get('/surveys/new', async (req, res) => {
       participants,
       error_message: '',
       isManager: true,
-      Username: req.session.username,
+      Username: req.session.useremail,
       // csrfToken is already in res.locals
     });
   } catch (err) {
@@ -2733,7 +2732,7 @@ app.get('/surveys/new', async (req, res) => {
       participants: [],
       error_message: 'Error loading data for new survey.',
       isManager: true,
-      Username: req.session.username
+      Username: req.session.useremail
     });
   }
 });
@@ -2807,7 +2806,7 @@ app.post('/surveys/new', async (req, res) => {
       participants: [],
       error_message: 'Error inserting new survey.',
       isManager: true,
-      Username: req.session.username
+      Username: req.session.useremail
     });
   }
 });
@@ -2859,7 +2858,7 @@ app.get('/surveys/:surveyid/edit', async (req, res) => {
       survey,
       error_message: '',
       isManager: req.session.role === 'manager',
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken()  
     });
   } catch (err) {
@@ -2978,7 +2977,7 @@ app.get('/milestones', async (req, res) => {
       error_message: 'No participant record is linked to this user.',
       isManager,
       selfParticipantId: sessionParticipantId,
-      Username: req.session.username,
+      Username: req.session.useremail,
       participantName: '',
       email: '',
       milestoneTitle: '',
@@ -3085,7 +3084,7 @@ app.get('/milestones', async (req, res) => {
       error_message: '',
       isManager,
       selfParticipantId: sessionParticipantId,
-      Username: req.session.username,
+      Username: req.session.useremail,
       participantName,
       email,
       milestoneTitle,
@@ -3102,7 +3101,7 @@ app.get('/milestones', async (req, res) => {
       error_message: 'Error loading milestones.',
       isManager,
       selfParticipantId: sessionParticipantId,
-      Username: req.session.username,
+      Username: req.session.useremail,
       participantName,
       email,
       milestoneTitle,
@@ -3133,15 +3132,15 @@ app.get('/milestones/new', async (req, res) => {
     });
   }
 
-  const prefillEmail = req.query.email || '';
+  const prefillemail = req.query.email || '';
 
   return res.render('milestonesNew', {
-    email: prefillEmail,
+    email: prefillemail,
     milestonetitle: '',
     milestonedate: '',
     error_message: '',
     isManager,
-    Username: req.session.username,
+    Username: req.session.useremail,
     selfParticipantId: sessionParticipantId,
     csrfToken: req.csrfToken()
   });
@@ -3183,7 +3182,7 @@ app.post('/milestones/new', async (req, res) => {
           milestonedate,
           error_message: 'No participant found with that email.',
           isManager,
-          Username: req.session.username,
+          Username: req.session.useremail,
           selfParticipantId: sessionParticipantId,
           csrfToken: req.csrfToken()
         });
@@ -3208,7 +3207,7 @@ app.post('/milestones/new', async (req, res) => {
       milestonedate,
       error_message: 'Error creating milestone.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
     });
@@ -3249,7 +3248,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
         participants: [],
         error_message: 'Milestone not found.',
         isManager,
-        Username: req.session.username,
+        Username: req.session.useremail,
         csrfToken: req.csrfToken()
       });
     }
@@ -3278,7 +3277,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       participants,                      
       error_message: '',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken()
     });
   } catch (err) {
@@ -3288,7 +3287,7 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       participants: [],              
       error_message: 'Error loading milestone for edit.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       csrfToken: req.csrfToken()
     });
   }
@@ -3394,7 +3393,7 @@ app.get('/donations', async (req, res) => {
       totalAmount: 0,
       error_message: 'No participant record is linked to this user.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
       name,
       email,
@@ -3509,7 +3508,7 @@ app.get('/donations', async (req, res) => {
       totalAmount,
       error_message: '',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
       name,
       email,
@@ -3526,7 +3525,7 @@ app.get('/donations', async (req, res) => {
       totalAmount: 0,
       error_message: 'Error loading donations.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
       name,
       email,
@@ -3574,7 +3573,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
         donation: null,
         error_message: 'Donation not found.',
         isManager,
-        Username: req.session.username,
+        Username: req.session.useremail,
         selfParticipantId: sessionParticipantId,
         csrfToken: req.csrfToken()
       });
@@ -3584,7 +3583,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       donation,
       error_message: '',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
     });
@@ -3594,7 +3593,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       donation: null,
       error_message: 'Error loading donation.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
     });
@@ -3621,7 +3620,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
         donation: null,
         error_message: 'Donation not found.',
         isManager,
-        Username: req.session.username,
+        Username: req.session.useremail,
         selfParticipantId: sessionParticipantId,
         csrfToken: req.csrfToken()
       });
@@ -3650,7 +3649,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
           donation,
           error_message: 'No participant found with that email.',
           isManager,
-          Username: req.session.username,
+          Username: req.session.useremail,
           selfParticipantId: sessionParticipantId,
           csrfToken: req.csrfToken()
         });
@@ -3687,7 +3686,7 @@ app.post('/donations/:donationid/edit', async (req, res) => {
       donation,
       error_message: 'Error updating donation.',
       isManager,
-      Username: req.session.username,
+      Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
       csrfToken: req.csrfToken()
     });

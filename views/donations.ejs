@@ -31,6 +31,10 @@
 
 <h1>Donations</h1>
 
+<div class="page-actions">
+  <a href="/donate"><button type="button">Add Donation</button></a>
+</div>
+
 <% if (error_message) { %>
   <div class="alert alert-error"><%= error_message %></div>
 <% } %>
@@ -44,51 +48,53 @@
 
 <div class="donation-total">
   <div class="donation-total__label">Total Amount</div>
-  <div class="donation-total__value">$<%= (totalAmount || 0).toFixed(2) %></div>
+  <div class="donation-total__value">
+    $<%= Number(totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+  </div>
 </div>
 
 <% if (isManager) { %>
   <section>
-    <h2>Search Donations</h2>
-    <form method="get" action="/donations">
-      <label>
-        Name:
-        <input type="text" name="name" value="<%= name || '' %>">
-      </label>
-      <label>
-        Email:
-        <input type="text" name="email" value="<%= email || '' %>">
-      </label>
-      <label>
-        Start Date:
-        <input type="date" name="startDate" value="<%= startDate || '' %>">
-      </label>
-      <label>
-        End Date:
-        <input type="date" name="endDate" value="<%= endDate || '' %>">
-      </label>
-      <button type="submit">Search</button>
+    <h2 class="centered-title">Search Donations</h2>
+    <form method="get" action="/donations" class="filter-form">
+      <div class="filter-stack">
+        <div class="compact-field">
+          <label>
+            Name:
+            <input type="text" name="name" value="<%= name || '' %>">
+          </label>
+        </div>
+        <div class="compact-field">
+          <label>
+            Email:
+            <input type="text" name="email" value="<%= email || '' %>">
+          </label>
+        </div>
+      </div>
+      <div class="date-range">
+        <div class="date-field">
+          <label>
+            Start Date:
+            <input type="date" name="startDate" value="<%= startDate || '' %>">
+          </label>
+        </div>
+        <div class="date-field">
+          <label>
+            End Date:
+            <input type="date" name="endDate" value="<%= endDate || '' %>">
+          </label>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button type="submit">Search</button>
+      </div>
     </form>
   </section>
   <hr>
 <% } %>
 
-<p>
-  <a href="/donate"><button type="button">Add Donation</button></a>
-</p>
-
 <section>
   <h2>Donation List</h2>
-
-  <div class="pagination pagination-centered">
-    <% if (currentPage > 1) { %>
-      <a class="btn secondary-btn" href="/donations?page=<%= currentPage - 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Prev</a>
-    <% } %>
-    <span>Page <%= currentPage %> of <%= totalPages %></span>
-    <% if (currentPage < totalPages) { %>
-      <a class="btn secondary-btn" href="/donations?page=<%= currentPage + 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Next</a>
-    <% } %>
-  </div>
 
   <% if (!donations || donations.length === 0) { %>
     <p>No donations found.</p>
@@ -141,6 +147,16 @@
       </tbody>
     </table>
   <% } %>
+
+  <div class="pagination pagination-centered">
+    <% if (currentPage > 1) { %>
+      <a class="btn secondary-btn" href="/donations?page=<%= currentPage - 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Prev</a>
+    <% } %>
+    <span>Page <%= currentPage %> of <%= totalPages %></span>
+    <% if (currentPage < totalPages) { %>
+      <a class="btn secondary-btn" href="/donations?page=<%= currentPage + 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Next</a>
+    <% } %>
+  </div>
 </section>
 
   </main>

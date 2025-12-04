@@ -58,41 +58,56 @@
 
   <!-- Filter form: event + basic participant info -->
   <% if (isManager) { %>
-    <form method="get" action="/participants">
-      <label>
-        Milestone Title:
-        <input
-          type="text"
-          name="milestoneTitle"
-          value="<%= typeof milestoneTitle !== 'undefined' ? milestoneTitle : '' %>">
-      </label>
+    <div class="page-actions">
+      <a href="/participants/add">
+        <button type="button">Add New Participant</button>
+      </a>
+    </div>
+    <h2 class="centered-title">Search Participant</h2>
+    <form method="get" action="/participants" class="filter-form">
+      <div class="compact-field">
+        <label>
+          Milestone Title:
+          <input
+            type="text"
+            name="milestoneTitle"
+            value="<%= typeof milestoneTitle !== 'undefined' ? milestoneTitle : '' %>">
+        </label>
+      </div>
 
-      <!-- optional: keep these if you already added them -->
-      <label>
-        Name:
-        <input
-          type="text"
-          name="name"
-          value="<%= typeof name !== 'undefined' ? name : '' %>">
-      </label>
+      <div class="compact-field">
+        <label>
+          Name:
+          <input
+            type="text"
+            name="name"
+            value="<%= typeof name !== 'undefined' ? name : '' %>">
+        </label>
+      </div>
 
-      <label>
-        Email:
-        <input
-          type="text"
-          name="email"
-          value="<%= typeof email !== 'undefined' ? email : '' %>">
-      </label>
+      <div class="compact-field">
+        <label>
+          Email:
+          <input
+            type="text"
+            name="email"
+            value="<%= typeof email !== 'undefined' ? email : '' %>">
+        </label>
+      </div>
 
-      <label>
-        Phone:
-        <input
-          type="text"
-          name="phone"
-          value="<%= typeof phone !== 'undefined' ? phone : '' %>">
-      </label>
+      <div class="compact-field">
+        <label>
+          Phone:
+          <input
+            type="text"
+            name="phone"
+            value="<%= typeof phone !== 'undefined' ? phone : '' %>">
+        </label>
+      </div>
 
-      <button type="submit">Filter</button>
+      <div class="filter-actions">
+        <button type="submit">Filter</button>
+      </div>
     </form>
 
 
@@ -175,25 +190,17 @@
     </tbody>
   </table>
 
-  <!-- Simple pagination -->
-<div style="margin-top: 16px;">
-  <% if (currentPage > 1) { %>
-    <a href="/participants?page=<%= currentPage - 1 %>">Prev</a>
-  <% } %>
+  <div class="pagination pagination-centered" style="margin-top: 16px;">
+    <% if (currentPage > 1) { %>
+      <a class="btn secondary-btn" href="/participants?page=<%= currentPage - 1 %>">Prev</a>
+    <% } %>
 
-  <span>Page <%= currentPage %> of <%= totalPages %></span>
+    <span>Page <%= currentPage %> of <%= totalPages %></span>
 
-  <% if (currentPage < totalPages) { %>
-    <a href="/participants?page=<%= currentPage + 1 %>">Next</a>
-  <% } %>
-</div>
-
-  <!-- Manager-only: Add new participant -->
-  <% if (isManager) { %>
-    <p>
-      <a href="/participants/add">Add New Participant</a>
-    </p>
-  <% } %>
+    <% if (currentPage < totalPages) { %>
+      <a class="btn secondary-btn" href="/participants?page=<%= currentPage + 1 %>">Next</a>
+    <% } %>
+  </div>
 
 </main>
 </div>
