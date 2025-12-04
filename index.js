@@ -334,6 +334,17 @@ app.post('/donate', async (req, res) => {
 });
 
 
+
+//Begining of code for 418 teapot 
+// Keep this before the login guard so it's always reachable without a session.
+app.get('/teapot', (req, res) => {
+  res
+    .status(418)                         // set HTTP 418
+    .send("I'm a teapot: cannot brew coffee."); 
+});
+//end of teapot code
+
+
   
   
   //Login check
@@ -578,15 +589,6 @@ app.post("/signup", async (req, res) => {
     return renderError("Signup error. Please try again.");
   }
 });
-
-
-//Begining of code for 418 teapot 
-app.get('/teapot', (req, res) => {
-  res
-    .status(418)                         // set HTTP 418
-    .send("I'm a teapot: cannot brew coffee."); 
-});
-//end of teapot code
 
 
 // GET /checkEmail
