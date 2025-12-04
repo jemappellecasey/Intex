@@ -1,4 +1,13 @@
 {
+  "name": "intex",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.943.0",
     "@dr.pogodin/csurf": "^1.16.6",
