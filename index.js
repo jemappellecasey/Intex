@@ -880,6 +880,7 @@ app.get('/participants', async (req, res) => {
       name: '',
       email: '',
       phone: '',
+      validationErrors: [],
     });
   }
 
@@ -985,6 +986,7 @@ app.get('/participants', async (req, res) => {
       name: name || '',
       email: email || '',
       phone: phone || '',
+      validationErrors: [],
     });
   } catch (error) {
     console.error('Error loading participants:', error);
@@ -1000,6 +1002,7 @@ app.get('/participants', async (req, res) => {
       name: name || '',
       email: email || '',
       phone: phone || '',
+      validationErrors: []
     });
   }
 });
