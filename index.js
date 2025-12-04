@@ -204,6 +204,8 @@ async function ensureDonationSequenceInSync() {
 app.get('/donate', async (req, res) => {
   let prefillEmail = '';
   let prefillName = '';
+  const cameFromDonationsList = req.query.from === 'donations';
+
   if (req.session && req.session.isLoggedIn) {
     prefillEmail = req.session.username || '';
     const participantId = await ensureParticipantId(req);
@@ -221,13 +223,23 @@ app.get('/donate', async (req, res) => {
       }
     }
   }
+
+  // Allow explicit overrides (e.g., coming from donations list)
+  if (req.query.email) {
+    prefillEmail = req.query.email.trim();
+  }
+  if (req.query.name) {
+    prefillName = req.query.name.trim();
+  }
+
   res.render('donate', {
     csrfToken: req.csrfToken(),
     error_message: '',
     success_message: '',
     prefillEmail,
     prefillName,
-    isLoggedIn: !!(req.session && req.session.isLoggedIn)
+    isLoggedIn: !!(req.session && req.session.isLoggedIn),
+    backToDonations: cameFromDonationsList
   });
 });
 
@@ -235,15 +247,19 @@ app.get('/donate', async (req, res) => {
 app.post('/donate', async (req, res) => {
   const isLoggedIn = !!(req.session && req.session.isLoggedIn);
   const sessionEmail = isLoggedIn ? (req.session.username || '') : '';
-  const { name, email, donationamount } = req.body;
+
+  const { name, email, donationamount, from } = req.body;
+  const cameFromDonationsList = (from === 'donations') || (req.query.from === 'donations');
+
   const renderBack = (msgError, msgSuccess) => {
     return res.render('donate', {
       csrfToken: req.csrfToken(),
       error_message: msgError || '',
-      success_message: msgSuccess || '',
+      success_message: cameFromDonationsList ? '' : (msgSuccess || ''),
       prefillEmail: email || sessionEmail,
       prefillName: name || '',
-      isLoggedIn
+      isLoggedIn,
+      backToDonations: cameFromDonationsList
     });
   };
   const effectiveEmail = (email && email.trim()) || sessionEmail;
@@ -299,6 +315,10 @@ app.post('/donate', async (req, res) => {
     });
     // updatetotaldonations() trigger will keep participants.totaldonations in sync
     // according to your DB function. [file:77]
+
+    if (cameFromDonationsList) {
+      return res.redirect('/donations');
+    }
     return renderBack('', 'Thank you for your donation!');
   } catch (err) {
     console.error('Visitor donation error:', err);
@@ -839,6 +859,8 @@ app.get('/participants', async (req, res) => {
 
   const isManager = req.session.role === 'manager';
   const participantId = await ensureParticipantId(req);
+  const successFlash = req.flash('success');
+  const successMessage = successFlash && successFlash.length ? successFlash[0] : '';
 
   // Participant role without a linked participantId returns early.
   if (!isManager && (!participantId || Number.isNaN(participantId))) {
@@ -2207,9 +2229,13 @@ app.get('/events/:eventdetailsid/edit', async (req, res) => {
       return res.send('Event not found.');
     }
 
+    const successFlash = req.flash('success');
     res.render('eventEdit', {
       event,
       error_message: '',
+      success_message:
+        (successFlash && successFlash.length ? successFlash[0] : '') ||
+        (req.query.saved ? 'Saved successfully.' : ''),
       isManager: req.session.role === 'manager',
       Username: req.session.username,
       csrfToken: req.csrfToken()
@@ -2273,7 +2299,8 @@ app.post('/events/:eventdetailsid/edit', async (req, res) => {
         });
     });
 
-    res.redirect('/events');
+    req.flash('success', 'Saved successfully.');
+    res.redirect(`/events/${eventdetailsid}/edit?saved=1`);
   } catch (err) {
     console.error('Error updating event:', err);
     res.send('Error updating event.');
@@ -2333,6 +2360,11 @@ app.get('/surveys', async (req, res) => {
   const rawEndDate   = req.query.endDate || '';
   const startDate = rawStartDate.trim();
   const endDate   = rawEndDate.trim();
+  const querySaved = req.query.saved === '1';
+  const successFlash = req.flash('success');
+  const successMessage =
+    (successFlash && successFlash.length ? successFlash[0] : '') ||
+    (querySaved ? 'Survey updated successfully.' : '');
 
   try {
     // Participant view: show answered vs pending surveys for this participant only.
@@ -2345,6 +2377,7 @@ app.get('/surveys', async (req, res) => {
           error_message: 'No participant record is linked to this user.',
           isManager,
           Username: req.session.username,
+          success_message: successMessage,
           eventName,
           participantName,
           startDate,
@@ -2414,6 +2447,7 @@ app.get('/surveys', async (req, res) => {
         error_message: '',
         isManager,
         Username: req.session.username,
+        success_message: successMessage,
         eventName,
         participantName,
         startDate,
@@ -2528,6 +2562,7 @@ app.get('/surveys', async (req, res) => {
       error_message: '',
       isManager,
       Username: req.session.username,
+      success_message: successMessage,
       eventName,
       participantName,
       startDate,
@@ -2788,7 +2823,8 @@ app.post('/surveys/:surveyid/edit', async (req, res) => {
         surveysubmissiondate: surveysubmissiondate || null
       });
 
-    return res.redirect('/surveys');
+    req.flash('success', 'Survey updated successfully.');
+    return res.redirect('/surveys?saved=1');
   } catch (err) {
     console.error('Error updating survey:', err);
     return res.send('Error updating survey.');

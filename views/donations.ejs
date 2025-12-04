@@ -74,20 +74,20 @@
 <section>
   <h2>Donation List</h2>
 
-  <div>
+  <div class="pagination pagination-centered">
     <% if (currentPage > 1) { %>
-      <a href="/donations?page=<%= currentPage - 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Prev</a>
+      <a class="btn secondary-btn" href="/donations?page=<%= currentPage - 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Prev</a>
     <% } %>
     <span>Page <%= currentPage %> of <%= totalPages %></span>
     <% if (currentPage < totalPages) { %>
-      <a href="/donations?page=<%= currentPage + 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Next</a>
+      <a class="btn secondary-btn" href="/donations?page=<%= currentPage + 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Next</a>
     <% } %>
   </div>
 
   <% if (!donations || donations.length === 0) { %>
     <p>No donations found.</p>
   <% } else { %>
-    <table>
+    <table class="center-table donations-table">
       <thead>
         <tr>
           <% if (isManager) { %>
@@ -120,6 +120,9 @@
           <td>$<%= d.donationamount ? Number(d.donationamount).toFixed(2) : '0.00' %></td>
           <% if (isManager) { %>
             <td>
+              <a href="/donate?from=donations&email=<%= encodeURIComponent(d.email || '') %>&name=<%= encodeURIComponent((d.participantfirstname || '') + ' ' + (d.participantlastname || '')) %>">
+                <button type="button">Add</button>
+              </a>
               <a href="/donations/<%= d.donationid %>/edit"><button type="button">Edit</button></a>
               <form method="post" action="/donations/<%= d.donationid %>/delete" style="display:inline;">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
