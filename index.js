@@ -278,7 +278,7 @@ app.post('/donate', async (req, res) => {
         .insert({
           email: normalizedEmail,
           participantfirstname: displayName,
-          participantlastname: '',
+          participantlastname: 'Visitor',
           participantrole: 'donor'
         })
         .returning('*');
