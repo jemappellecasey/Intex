@@ -1747,7 +1747,8 @@ app.post('/events/new', async (req, res) => {
       eventtype,
       eventdescription,
       eventlocation,
-      eventcapacity
+      eventcapacity,
+      eventrecurrencepattern
     });
   };
 
@@ -1762,7 +1763,9 @@ app.post('/events/new', async (req, res) => {
         eventname: eventname.trim(),
         eventtype: eventtype.trim(),
         eventdescription: eventdescription && eventdescription.trim() !== '' ? eventdescription.trim() : null,
-        eventrecurrencepattern: null,
+        eventrecurrencepattern: eventrecurrencepattern && eventrecurrencepattern.trim() !== ''
+          ? eventrecurrencepattern.trim()
+          : null,
         eventdefaultcapacity: eventcapacity && eventcapacity !== '' ? Number(eventcapacity) : null
       })
       .returning('*');
