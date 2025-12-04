@@ -12,55 +12,58 @@
   <main class="main">
 
 <h1>Add New Milestone</h1>
+<p>
+  <a href="/milestones" class="btn secondary-btn">Back to Milestones List</a>
+</p>
 
 <!-- Error message -->
 <% if (error_message) { %>
   <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
-<p>
-  <a href="/milestones" class="btn secondary-btn">Back to Milestones List</a>
-</p>
-
-<form method="post" action="/milestones/new">
+<form method="post" action="/milestones/new" class="form-card form-shell">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-  <% if (isManager) { %>
-    <div>
-      <!-- Email is used to find the participant (manager only) -->
-      <label>
-        Participant Email:*
-        <input type="email"
-               name="email"
-               value="<%= email || '' %>"
+  <table>
+    <% if (isManager) { %>
+      <tr>
+        <th>Participant Email*</th>
+        <td>
+          <input type="email"
+                 name="email"
+                 value="<%= email || '' %>"
+                 required>
+        </td>
+      </tr>
+    <% } else { %>
+      <tr>
+        <th>Participant</th>
+        <td>Adding milestone for your account.</td>
+      </tr>
+    <% } %>
+
+    <tr>
+      <th>Milestone Title*</th>
+      <td>
+        <input type="text"
+               name="milestonetitle"
+               value="<%= milestonetitle || '' %>"
                required>
-      </label>
-    </div>
-  <% } else { %>
-    <p>Adding milestone for your account.</p>
-  <% } %>
+      </td>
+    </tr>
 
-  <div>
-    <label>
-      Milestone Title:*
-      <input type="text"
-             name="milestonetitle"
-             value="<%= milestonetitle || '' %>"
-             required>
-    </label>
-  </div>
+    <tr>
+      <th>Milestone Date*</th>
+      <td>
+        <input type="date"
+               name="milestonedate"
+               value="<%= milestonedate || '' %>"
+               required>
+      </td>
+    </tr>
+  </table>
 
-  <div>
-    <label>
-      Milestone Date:*
-      <input type="date"
-             name="milestonedate"
-             value="<%= milestonedate || '' %>"
-             required>
-    </label>
-  </div>
-
-  <div>
+  <div class="form-actions">
     <button type="submit">Create Milestone</button>
   </div>
 </form>
