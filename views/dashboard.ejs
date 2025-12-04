@@ -85,7 +85,7 @@
             var vizElement = divElement.getElementsByTagName('object')[0];
             var setSize = function() {
               var w = divElement.offsetWidth || 800;
-              var h = Math.min(Math.max(w * 0.42, 320), 560);
+              var h = Math.min(Math.max(w * 0.40, 280), 520);
               vizElement.style.width = '100%';
               vizElement.style.height = h + 'px';
             };
@@ -107,7 +107,8 @@
             var vizElement = divElement.getElementsByTagName('object')[0];
             var setSize = function() {
               var w = divElement.offsetWidth || 800;
-              var h = Math.min(Math.max(w * 0.55, 380), 780);
+              // Keep this embed shorter; lower multiplier and caps
+              var h = Math.min(Math.max(w * 0.40, 260), 520);
               vizElement.style.width = '100%';
               vizElement.style.height = h + 'px';
             };
