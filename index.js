@@ -199,7 +199,7 @@ async function ensureDonationSequenceInSync() {
     console.error('Could not sync donations sequence', err);
   }
 }
-
+ 
 // Public donate page – works for logged-in and anonymous users
 app.get('/donate', (req, res) => {
   const isLoggedIn = !!(req.session && req.session.isLoggedIn);
