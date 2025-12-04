@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="/css/style.css">
+
+  <meta charset="UTF-8">
+  <title>Register for Event</title>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/dashboard" aria-label="Back to dashboard">
+        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+      </a>
+    </div>
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events" class="active">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <h1>Register for Event</h1>
+    <p><a href="/events">Back to Events</a></p>
+
+    <% if (error_message) { %>
+      <div class="alert alert-error"><%= error_message %></div>
+    <% } %>
+
+    <% if (success_message) { %>
+      <div class="alert alert-success"><%= success_message %></div>
+    <% } %>
+
+    <% if (!event) { %>
+      <p>Event details could not be loaded.</p>
+    <% } else { %>
+      <section>
+        <h2><%= event.eventname %></h2>
+        <p><%= event.eventdescription || 'No description provided.' %></p>
+
+        <ul>
+          <li><strong>Location:</strong> <%= event.eventlocation || 'TBD' %></li>
+          <li>
+            <strong>Starts:</strong>
+            <% if (event.eventdatetimestart) { %>
+              <%= new Date(event.eventdatetimestart).toLocaleString() %>
+            <% } else { %> N/A <% } %>
+          </li>
+          <li>
+            <strong>Ends:</strong>
+            <% if (event.eventdatetimeend) { %>
+              <%= new Date(event.eventdatetimeend).toLocaleString() %>
+            <% } else { %> N/A <% } %>
+          </li>
+          <li><strong>Capacity:</strong> <%= event.eventcapacity !== null && event.eventcapacity !== undefined ? event.eventcapacity : 'No limit' %></li>
+          <li><strong>Registered:</strong> <%= event.registeredcount %></li>
+          <li>
+            <strong>Registration Deadline:</strong>
+            <% if (event.eventregistrationdeadline) { %>
+              <%= new Date(event.eventregistrationdeadline).toLocaleString() %>
+            <% } else { %> None <% } %>
+          </li>
+        </ul>
+
+        <% if (isClosed) { %>
+          <div class="alert alert-error">Registration is closed for this event.</div>
+        <% } else if (isFull) { %>
+          <div class="alert alert-error">This event is fully booked.</div>
+        <% } else if (existingRegistration && !isManager) { %>
+          <div class="alert alert-info">You are already registered for this event.</div>
+        <% } %>
+      </section>
+
+      <% if (!isClosed && !isFull && !(existingRegistration && !isManager)) { %>
+        <section style="margin-top: 16px;">
+          <h3>Registration</h3>
+          <form method="post" action="/events/<%= event.eventdetailsid %>/register">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <% if (isManager) { %>
+              <label>
+                Participant
+                <select name="participantid" required>
+                  <option value="">Select participant</option>
+                  <% participants.forEach(function(p) { %>
+                    <option value="<%= p.participantid %>">
+                      <%= p.participantfirstname %> <%= p.participantlastname %>
+                    </option>
+                  <% }); %>
+                </select>
+              </label>
+            <% } else { %>
+              <input type="hidden" name="participantid" value="<%= selfParticipantId %>">
+              <p>Registering as your account (Participant ID: <%= selfParticipantId %>).</p>
+            <% } %>
+
+            <button type="submit">Confirm Registration</button>
+          </form>
+        </section>
+      <% } %>
+    <% } %>
+  </main>
+</div>
+</body>
+</html>

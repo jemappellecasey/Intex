@@ -65,6 +65,15 @@
   </section>
 
   <hr>
+  <section style="margin-top: 12px;">
+    <h2>Manager Tools</h2>
+
+    <p>
+      <a href="/events/new">
+        <button type="button">Add New Event</button>
+      </a>
+    </p>
+  </section>
 <% } %>
 
 <!-- ============================= -->
@@ -131,7 +140,13 @@
           </td>
 
           <td><%= ev.eventcapacity %></td>
-          <td><%= ev.registeredcount %></td>
+          <td>
+            <% if (!isManager && ev.selfregistrationstatus) { %>
+              Registered
+            <% } else { %>
+              <%= ev.registeredcount %>
+            <% } %>
+          </td>
 
           <td>
             <% if (ev.eventregistrationdeadline) { %>
@@ -144,12 +159,19 @@
                               && ev.eventcapacity !== undefined
                               && Number(ev.registeredcount) >= Number(ev.eventcapacity); %>
 
-            <% if (isFull) { %>
+            <% if (isManager) { %>
+              <span>—</span>
+            <% } else if (ev.selfregistrationstatus) { %>
+              <form method="post" action="/events/<%= ev.eventdetailsid %>/cancel">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit">Cancel</button>
+              </form>
+            <% } else if (isFull) { %>
               <strong class="alert alert-error">This event is fully booked</strong>
             <% } else { %>
               <!-- 🔹 Register button: go to registration form page -->
               <form method="get" action="/events/<%= ev.eventdetailsid %>/register">
-                <button type="submit">Register Participant</button>
+                <button type="submit">Register</button>
               </form>
             <% } %>
           </td>
@@ -240,7 +262,13 @@
           </td>
 
           <td><%= ev.eventcapacity %></td>
-          <td><%= ev.registeredcount %></td>
+          <td>
+            <% if (!isManager && ev.selfregistrationstatus) { %>
+              Registered
+            <% } else { %>
+              <%= ev.registeredcount %>
+            <% } %>
+          </td>
           <td><%= ev.attendedcount %></td>
 
           <% if (isManager) { %>
@@ -265,21 +293,6 @@
 </section>
 
 <hr>
-
-<!-- ============================= -->
-<!-- MANAGER-ONLY TOOLS           -->
-<!-- ============================= -->
-<% if (isManager) { %>
-<section>
-  <h2>Manager Tools</h2>
-
-  <p>
-    <a href="/events/new">
-      <button>Add New Event</button>
-    </a>
-  </p>
-</section>
-<% } %>
 
 </main>
 </div>

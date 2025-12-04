@@ -1535,6 +1535,15 @@ app.get('/events', async (req, res) => {
 
   // Base select clause (used for both upcoming / past)
   function baseSelect(q) {
+    const hasSelf = !isManager && participantId && !Number.isNaN(participantId);
+
+    if (hasSelf) {
+      q.leftJoin('registrations as sr', function () {
+        this.on('sr.eventdetailsid', '=', 'ed.eventdetailsid')
+          .andOn('sr.participantid', '=', knex.raw('?', [participantId]));
+      });
+    }
+
     return q
       .select(
         'ed.eventdetailsid',
@@ -1551,7 +1560,13 @@ app.get('/events', async (req, res) => {
         // number of attendees (attendance flag true)
         knex.raw(
           "COALESCE(SUM(CASE WHEN r.registrationattendanceflag = true THEN 1 ELSE 0 END), 0) AS attendedcount"
-        )
+        ),
+        hasSelf
+          ? knex.raw('MAX(sr.registrationstatus) AS selfregistrationstatus')
+          : knex.raw('NULL::text AS selfregistrationstatus'),
+        hasSelf
+          ? knex.raw('MAX(sr.registrationid) AS selfregistrationid')
+          : knex.raw('NULL::int AS selfregistrationid')
       )
       .groupBy(
         'ed.eventdetailsid',
@@ -1571,14 +1586,6 @@ app.get('/events', async (req, res) => {
     const q = knex('eventdetails as ed')
       .join('events as e', 'ed.eventid', 'e.eventid')
       .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid');
-    if (!isManager && participantId && !Number.isNaN(participantId)) {
-      q.whereExists(
-        knex.select(1)
-          .from('registrations as rr')
-          .whereRaw('rr.eventdetailsid = ed.eventdetailsid')
-          .andWhere('rr.participantid', participantId)
-      );
-    }
     applyEventFilters(q);
     q.where('ed.eventdatetimestart', '>=', now);
     q.orderBy('ed.eventdatetimestart', 'asc');
@@ -1619,14 +1626,6 @@ app.get('/events', async (req, res) => {
       (function () {
         const q = knex('eventdetails as ed')
           .join('events as e', 'ed.eventid', 'e.eventid');
-        if (!isManager && participantId && !Number.isNaN(participantId)) {
-          q.whereExists(
-            knex.select(1)
-              .from('registrations as rr')
-              .whereRaw('rr.eventdetailsid = ed.eventdetailsid')
-              .andWhere('rr.participantid', participantId)
-          );
-        }
         applyEventFilters(q);
         q.where('ed.eventdatetimestart', '>=', now);
         return q.countDistinct('ed.eventdetailsid as total');
@@ -1680,7 +1679,8 @@ app.get('/events', async (req, res) => {
 
       pastEvents,
       pastCurrentPage: pastPage,
-      pastTotalPages
+      pastTotalPages,
+      csrfToken: req.csrfToken()
     });
   } catch (err) {
     console.error('Error loading events:', err);
@@ -1699,7 +1699,570 @@ app.get('/events', async (req, res) => {
 
       pastEvents: [],
       pastCurrentPage: 1,
+      pastTotalPages: 1,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+// Shared helper: fetch single eventdetail + counts
+async function loadEventWithCounts(eventdetailsid) {
+  return knex('eventdetails as ed')
+    .join('events as e', 'ed.eventid', 'e.eventid')
+    .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid')
+    .where('ed.eventdetailsid', eventdetailsid)
+    .groupBy(
+      'ed.eventdetailsid',
+      'e.eventid',
+      'e.eventname',
+      'e.eventdescription',
+      'ed.eventdatetimestart',
+      'ed.eventdatetimeend',
+      'ed.eventlocation',
+      'ed.eventcapacity',
+      'ed.eventregistrationdeadline'
+    )
+    .select(
+      'ed.eventdetailsid',
+      'e.eventid',
+      'e.eventname',
+      'e.eventdescription',
+      'ed.eventdatetimestart',
+      'ed.eventdatetimeend',
+      'ed.eventlocation',
+      'ed.eventcapacity',
+      'ed.eventregistrationdeadline',
+      knex.raw('COUNT(r.registrationid)::int AS registeredcount')
+    )
+    .first();
+}
+
+// Registration form for an upcoming event
+app.get('/events/:eventdetailsid/register', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const isManager = req.session.role === 'manager';
+  const eventdetailsid = parseInt(req.params.eventdetailsid, 10);
+  const selfParticipantId = await ensureParticipantId(req);
+
+  if (!isManager && (!selfParticipantId || Number.isNaN(selfParticipantId))) {
+    return res.render('events', {
+      error_message: 'No participant record is linked to this user.',
+      isManager,
+      Username: req.session.username,
+      name: '',
+      startDate: '',
+      endDate: '',
+      upcomingEvents: [],
+      upcomingCurrentPage: 1,
+      upcomingTotalPages: 1,
+      pastEvents: [],
+      pastCurrentPage: 1,
       pastTotalPages: 1
+    });
+  }
+
+  try {
+    const event = await loadEventWithCounts(eventdetailsid);
+    if (!event) {
+      return res.status(404).render('events', {
+        error_message: 'Event not found.',
+        isManager,
+        Username: req.session.username,
+        name: '',
+        startDate: '',
+        endDate: '',
+        upcomingEvents: [],
+        upcomingCurrentPage: 1,
+        upcomingTotalPages: 1,
+        pastEvents: [],
+        pastCurrentPage: 1,
+        pastTotalPages: 1
+      });
+    }
+
+    const participants = isManager
+      ? await knex('participants')
+          .select('participantid', 'participantfirstname', 'participantlastname')
+          .orderBy('participantlastname')
+          .orderBy('participantfirstname')
+      : [];
+
+    const existingRegistration = selfParticipantId
+      ? await knex('registrations')
+          .where({
+            participantid: selfParticipantId,
+            eventdetailsid
+          })
+          .first()
+      : null;
+
+    const now = new Date();
+    const eventStart = new Date(event.eventdatetimestart);
+    const deadline = event.eventregistrationdeadline
+      ? new Date(event.eventregistrationdeadline)
+      : null;
+    const isClosed =
+      eventStart <= now || (deadline && now > deadline);
+    const isFull =
+      event.eventcapacity !== null &&
+      event.eventcapacity !== undefined &&
+      Number(event.registeredcount) >= Number(event.eventcapacity);
+
+    return res.render('eventRegister', {
+      event,
+      participants,
+      selfParticipantId,
+      existingRegistration,
+      isManager,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      isFull,
+      isClosed,
+      error_message: '',
+      success_message: ''
+    });
+  } catch (err) {
+    console.error('Error loading registration form:', err);
+    return res.render('events', {
+      error_message: 'Error loading registration form.',
+      isManager,
+      Username: req.session.username,
+      name: '',
+      startDate: '',
+      endDate: '',
+      upcomingEvents: [],
+      upcomingCurrentPage: 1,
+      upcomingTotalPages: 1,
+      pastEvents: [],
+      pastCurrentPage: 1,
+      pastTotalPages: 1
+    });
+  }
+});
+
+// Submit registration for an upcoming event
+app.post('/events/:eventdetailsid/register', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const isManager = req.session.role === 'manager';
+  const eventdetailsid = parseInt(req.params.eventdetailsid, 10);
+  const selfParticipantId = await ensureParticipantId(req);
+
+  const participantId = isManager
+    ? parseInt(req.body.participantid, 10)
+    : selfParticipantId;
+
+  try {
+    const event = await loadEventWithCounts(eventdetailsid);
+    if (!event) {
+      return res.status(404).render('eventRegister', {
+        event: null,
+        participants: [],
+        selfParticipantId,
+        existingRegistration: null,
+        isManager,
+        Username: req.session.username,
+        csrfToken: req.csrfToken(),
+        isFull: false,
+        isClosed: false,
+        error_message: 'Event not found.',
+        success_message: ''
+      });
+    }
+
+    const participants = isManager
+      ? await knex('participants')
+          .select('participantid', 'participantfirstname', 'participantlastname')
+          .orderBy('participantlastname')
+          .orderBy('participantfirstname')
+      : [];
+
+    if (!participantId || Number.isNaN(participantId)) {
+      return res.render('eventRegister', {
+        event,
+        participants,
+        selfParticipantId,
+        existingRegistration: null,
+        isManager,
+        Username: req.session.username,
+        csrfToken: req.csrfToken(),
+        isFull: false,
+        isClosed: false,
+        error_message: 'Participant selection is required.',
+        success_message: ''
+      });
+    }
+
+    const now = new Date();
+    const eventStart = new Date(event.eventdatetimestart);
+    const deadline = event.eventregistrationdeadline
+      ? new Date(event.eventregistrationdeadline)
+      : null;
+
+    const isClosed =
+      eventStart <= now || (deadline && now > deadline);
+    const isFull =
+      event.eventcapacity !== null &&
+      event.eventcapacity !== undefined &&
+      Number(event.registeredcount) >= Number(event.eventcapacity);
+
+    const existingRegistration = await knex('registrations')
+      .where({
+        participantid: participantId,
+        eventdetailsid
+      })
+      .first();
+
+    if (isClosed) {
+      return res.render('eventRegister', {
+        event,
+        participants,
+        selfParticipantId,
+        existingRegistration,
+        isManager,
+        Username: req.session.username,
+        csrfToken: req.csrfToken(),
+        isFull,
+        isClosed,
+        error_message: 'Registration is closed for this event.',
+        success_message: ''
+      });
+    }
+
+    if (isFull) {
+      return res.render('eventRegister', {
+        event,
+        participants,
+        selfParticipantId,
+        existingRegistration,
+        isManager,
+        Username: req.session.username,
+        csrfToken: req.csrfToken(),
+        isFull,
+        isClosed,
+        error_message: 'This event is fully booked.',
+        success_message: ''
+      });
+    }
+
+    if (existingRegistration) {
+      return res.render('eventRegister', {
+        event,
+        participants,
+        selfParticipantId,
+        existingRegistration,
+        isManager,
+        Username: req.session.username,
+        csrfToken: req.csrfToken(),
+        isFull,
+        isClosed,
+        error_message: 'This participant is already registered for this event.',
+        success_message: ''
+      });
+    }
+
+    await knex.transaction(async (trx) => {
+      // Align sequence to current max to avoid duplicate key errors
+      await trx.raw(
+        "SELECT setval('registrations_registrationid_seq', COALESCE((SELECT MAX(registrationid) FROM registrations), 0), true)"
+      );
+
+      await trx('registrations').insert({
+        participantid: participantId,
+        eventid: event.eventid,
+        eventdatetimestart: event.eventdatetimestart,
+        registrationstatus: 'registered',
+        registrationcreatedat: new Date(),
+        eventdetailsid
+      });
+    });
+
+    const refreshedEvent = await loadEventWithCounts(eventdetailsid);
+    const refreshedIsFull =
+      refreshedEvent.eventcapacity !== null &&
+      refreshedEvent.eventcapacity !== undefined &&
+      Number(refreshedEvent.registeredcount) >= Number(refreshedEvent.eventcapacity);
+    const refreshedDeadline = refreshedEvent.eventregistrationdeadline
+      ? new Date(refreshedEvent.eventregistrationdeadline)
+      : null;
+    const refreshedIsClosed =
+      new Date(refreshedEvent.eventdatetimestart) <= new Date() ||
+      (refreshedDeadline && new Date() > refreshedDeadline);
+    return res.render('eventRegister', {
+      event: refreshedEvent,
+      participants,
+      selfParticipantId,
+      existingRegistration: { participantid: participantId },
+      isManager,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      isFull: refreshedIsFull,
+      isClosed: refreshedIsClosed,
+      error_message: '',
+      success_message: 'Registration completed.'
+    });
+  } catch (err) {
+    console.error('Error creating registration:', err);
+    return res.render('eventRegister', {
+      event: null,
+      participants: [],
+      selfParticipantId,
+      existingRegistration: null,
+      isManager,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      isFull: false,
+      isClosed: false,
+      error_message: 'Error creating registration.',
+      success_message: ''
+    });
+  }
+});
+
+// Add new event (manager only) - form
+app.get('/events/new', (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'manager') {
+    return res.render('login', { error_message: 'You do not have permission to add events.' });
+  }
+
+  return res.render('addEvent', {
+    error_message: '',
+    isManager: true,
+    Username: req.session.username,
+    csrfToken: req.csrfToken(),
+    event: {
+      eventname: '',
+      eventtype: '',
+      eventdescription: '',
+      eventlocation: '',
+      eventcapacity: '',
+      eventdatetimestart: '',
+      eventdatetimeend: '',
+      eventregistrationdeadline: ''
+    }
+  });
+});
+
+// Add new event (manager only) - submit
+app.post('/events/new', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+  if (req.session.role !== 'manager') {
+    return res.render('login', { error_message: 'You do not have permission to add events.' });
+  }
+
+  const {
+    eventname,
+    eventtype,
+    eventdescription,
+    eventdatetimestart,
+    eventdatetimeend,
+    eventlocation,
+    eventcapacity,
+    eventregistrationdeadline
+  } = req.body;
+
+  const parsedCapacity = eventcapacity !== '' ? parseInt(eventcapacity, 10) : null;
+  const startDate = eventdatetimestart ? new Date(eventdatetimestart) : null;
+  const endDate = eventdatetimeend ? new Date(eventdatetimeend) : null;
+  const deadlineDate = eventregistrationdeadline ? new Date(eventregistrationdeadline) : null;
+
+  if (!eventname || !startDate || Number.isNaN(startDate.getTime())) {
+    return res.render('addEvent', {
+      error_message: 'Event name and start time are required.',
+      isManager: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      event: {
+        eventname,
+        eventtype,
+        eventdescription,
+        eventlocation,
+        eventcapacity,
+        eventdatetimestart,
+        eventdatetimeend,
+        eventregistrationdeadline
+      }
+    });
+  }
+
+  if (deadlineDate && startDate && deadlineDate >= startDate) {
+    return res.render('addEvent', {
+      error_message: 'Registration deadline must be before the start time.',
+      isManager: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      event: {
+        eventname,
+        eventtype,
+        eventdescription,
+        eventlocation,
+        eventcapacity,
+        eventdatetimestart,
+        eventdatetimeend,
+        eventregistrationdeadline
+      }
+    });
+  }
+
+  if (endDate && startDate && endDate <= startDate) {
+    return res.render('addEvent', {
+      error_message: 'End time must be after the start time.',
+      isManager: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      event: {
+        eventname,
+        eventtype,
+        eventdescription,
+        eventlocation,
+        eventcapacity,
+        eventdatetimestart,
+        eventdatetimeend,
+        eventregistrationdeadline
+      }
+    });
+  }
+
+  try {
+    await knex.transaction(async (trx) => {
+      // Align sequences to current max values to avoid duplicate key errors
+      await trx.raw(
+        "SELECT setval('events_eventid_seq', COALESCE((SELECT MAX(eventid) FROM events), 0), true)"
+      );
+      await trx.raw(
+        "SELECT setval('eventdetails_eventdetailsid_seq', COALESCE((SELECT MAX(eventdetailsid) FROM eventdetails), 0), true)"
+      );
+
+      const [eventRow] = await trx('events')
+        .insert(
+          {
+            eventname,
+            eventtype: eventtype || null,
+            eventdescription: eventdescription || null
+          },
+          ['eventid']
+        );
+
+      const eventid = eventRow.eventid || eventRow; // PG returns object, sqlite returns id
+
+      await trx('eventdetails').insert({
+        eventid,
+        eventdatetimestart: startDate,
+        eventdatetimeend: endDate || null,
+        eventlocation: eventlocation || null,
+        eventcapacity: Number.isNaN(parsedCapacity) ? null : parsedCapacity,
+        eventregistrationdeadline: deadlineDate || null
+      });
+    });
+
+    return res.redirect('/events');
+  } catch (err) {
+    console.error('Error creating event:', err);
+    return res.render('addEvent', {
+      error_message: 'Error creating event.',
+      isManager: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      event: {
+        eventname,
+        eventtype,
+        eventdescription,
+        eventlocation,
+        eventcapacity,
+        eventdatetimestart,
+        eventdatetimeend,
+        eventregistrationdeadline
+      }
+    });
+  }
+});
+
+// Cancel own registration
+app.post('/events/:eventdetailsid/cancel', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const eventdetailsid = parseInt(req.params.eventdetailsid, 10);
+  const participantId = await ensureParticipantId(req);
+
+  if (!participantId || Number.isNaN(participantId)) {
+    return res.render('events', {
+      error_message: 'No participant record is linked to this user.',
+      isManager: req.session.role === 'manager',
+      Username: req.session.username,
+      name: '',
+      startDate: '',
+      endDate: '',
+      upcomingEvents: [],
+      upcomingCurrentPage: 1,
+      upcomingTotalPages: 1,
+      pastEvents: [],
+      pastCurrentPage: 1,
+      pastTotalPages: 1,
+      csrfToken: req.csrfToken()
+    });
+  }
+
+  try {
+    const registration = await knex('registrations')
+      .where({
+        participantid: participantId,
+        eventdetailsid
+      })
+      .first();
+
+    if (!registration) {
+      return res.render('events', {
+        error_message: 'No registration found to cancel.',
+        isManager: req.session.role === 'manager',
+        Username: req.session.username,
+        name: '',
+        startDate: '',
+        endDate: '',
+        upcomingEvents: [],
+        upcomingCurrentPage: 1,
+        upcomingTotalPages: 1,
+        pastEvents: [],
+        pastCurrentPage: 1,
+        pastTotalPages: 1,
+        csrfToken: req.csrfToken()
+      });
+    }
+
+    await knex('registrations')
+      .where({
+        registrationid: registration.registrationid
+      })
+      .del();
+
+    return res.redirect('/events');
+  } catch (err) {
+    console.error('Error cancelling registration:', err);
+    return res.render('events', {
+      error_message: 'Error cancelling registration.',
+      isManager: req.session.role === 'manager',
+      Username: req.session.username,
+      name: '',
+      startDate: '',
+      endDate: '',
+      upcomingEvents: [],
+      upcomingCurrentPage: 1,
+      upcomingTotalPages: 1,
+      pastEvents: [],
+      pastCurrentPage: 1,
+      pastTotalPages: 1,
+      csrfToken: req.csrfToken()
     });
   }
 });
