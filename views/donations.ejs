@@ -34,7 +34,7 @@
 <p><a href="/dashboard">Back to Dashboard</a></p>
 
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <% if (!isManager) { %>
@@ -89,7 +89,7 @@
   <% if (!donations || donations.length === 0) { %>
     <p>No donations found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
         <tr>
           <% if (isManager) { %>

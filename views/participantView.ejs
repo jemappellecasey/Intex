@@ -19,18 +19,18 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
 
   <% if (!participant) { %>
     <!-- Participant not found -->
-    <p style="color:red;"><%= error_message || 'Participant not found.' %></p>
+    <div class="alert alert-error"><%= error_message %></div>
     <p><a href="/participants">Back to Participants List</a></p>
   <% } else { %>
 
     <% if (error_message && error_message !== '') { %>
-      <p style="color:red;"><%= error_message %></p>
+      <div class="alert alert-error"><%= error_message %></div>
     <% } %>
 
     <!-- Basic participant information -->
     <section>
       <h2>Basic Information</h2>
-      <table border="1" cellpadding="4" cellspacing="0">
+      <table>
         <tr>
           <th>Email</th>
           <td><%= participant.email %></td>
@@ -124,7 +124,7 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
     <section>
       <h2>Event History</h2>
       <% if (events && events.length > 0) { %>
-        <table border="1" cellpadding="4" cellspacing="0">
+        <table>
           <thead>
             <tr>
               <th>Event Title</th>
@@ -176,7 +176,7 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
     <section>
       <h2>Post-Event Surveys</h2>
       <% if (surveys && surveys.length > 0) { %>
-        <table border="1" cellpadding="4" cellspacing="0">
+        <table>
           <thead>
             <tr>
               <th>Event Title</th>
@@ -225,7 +225,7 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
     <section>
       <h2>Milestones</h2>
       <% if (milestones && milestones.length > 0) { %>
-        <table border="1" cellpadding="4" cellspacing="0">
+        <table>
           <thead>
             <tr>
               <th>Title</th>
@@ -256,7 +256,7 @@ show all their milestones, show their email, first, and last name, their DOB, Ph
     <section>
       <h2>Donations</h2>
       <% if (donations && donations.length > 0) { %>
-        <table border="1" cellpadding="4" cellspacing="0">
+        <table>
           <thead>
             <tr>
               <th>Date</th>

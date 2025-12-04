@@ -12,7 +12,7 @@
 
   <!-- Error message -->
   <% if (error_message) { %>
-    <p style="color:red;"><%= error_message %></p>
+    <div class="alert alert-error"><%= error_message %></div>
   <% } %>
 
   <!-- Navigation -->
@@ -27,7 +27,7 @@
     <!-- Basic info: event and participant (read-only) -->
     <section>
       <h2>Basic Information</h2>
-      <table border="1" cellpadding="4" cellspacing="0">
+      <table>
         <tr>
           <th>Event Name</th>
           <td><%= survey.eventname || 'N/A' %></td>
@@ -72,7 +72,7 @@
       <form method="post" action="/surveys/<%= survey.surveyid %>/edit">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-        <table border="1" cellpadding="4" cellspacing="0">
+        <table>
           <tr>
             <th>Satisfaction (1–5)</th>
             <td>

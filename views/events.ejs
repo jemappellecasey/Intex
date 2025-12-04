@@ -35,7 +35,7 @@
 
 <!-- Error message -->
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <!-- ============================= -->
@@ -92,7 +92,7 @@
   <% if (!upcomingEvents || upcomingEvents.length === 0) { %>
     <p>No upcoming events found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
       <tr>
         <th>Name</th>
@@ -145,7 +145,7 @@
                               && Number(ev.registeredcount) >= Number(ev.eventcapacity); %>
 
             <% if (isFull) { %>
-              <strong style="color:red;">This event is fully booked</strong>
+              <strong class="alert alert-error">This event is fully booked</strong>
             <% } else { %>
               <!-- 🔹 Register button: go to registration form page -->
               <form method="get" action="/events/<%= ev.eventdetailsid %>/register">
@@ -205,7 +205,7 @@
   <% if (!pastEvents || pastEvents.length === 0) { %>
     <p>No past events found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
       <tr>
         <th>Name</th>

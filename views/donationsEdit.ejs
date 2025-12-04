@@ -12,7 +12,7 @@
 <p><a href="/donations">Back to Donations</a></p>
 
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <% if (!donation) { %>

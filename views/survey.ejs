@@ -41,7 +41,7 @@
 
 <!-- Error message -->
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <hr>
@@ -132,7 +132,7 @@
   <% if (!surveys || surveys.length === 0) { %>
     <p>No surveys found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
         <tr>
           <th>Event Name</th>
@@ -246,7 +246,7 @@
   <% if (!answeredSurveys || answeredSurveys.length === 0) { %>
     <p>No answered surveys yet.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
         <tr>
           <th>Event Name</th>
@@ -295,7 +295,7 @@
   <% if (!pendingSurveys || pendingSurveys.length === 0) { %>
     <p>No pending surveys right now.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
         <tr>
           <th>Event Name</th>

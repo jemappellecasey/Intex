@@ -8,21 +8,13 @@
 </head>
 <body>
   <% if (info && info.length) { %>
-    <div style="color: blue;">
-      <% info.forEach(function(msg) { %>
-        <p><%= msg %></p>
-      <% }); %>
-    </div>
+    <div class="alert alert-info"><%= msg %></div>
   <% } else { %>
     <p>Please check your email for the verification link.</p>
   <% } %>
 
   <% if (error && error.length) { %>
-    <div style="color: red;">
-      <% error.forEach(function(msg) { %>
-        <p><%= msg %></p>
-      <% }); %>
-    </div>
+    <div class="alert alert-error"><%= msg %></div>
   <% } %>
 
   <p>If you did not receive an email, verify that you used the correct address and try signing up again.</p>

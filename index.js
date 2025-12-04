@@ -161,11 +161,81 @@ app.use(csrfProtection);
     }
     next(err);
   });
+
+
+// Public visitor donations (no login required, uses participants + donations tables)
+
+// GET /donate – show visitor donation form
+app.get('/donate', (req, res) => {
+  res.render('donate', {
+    csrfToken: req.csrfToken(),
+    error_message: '',
+    success_message: ''
+  });
+});
+
+// POST /donate – process visitor donation
+app.post('/donate', async (req, res) => {
+  const { name, email, donationamount } = req.body;
+
+  const renderBack = (msgError, msgSuccess) => {
+    return res.render('donate', {
+      csrfToken: req.csrfToken(),
+      error_message: msgError || '',
+      success_message: msgSuccess || ''
+    });
+  };
+
+  if (!email || !donationamount) {
+    return renderBack('Email and amount are required.', '');
+  }
+
+  const amountNumber = Number(donationamount);
+  if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+    return renderBack('Donation amount must be greater than 0.', '');
+  }
+
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const displayName = name && name.trim() ? name.trim() : 'Visitor';
+
+    // 1) Find or create participant (required for donations.participantid)
+    let participant = await knex('participants')
+      .whereILike('email', normalizedEmail)
+      .first();
+
+    if (!participant) {
+      const [inserted] = await knex('participants')
+        .insert({
+          email: normalizedEmail,
+          participantfirstname: displayName,
+          participantlastname: '',
+          participantrole: 'donor'  // or 'participant', your choice
+        })
+        .returning('*');
+      participant = inserted;
+    }
+
+    // 2) Insert donation (participantid NOT NULL, amount > 0)
+    await knex('donations').insert({
+      participantid: participant.participantid,
+      donationamount: amountNumber
+    });
+
+    // updatetotaldonations() trigger will keep participants.totaldonations in sync
+    // according to your DB function. [file:77]
+
+    return renderBack('', 'Thank you for your donation!');
+  } catch (err) {
+    console.error('Visitor donation error:', err);
+    return renderBack('Error processing donation. Please try again.', '');
+  }
+});
   
   
   //Login check
   app.use((req, res, next)=> {
-        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass', '/signup', '/landing'];
+        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass', '/signup', '/landing', '/donate'];
         if (openPaths.includes(req.path)) {
           return next();
         }
@@ -436,7 +506,6 @@ app.get("/verify-email/:token", async (req, res) => {
     await knex("users")
       .where({ userid: user.userid })
       .update({
-        isverified: true,
         magic_token: null,
         magic_token_expires_at: null,
       });
@@ -457,16 +526,30 @@ app.get("/verify-email/:token", async (req, res) => {
 // Admin-only settings: manage user roles
 app.get('/admin/settings', requireManager, async (req, res) => {
   try {
-    const users = await knex('users')
-      .select('userid', 'email', 'role', 'isverified')
+    // ADD THIS LINE
+    const { email, role } = req.query;
+
+    const query = knex('users')
+      .select('userid', 'email', 'role')
       .orderBy('userid', 'asc');
+
+    if (email && email.trim() !== '') {
+      query.whereILike('email', `%${email.trim()}%`);
+    }
+    if (role && role.trim() !== '') {
+      query.where('role', role.trim());
+    }
+
+    const users = await query;
 
     return res.render('adminSettings', {
       users,
       error_message: '',
       isManager: true,
       Username: req.session.username,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      email: email || '',
+      role: role || ''
     });
   } catch (err) {
     console.error('Error loading admin settings:', err);
@@ -475,10 +558,13 @@ app.get('/admin/settings', requireManager, async (req, res) => {
       error_message: 'Error loading users.',
       isManager: true,
       Username: req.session.username,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      email: '',
+      role: ''
     });
   }
 });
+
 
 app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
   const { userid } = req.params;
@@ -487,14 +573,16 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
   const allowedRoles = ['manager', 'user', 'secretary'];
   if (!allowedRoles.includes(role)) {
     const users = await knex('users')
-      .select('userid', 'email', 'role', 'isverified')
+      .select('userid', 'email', 'role')
       .orderBy('userid', 'asc');
     return res.render('adminSettings', {
       users,
       error_message: 'Invalid role.',
       isManager: true,
       Username: req.session.username,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      email: '',
+      role: ''
     });
   }
 
@@ -506,7 +594,7 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
   } catch (err) {
     console.error('Error updating user role:', err);
     const users = await knex('users')
-      .select('userid', 'email', 'role', 'isverified')
+      .select('userid', 'email', 'role')
       .orderBy('userid', 'asc');
     return res.render('adminSettings', {
       users,
@@ -531,7 +619,7 @@ app.post('/admin/users/:userid/delete', requireManager, async (req, res) => {
   } catch (err) {
     console.error('Error deleting user:', err);
     const users = await knex('users')
-      .select('userid', 'email', 'role', 'isverified')
+      .select('userid', 'email', 'role')
       .orderBy('userid', 'asc');
     return res.render('adminSettings', {
       users,
@@ -904,7 +992,7 @@ app.get('/participants/:participantid', async (req, res) => {
   const participantid = parseInt(req.params.participantid, 10);
 
   if (Number.isNaN(participantid)) {
-    return res.render('viewParticipant', {
+    return res.render('participantView', {
       participant: null,
       events: [],
       milestones: [],
@@ -950,7 +1038,7 @@ app.get('/participants/:participantid', async (req, res) => {
 
     if (!participant) {
       console.error('Participant not found for id =', participantid);
-      return res.render('viewParticipant', {
+      return res.render('participantView', {
         participant: null,
         events: [],
         milestones: [],
@@ -1033,7 +1121,7 @@ app.get('/participants/:participantid', async (req, res) => {
 
     console.log('View page loaded for participantid =', participantid);
 
-    return res.render('viewParticipant', {
+    return res.render('participantView', {
       participant,
       events,
       milestones,
@@ -1049,7 +1137,7 @@ app.get('/participants/:participantid', async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading participant details:', err);
-    return res.render('viewParticipant', {
+    return res.render('participantView', {
       participant: null,
       events: [],
       milestones: [],

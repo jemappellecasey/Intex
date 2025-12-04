@@ -12,7 +12,7 @@
 
 <!-- Show error message if any -->
 <% if (error_message && error_message !== '') { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <!-- Basic info about who is logged in (optional) -->
@@ -40,7 +40,7 @@
   <form method="post" action="/events/<%= event.eventdetailsid %>/edit">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-    <table border="1" cellpadding="4" cellspacing="0">
+    <table>
       <tr>
         <th>Event ID</th>
         <td><%= event.eventid %> (Details ID: <%= event.eventdetailsid %>)</td>

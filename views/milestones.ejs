@@ -36,7 +36,7 @@
 
 <!-- Error message -->
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <!-- ============================= -->
@@ -109,7 +109,7 @@
   <% if (!milestones || milestones.length === 0) { %>
     <p>No milestones found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
       <tr>
         <th>Participant</th>
