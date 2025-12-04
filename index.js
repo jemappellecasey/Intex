@@ -192,7 +192,6 @@ async function ensureDonationSequenceInSync() {
 app.get('/donate', async (req, res) => {
   let prefillEmail = '';
   let prefillName = '';
-
   if (req.session && req.session.isLoggedIn) {
     prefillEmail = req.session.username || '';
     const participantId = await ensureParticipantId(req);
@@ -210,7 +209,6 @@ app.get('/donate', async (req, res) => {
       }
     }
   }
-
   res.render('donate', {
     csrfToken: req.csrfToken(),
     error_message: '',
@@ -225,9 +223,7 @@ app.get('/donate', async (req, res) => {
 app.post('/donate', async (req, res) => {
   const isLoggedIn = !!(req.session && req.session.isLoggedIn);
   const sessionEmail = isLoggedIn ? (req.session.username || '') : '';
-
   const { name, email, donationamount } = req.body;
-
   const renderBack = (msgError, msgSuccess) => {
     return res.render('donate', {
       csrfToken: req.csrfToken(),
@@ -238,51 +234,40 @@ app.post('/donate', async (req, res) => {
       isLoggedIn
     });
   };
-
   const effectiveEmail = (email && email.trim()) || sessionEmail;
-
   if (!effectiveEmail || !donationamount) {
     return renderBack('Email and amount are required.', '');
   }
-
   const amountNumber = Number(donationamount);
   if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
     return renderBack('Donation amount must be greater than 0.', '');
   }
-
   try {
     const normalizedEmail = effectiveEmail.trim().toLowerCase();
     const displayName = name && name.trim()
       ? name.trim()
       : (isLoggedIn ? 'Logged-in User' : 'Visitor');
-
     // Split the provided name into first/last and guarantee non-empty values to satisfy DB constraints
     const deriveNameParts = (raw) => {
       const defaultFirst = isLoggedIn ? 'Member' : 'Guest';
       const defaultLast = 'Donor';
-
       if (!raw || !raw.trim()) {
         return { first: defaultFirst, last: defaultLast };
       }
-
       const cleaned = raw.trim().replace(/\s+/g, ' ');
       const [first, ...rest] = cleaned.split(' ');
       const safeFirst = (first || defaultFirst).slice(0, 50);
       const safeLast = (rest.join(' ') || defaultLast).slice(0, 50);
-
       return {
         first: safeFirst || defaultFirst,
         last: safeLast || defaultLast
       };
     };
-
     const { first: participantFirst, last: participantLast } = deriveNameParts(displayName);
-
     // 1) Find or create participant (required for donations.participantid)
     let participant = await knex('participants')
       .whereILike('email', normalizedEmail)
       .first();
-
     if (!participant) {
       const [inserted] = await knex('participants')
         .insert({
@@ -294,18 +279,14 @@ app.post('/donate', async (req, res) => {
         .returning('*');
       participant = inserted;
     }
-
     await ensureDonationSequenceInSync();
-
     // 2) Insert donation (participantid NOT NULL, amount > 0)
     await knex('donations').insert({
       participantid: participant.participantid,
       donationamount: amountNumber
     });
-
     // updatetotaldonations() trigger will keep participants.totaldonations in sync
     // according to your DB function. [file:77]
-
     return renderBack('', 'Thank you for your donation!');
   } catch (err) {
     console.error('Visitor donation error:', err);
@@ -713,7 +694,7 @@ app.post('/admin/users/:userid/delete', requireManager, async (req, res) => {
 });
 
 //First, all user go to the landing page
-app.get('/', (req, res) => {
+app.get(['/', '/landing'], (req, res) => {
   res.render('landing', { 
     
   });
