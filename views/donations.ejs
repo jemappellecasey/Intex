@@ -36,10 +36,16 @@
 <% } %>
 
 <% if (!isManager) { %>
-  <p>Thank you for your donations!</p>
+  <div class="donation-note">
+    <div class="donation-note__title">Thank you for your donations!</div>
+    <p>Your support directly powers Ella Rises programs.</p>
+  </div>
 <% } %>
 
-<p><strong>Total Amount:</strong> $<%= (totalAmount || 0).toFixed(2) %></p>
+<div class="donation-total">
+  <div class="donation-total__label">Total Amount</div>
+  <div class="donation-total__value">$<%= (totalAmount || 0).toFixed(2) %></div>
+</div>
 
 <% if (isManager) { %>
   <section>
