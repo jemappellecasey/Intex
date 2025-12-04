@@ -33,20 +33,20 @@ const transporter = nodemailer.createTransport({
 });
 
 
+const port = process.env.PORT || 3000;
 
 //We need to fix it before deploying the AWS!!
 const knex = require("knex")({
     client: "pg",
     connection: {
-        host : process.env.DB_HOST || "localhost",
-        user : process.env.DB_USER || "postgres",
-        password : process.env.DB_PASSWORD || "manager",
-        database : process.env.DB_NAME || "312intex",
-        port : process.env.DB_PORT || 5432
+        host : process.env.RDS_HOSTNAME || "localhost",
+        user : process.env.RDS_USERNAME || "postgres",
+        password : process.env.RDS_PASSWORD || "manager",
+        database : process.env.RDS_DB_NAME || "312intex",
+        port : process.env.RDS_PORT || 5432
     }
 });
 const app = express();
-const port = process.env.PORT || 3000;
 
 const multer = require('multer');
 const uploadRoot = path.join(__dirname, "images");
@@ -1822,6 +1822,13 @@ app.get('/events', async (req, res) => {
 
   const isManager = req.session.role === 'manager';
   const participantId = await ensureParticipantId(req);
+  // Use the success flash already loaded into locals (middleware reads it once)
+  const successFlash =
+    (Array.isArray(res.locals.success) && res.locals.success.length
+      ? res.locals.success
+      : req.flash('success'));
+  const success_message =
+    (successFlash && successFlash.length ? successFlash[0] : '') || '';
 
   const pageSize = 25;
 
@@ -1991,6 +1998,7 @@ function buildPastQuery() {
 
     return res.render('events', {
       error_message: '',
+      success_message,
       isManager: req.session.role === 'manager',
       Username: req.session.useremail,
 
@@ -2011,6 +2019,7 @@ function buildPastQuery() {
     console.error('Error loading events:', err);
     return res.render('events', {
       error_message: 'Error loading events.',
+      success_message,
       isManager: req.session.role === 'manager',
       Username: req.session.useremail,
 
@@ -2279,6 +2288,7 @@ app.post('/events/:eventdetailsid/register', async (req, res) => {
       });
     }
 
+    req.flash('success', 'Registered successfully.');
     return res.redirect('/events');
   } catch (err) {
     console.error('Error registering for event:', err);
