@@ -52,7 +52,11 @@
     </form>
 
     <p class="mt-2">
-      <a href="/">Back to Landing</a>
+      <% if (isLoggedIn) { %>
+        <a href="/dashboard">Back to Dashboard</a>
+      <% } else { %>
+        <a href="/landing">Back to Landing</a>
+      <% } %>
     </p>
   </div>
 </body>
