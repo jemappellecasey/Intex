@@ -18,11 +18,21 @@
 <% if (error_message && error_message !== '') { %>
   <div class="alert alert-error"><%= error_message %></div>
 <% } %>
+<% if (typeof success_message !== 'undefined' && success_message) { %>
+  <div class="alert alert-success"><%= success_message %></div>
+  <script>
+    // Provide an immediate confirmation pop-up after successful save and return to Events
+    window.addEventListener('DOMContentLoaded', function () {
+      alert('<%= success_message %>');
+      window.location.href = '/events';
+    });
+  </script>
+<% } %>
 
 <!-- If event is not found, show message and stop -->
 <% if (!event) { %>
   <p>Event not found.</p>
-  <p><a href="/events">Back to Events</a></p>
+  <p><a href="/events" class="btn secondary-btn">Back to Events</a></p>
   </main>
 </div>
 </body>
@@ -120,7 +130,7 @@
 
     <p>
       <button type="submit">Save Changes</button>
-      <a href="/events">Cancel</a>
+      <a href="/events" class="btn secondary-btn" style="margin-left:8px;">Cancel</a>
     </p>
   </form>
 </section>

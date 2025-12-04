@@ -41,6 +41,24 @@
 <% if (error_message) { %>
   <div class="alert alert-error"><%= error_message %></div>
 <% } %>
+<% if (typeof success_message !== 'undefined' && success_message) { %>
+  <div class="alert alert-success" id="survey-success" data-success="<%= success_message %>"><%= success_message %></div>
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      var el = document.getElementById('survey-success');
+      if (el && el.dataset && el.dataset.success) {
+        alert(el.dataset.success);
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('saved') === '1') {
+          params.delete('saved');
+          var newQuery = params.toString();
+          var newUrl = window.location.pathname + (newQuery ? '?' + newQuery : '');
+          window.history.replaceState({}, document.title, newUrl);
+        }
+      }
+    });
+  </script>
+<% } %>
 
 <hr>
 
@@ -63,15 +81,16 @@
         <input type="text" name="participantName" value="<%= participantName || '' %>">
       </label>
 
-      <label>
-        From Date:
-        <input type="date" name="startDate" value="<%= startDate || '' %>">
-      </label>
-
-      <label>
-        To Date:
-        <input type="date" name="endDate" value="<%= endDate || '' %>">
-      </label>
+      <div class="date-range">
+        <div class="date-field">
+          <label>From Date</label>
+          <input type="date" name="startDate" value="<%= startDate || '' %>">
+        </div>
+        <div class="date-field">
+          <label>To Date</label>
+          <input type="date" name="endDate" value="<%= endDate || '' %>">
+        </div>
+      </div>
 
       <button type="submit">Search</button>
     </form>
@@ -103,9 +122,9 @@
   <h2>Survey List</h2>
 
   <!-- Paging controls (top) -->
-  <div>
+  <div class="pagination pagination-centered">
     <% if (currentPage > 1) { %>
-      <a href="/surveys?page=<%= currentPage - 1 %>
+      <a class="btn secondary-btn" href="/surveys?page=<%= currentPage - 1 %>
         &eventName=<%= encodeURIComponent(eventName || '') %>
         &participantName=<%= encodeURIComponent(participantName || '') %>
         &startDate=<%= startDate || '' %>
@@ -117,7 +136,7 @@
     <span>Page <%= currentPage %> of <%= totalPages %></span>
 
     <% if (currentPage < totalPages) { %>
-      <a href="/surveys?page=<%= currentPage + 1 %>
+      <a class="btn secondary-btn" href="/surveys?page=<%= currentPage + 1 %>
         &eventName=<%= encodeURIComponent(eventName || '') %>
         &participantName=<%= encodeURIComponent(participantName || '') %>
         &startDate=<%= startDate || '' %>
@@ -130,110 +149,90 @@
   <% if (!surveys || surveys.length === 0) { %>
     <p>No surveys found.</p>
   <% } else { %>
-    <table>
-      <thead>
-        <tr>
-          <th>Event Name</th>
-          <th>Event Start</th>
-          <th>Location</th>
-          <th>Participant</th>
-          <th>Satisfaction</th>
-          <th>Usefulness</th>
-          <th>Instructor</th>
-          <th>Recommendation</th>
-          <th>Overall</th>
-          <th>Attendance</th>
-          <th>Submitted At</th>
-          <% if (isManager) { %>
-            <th>Actions</th>
-          <% } %>
-        </tr>
-      </thead>
-
-      <tbody>
-      <% surveys.forEach(function(s) { %>
-        <tr>
-          <td><%= s.eventname %></td>
-
-          <td>
-            <% if (s.eventdatetimestart) { %>
-              <%= new Date(s.eventdatetimestart).toLocaleString() %>
-            <% } else { %> N/A <% } %>
-          </td>
-
-          <td><%= s.eventlocation || 'N/A' %></td>
-
-          <td>
-            <%= s.participantfirstname || '' %>
-            <%= s.participantlastname || '' %>
-          </td>
-
-          <td><%= s.surveysatisfactionscore %></td>
-          <td><%= s.surveyusefulnessscore %></td>
-          <td><%= s.surveyinstructorscore %></td>
-          <td><%= s.surveyrecommendationscore %></td>
-          <td><%= s.surveyoverallscore %></td>
-          <td>
-            <% if (typeof s.registrationattendanceflag !== 'undefined' && s.registrationattendanceflag !== null) { %>
-              <%= s.registrationattendanceflag ? 'Yes' : 'No' %>
-            <% } else { %>
-              N/A
+    <div class="table-responsive">
+      <table class="surveys-table">
+        <thead>
+          <tr>
+            <th>Event Name</th>
+            <th>Event Start</th>
+            <th>Location</th>
+            <th>Participant</th>
+            <th>Satisfaction</th>
+            <th>Usefulness</th>
+            <th>Instructor</th>
+            <th>Recommendation</th>
+            <th>Overall</th>
+            <th>Attendance</th>
+            <th>Submitted At</th>
+            <% if (isManager) { %>
+              <th>Actions</th>
             <% } %>
-          </td>
+          </tr>
+        </thead>
 
-          <td>
-            <% if (s.surveysubmissiondate) { %>
-              <%= new Date(s.surveysubmissiondate).toLocaleString() %>
-            <% } else { %> N/A <% } %>
-          </td>
+        <tbody>
+        <% surveys.forEach(function(s) { %>
+          <tr>
+            <td><%= s.eventname %></td>
 
-          <% if (isManager) { %>
-          <td>
-            <!-- Edit button (manager only) -->
-            <a href="/surveys/<%= s.surveyid %>/edit">
-              <button type="button">Edit</button>
-            </a>
+            <td>
+              <% if (s.eventdatetimestart) { %>
+                <%= new Date(s.eventdatetimestart).toLocaleString() %>
+              <% } else { %> N/A <% } %>
+            </td>
 
-            <!-- Delete button (manager only) -->
-            <form method="post"
-                  action="/surveys/<%= s.surveyid %>/delete"
-                  style="display:inline;"
-                  onsubmit="return confirm('Are you sure you want to delete this survey?');">
-              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-              <button type="submit">Delete</button>
-            </form>
-          </td>
-          <% } %>
-        </tr>
-      <% }); %>
-      </tbody>
-    </table>
+            <td><%= s.eventlocation || 'N/A' %></td>
+
+            <td>
+              <%= s.participantfirstname || '' %>
+              <%= s.participantlastname || '' %>
+            </td>
+
+            <td><%= s.surveysatisfactionscore %></td>
+            <td><%= s.surveyusefulnessscore %></td>
+            <td><%= s.surveyinstructorscore %></td>
+            <td><%= s.surveyrecommendationscore %></td>
+            <td><%= s.surveyoverallscore %></td>
+            <td>
+              <% if (typeof s.registrationattendanceflag !== 'undefined' && s.registrationattendanceflag !== null) { %>
+                <%= s.registrationattendanceflag ? 'Yes' : 'No' %>
+              <% } else { %>
+                N/A
+              <% } %>
+            </td>
+
+            <td>
+              <% if (s.surveysubmissiondate) { %>
+                <%= new Date(s.surveysubmissiondate).toLocaleString() %>
+              <% } else { %> N/A <% } %>
+            </td>
+
+            <% if (isManager) { %>
+            <td>
+              <!-- Edit button (manager only) -->
+              <a href="/surveys/<%= s.surveyid %>/edit">
+                <button type="button">Edit</button>
+              </a>
+
+              <!-- Delete button (manager only) -->
+              <form method="post"
+                    action="/surveys/<%= s.surveyid %>/delete"
+                    style="display:inline;"
+                    onsubmit="return confirm('Are you sure you want to delete this survey?');">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit">Delete</button>
+              </form>
+            </td>
+            <% } %>
+          </tr>
+        <% }); %>
+        </tbody>
+      </table>
+    </div>
   <% } %>
 
   <!-- Paging controls (bottom) -->
-  <div style="margin-top:8px;">
-    <% if (currentPage > 1) { %>
-      <a href="/surveys?page=<%= currentPage - 1 %>
-        &eventName=<%= encodeURIComponent(eventName || '') %>
-        &participantName=<%= encodeURIComponent(participantName || '') %>
-        &startDate=<%= startDate || '' %>
-        &endDate=<%= endDate || '' %>">
-        Prev
-      </a>
-    <% } %>
-
-    <span>Page <%= currentPage %> of <%= totalPages %></span>
-
-    <% if (currentPage < totalPages) { %>
-      <a href="/surveys?page=<%= currentPage + 1 %>
-        &eventName=<%= encodeURIComponent(eventName || '') %>
-        &participantName=<%= encodeURIComponent(participantName || '') %>
-        &startDate=<%= startDate || '' %>
-        &endDate=<%= endDate || '' %>">
-        Next
-      </a>
-    <% } %>
-  </div>
+  <!-- Bottom pagination removed per request -->
 </section>
 <% } else { %>
 <!-- ============================= -->

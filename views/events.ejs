@@ -50,15 +50,16 @@
         <input type="text" name="name" value="<%= name || '' %>">
       </label>
 
-      <label>
-        Start Date:
-        <input type="date" name="startDate" value="<%= startDate || '' %>">
-      </label>
-
-      <label>
-        End Date:
-        <input type="date" name="endDate" value="<%= endDate || '' %>">
-      </label>
+      <div class="date-range">
+        <div class="date-field">
+          <label>Start Date</label>
+          <input type="date" name="startDate" value="<%= startDate || '' %>">
+        </div>
+        <div class="date-field">
+          <label>End Date</label>
+          <input type="date" name="endDate" value="<%= endDate || '' %>">
+        </div>
+      </div>
 
       <button type="submit">Search</button>
     </form>
@@ -82,18 +83,18 @@
 <section>
   <h2>Upcoming Events</h2>
 
-  <div>
+  <div class="pagination pagination-centered">
     <% if (upcomingCurrentPage > 1) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage - 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Prev Upcoming
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage - 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Prev
       </a>
     <% } %>
 
     <span>Page <%= upcomingCurrentPage %> of <%= upcomingTotalPages %></span>
 
     <% if (upcomingCurrentPage < upcomingTotalPages) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage + 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Next Upcoming
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage + 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Next
       </a>
     <% } %>
   </div>
@@ -210,18 +211,18 @@
 <section>
   <h2>Past Events</h2>
 
-  <div>
+  <div class="pagination pagination-centered">
     <% if (pastCurrentPage > 1) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage - 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Prev Past
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage - 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Prev
       </a>
     <% } %>
 
     <span>Page <%= pastCurrentPage %> of <%= pastTotalPages %></span>
 
     <% if (pastCurrentPage < pastTotalPages) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage + 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Next Past
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage + 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Next
       </a>
     <% } %>
   </div>

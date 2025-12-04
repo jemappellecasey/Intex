@@ -106,10 +106,10 @@
         </tr>
       </table>
 
-      <p>
-        <button type="submit">Save Changes</button>
-        <a href="/participants/<%= participant.participantid %>">Cancel</a>
-      </p>
+      <div class="form-actions centered">
+        <button type="submit" class="btn">Save Changes</button>
+        <a href="/participants/<%= participant.participantid %>" class="btn secondary-btn" style="margin-left:8px;">Cancel</a>
+      </div>
     </form>
   </section>
 
@@ -118,30 +118,36 @@
   <!-- Display-only summary information (same content as viewParticipant.ejs) -->
   <section>
     <h2>Summary</h2>
-    <ul>
-      <li>
-        First Registration:
-        <% if (firstRegistration) { %>
-          <%= (new Date(firstRegistration)).toISOString().slice(0, 10) %>
-        <% } else { %> N/A <% } %>
-      </li>
-
-      <li>
-        Latest Registration:
-        <% if (lastRegistration) { %>
-          <%= (new Date(lastRegistration)).toISOString().slice(0, 10) %>
-        <% } else { %> N/A <% } %>
-      </li>
-
-      <li>Total Surveys: <%= surveyCount %></li>
-
-      <li>
-        Average Overall Survey Score:
-        <% if (avgOverallScore) { %>
-          <%= Number(avgOverallScore).toFixed(2) %>
-        <% } else { %> N/A <% } %>
-      </li>
-    </ul>
+    <div class="summary-cards">
+      <div class="summary-card">
+        <p class="summary-label">First Registration</p>
+        <p class="summary-value">
+          <% if (firstRegistration) { %>
+            <%= (new Date(firstRegistration)).toISOString().slice(0, 10) %>
+          <% } else { %> N/A <% } %>
+        </p>
+      </div>
+      <div class="summary-card">
+        <p class="summary-label">Latest Registration</p>
+        <p class="summary-value">
+          <% if (lastRegistration) { %>
+            <%= (new Date(lastRegistration)).toISOString().slice(0, 10) %>
+          <% } else { %> N/A <% } %>
+        </p>
+      </div>
+      <div class="summary-card">
+        <p class="summary-label">Total Surveys</p>
+        <p class="summary-value"><%= surveyCount %></p>
+      </div>
+      <div class="summary-card">
+        <p class="summary-label">Average Overall Survey Score</p>
+        <p class="summary-value">
+          <% if (avgOverallScore) { %>
+            <%= Number(avgOverallScore).toFixed(2) %>
+          <% } else { %> N/A <% } %>
+        </p>
+      </div>
+    </div>
   </section>
 
   <hr>

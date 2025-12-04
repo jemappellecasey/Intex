@@ -149,6 +149,10 @@ h1, h2, h3 {
   gap: 16px;
 }
 
+.top-header h1 {
+  font-size: 26px;
+}
+
 .user-info {
   font-size: 0.95rem;
   color: var(--color-charcoal);
@@ -253,6 +257,34 @@ h1, h2, h3 {
 
 .section {
   margin-top: 20px;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.summary-card {
+  background-color: #ffffff;
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(58, 63, 59, 0.08);
+}
+
+.summary-label {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(58,63,59,0.8);
+}
+
+.summary-value {
+  margin: 6px 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-charcoal);
 }
 
 /* KPI cards */
@@ -372,6 +404,32 @@ textarea {
   font-family: inherit;
 }
 
+/* Keep date/time inputs compact so labels and fields stay close on wide screens */
+form input[type="date"],
+form input[type="datetime-local"] {
+  max-width: 260px;
+}
+
+.date-range {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  max-width: 220px;
+}
+
+.date-field label {
+  margin-bottom: 4px;
+  font-weight: 500;
+  display: inline-block;
+}
+
 textarea {
   resize: vertical;
   min-height: 80px;
@@ -401,6 +459,14 @@ button:hover,
 
 .logout-btn {
   margin-left: 12px;
+}
+
+.form-actions.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 12px;
+  gap: 10px;
 }
 
 /* =========
@@ -446,6 +512,39 @@ tbody tr:hover {
   background-color: rgba(255, 216, 209, 0.4);
 }
 
+.participants-table {
+  margin-top: 8px;
+}
+
+.participants-table.push-down {
+  margin-top: 64px;
+}
+
+.center-table th,
+.center-table td {
+  text-align: center;
+}
+
+.donations-table th,
+.donations-table td {
+  text-align: center;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.surveys-table {
+  width: 100%;
+  min-width: 1100px;
+}
+
+.surveys-table th,
+.surveys-table td {
+  white-space: nowrap;
+}
+
 /* Pagination */
 
 .pagination {
@@ -454,6 +553,10 @@ tbody tr:hover {
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
+}
+
+.pagination-centered {
+  justify-content: center;
 }
 
 /* =========
