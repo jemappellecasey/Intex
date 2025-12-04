@@ -10,6 +10,7 @@
 </head>
 <body>
 <div class="layout">
+  <%- include('partials/userbar') %>
   <aside class="sidebar">
     <div class="sidebar-brand">
       <a href="/dashboard" aria-label="Back to dashboard">
@@ -33,8 +34,6 @@
 <main class="main-content">
 
 <h1>Post-Event Surveys</h1>
-
-<p>Logged in as: <strong><%= Username %></strong></p>
 
 <!-- Error message -->
 <% if (error_message) { %>

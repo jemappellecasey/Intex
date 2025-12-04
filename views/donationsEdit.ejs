@@ -5,6 +5,10 @@
   <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'donations' }) %>
+  <main class="main">
 
 <h1>Edit Donation</h1>
 <p><a href="/donations">Back to Donations</a></p>
@@ -50,5 +54,7 @@
   </form>
 <% } %>
 
+  </main>
+</div>
 </body>
 </html>

@@ -5,6 +5,10 @@
   <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'events' }) %>
+  <main class="main">
 
 <h1>Edit Event</h1>
 
@@ -13,17 +17,12 @@
   <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
-<!-- Basic info about who is logged in (optional) -->
-<% if (Username) { %>
-  <p>Logged in as: <strong><%= Username %></strong>
-    <% if (isManager) { %>(Manager)<% } %>
-  </p>
-<% } %>
-
 <!-- If event is not found, show message and stop -->
 <% if (!event) { %>
   <p>Event not found.</p>
   <p><a href="/events">Back to Events</a></p>
+  </main>
+</div>
 </body>
 </html>
 <% return; } %>
@@ -147,5 +146,7 @@
 
 <p><a href="/events">Back to Events</a></p>
 
+  </main>
+</div>
 </body>
 </html>

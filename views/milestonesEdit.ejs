@@ -6,6 +6,10 @@
   <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'milestones' }) %>
+  <main class="main">
 
 <h1>Edit Milestone</h1>
 
@@ -57,5 +61,7 @@
   </form>
 <% } %>
 
+  </main>
+</div>
 </body>
 </html>

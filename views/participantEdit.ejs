@@ -5,9 +5,13 @@
   <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'participants' }) %>
+  <main class="main">
 
   <h1>Edit Participant</h1>
-  <p><a href="/participants">Back to Participants</a></p>
+  <p><a href="/participants" class="btn">Back to Participants</a></p>
 
   <% if (error_message && error_message !== '') { %>
     <div class="alert alert-error"><%= error_message %></div>
@@ -23,7 +27,7 @@
     <form method="post" action="/participants/<%= participant.participantid %>/edit">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-      <table>
+      <table class="form-table compact">
         <tr>
           <th>Email</th>
           <td>
@@ -439,5 +443,7 @@
 </section>
 
 
+  </main>
+</div>
 </body>
 </html>

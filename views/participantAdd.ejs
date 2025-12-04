@@ -5,6 +5,10 @@
   <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'participants' }) %>
+  <main class="main">
 
   <h1>Add New Participant</h1>
 
@@ -69,6 +73,9 @@
       <button type="submit">Create Participant</button>
     </p>
   </form>
+
+  </main>
+</div>
 
 </body>
 </html>

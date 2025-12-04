@@ -20,6 +20,7 @@
 
 <body>
 <div class="layout">
+  <%- include('partials/userbar') %>
 
   <!-- Sidebar navigation -->
   <aside class="sidebar">
@@ -48,29 +49,22 @@
   <main class="main">
     <header class="top-header">
       <h1>Dashboard</h1>
-      <div class="user-info">
-        Logged in as <strong><%= Username %></strong>
-        <a href="/logout" class="logout-btn">Logout</a>
-      </div>
     </header>
 
-    <section class="description">
-      This dashboard provides insights into event effectiveness, participant
-      experience, milestone achievements, and long-term STEAM outcomes.
-    </section>
+
 
     <!-- KPI section -->
     <section class="kpi-row">
       <div class="kpi-card">
         <h3>Post Secondary Graduation</h3>
         <div class="kpi-value">
-          <h1>39 %</h1>
+          <h1>39%</h1>
         </div>
       </div>
       <div class="kpi-card">
-        <h3>Post Collete Job</h3>
+        <h3>Post Collect Job</h3>
         <div class="kpi-value">
-          <h1>58 %</h1>
+          <h1>58%</h1>
         </div>
       </div>
     </section>
@@ -123,27 +117,6 @@
           })();
         </script>
       </div>
-
-      <!-- Additional insights / static image / chart -->
-      <div class="card">
-        <h3>Key Insights & Notes</h3>
-        <p>
-          Use this section to display supporting images, summary charts,
-          or high-level findings from your analysis.
-        </p>
-
-        <% if (typeof extraImageUrl !== 'undefined' && extraImageUrl) { %>
-          <img
-            src="<%= extraImageUrl %>"
-            alt="Insight chart"
-            style="width:100%; border-radius:8px; border:1px solid #e5e7eb;">
-        <% } else { %>
-          <ul>
-            <li>Which events generate the highest satisfaction?</li>
-            <li>Which participant groups achieve the most milestones?</li>
-            <li>Where should Ella Rises focus efforts next?</li>
-          </ul>
-        <% } %>
 
       </div>
 
