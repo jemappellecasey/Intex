@@ -171,27 +171,59 @@ app.use((err, req, res, next) => {
 // Public visitor donations (no login required, uses participants + donations tables)
 
 // GET /donate – show visitor donation form
-app.get('/donate', (req, res) => {
+app.get('/donate', async (req, res) => {
+  let prefillEmail = '';
+  let prefillName = '';
+
+  if (req.session && req.session.isLoggedIn) {
+    prefillEmail = req.session.username || '';
+    const participantId = await ensureParticipantId(req);
+    if (participantId) {
+      const p = await knex('participants')
+        .where({ participantid: participantId })
+        .first('participantfirstname', 'participantlastname', 'email');
+      if (p) {
+        const fullName = [p.participantfirstname, p.participantlastname]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+        prefillName = fullName || prefillName;
+        if (p.email) prefillEmail = p.email;
+      }
+    }
+  }
+
   res.render('donate', {
     csrfToken: req.csrfToken(),
     error_message: '',
-    success_message: ''
+    success_message: '',
+    prefillEmail,
+    prefillName,
+    isLoggedIn: !!(req.session && req.session.isLoggedIn)
   });
 });
 
 // POST /donate – process visitor donation
 app.post('/donate', async (req, res) => {
+  const isLoggedIn = !!(req.session && req.session.isLoggedIn);
+  const sessionEmail = isLoggedIn ? (req.session.username || '') : '';
+
   const { name, email, donationamount } = req.body;
 
   const renderBack = (msgError, msgSuccess) => {
     return res.render('donate', {
       csrfToken: req.csrfToken(),
       error_message: msgError || '',
-      success_message: msgSuccess || ''
+      success_message: msgSuccess || '',
+      prefillEmail: email || sessionEmail,
+      prefillName: name || '',
+      isLoggedIn
     });
   };
 
-  if (!email || !donationamount) {
+  const effectiveEmail = (email && email.trim()) || sessionEmail;
+
+  if (!effectiveEmail || !donationamount) {
     return renderBack('Email and amount are required.', '');
   }
 
@@ -201,8 +233,10 @@ app.post('/donate', async (req, res) => {
   }
 
   try {
-    const normalizedEmail = email.trim().toLowerCase();
-    const displayName = name && name.trim() ? name.trim() : 'Visitor';
+    const normalizedEmail = effectiveEmail.trim().toLowerCase();
+    const displayName = name && name.trim()
+      ? name.trim()
+      : (isLoggedIn ? 'Logged-in User' : 'Visitor');
 
     // 1) Find or create participant (required for donations.participantid)
     let participant = await knex('participants')
@@ -3200,95 +3234,7 @@ app.get('/donations', async (req, res) => {
   }
 });
 
-// Donations - new (manager or self)
-app.get('/donations/new', async (req, res) => {
-  if (!req.session || !req.session.isLoggedIn) {
-    return res.render('login', { error_message: null });
-  }
-  const isManager = req.session.role === 'manager';
-  const sessionParticipantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
-
-  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
-    return res.render('login', {
-      error_message: 'You do not have permission to add donations.'
-    });
-  }
-
-  return res.render('donationsNew', {
-    error_message: '',
-    isManager,
-    Username: req.session.username,
-    selfParticipantId: sessionParticipantId,
-    csrfToken: req.csrfToken(),
-    email: '',
-    donationamount: '',
-    donationdate: ''
-  });
-});
-
-app.post('/donations/new', async (req, res) => {
-  if (!req.session || !req.session.isLoggedIn) {
-    return res.render('login', { error_message: null });
-  }
-  const isManager = req.session.role === 'manager';
-  const sessionParticipantId = req.session.participantId
-    ? parseInt(req.session.participantId, 10)
-    : null;
-
-  if (!isManager && (!sessionParticipantId || Number.isNaN(sessionParticipantId))) {
-    return res.render('login', {
-      error_message: 'You do not have permission to add donations.'
-    });
-  }
-
-  const { email, donationamount, donationdate } = req.body;
-
-  try {
-    let participantIdToUse = null;
-    if (isManager) {
-      const participant = await knex('participants')
-        .whereILike('email', (email || '').trim())
-        .first();
-      if (!participant) {
-        return res.render('donationsNew', {
-          error_message: 'No participant found with that email.',
-          isManager,
-          Username: req.session.username,
-          selfParticipantId: sessionParticipantId,
-          csrfToken: req.csrfToken(),
-          email,
-          donationamount,
-          donationdate
-        });
-      }
-      participantIdToUse = participant.participantid;
-    } else {
-      participantIdToUse = sessionParticipantId;
-    }
-
-    await knex('donations').insert({
-      participantid: participantIdToUse,
-      donationamount: donationamount || null,
-      donationdate: donationdate || null
-    });
-
-    return res.redirect('/donations');
-  } catch (err) {
-    console.error('Error creating donation:', err);
-    return res.render('donationsNew', {
-      error_message: 'Error creating donation.',
-      isManager,
-      Username: req.session.username,
-      selfParticipantId: sessionParticipantId,
-      csrfToken: req.csrfToken(),
-      email,
-      donationamount,
-      donationdate
-    });
-  }
-});
+// Donations - new (manager or self) handled via /donate
 
 // Donations - edit (manager only)
 app.get('/donations/:donationid/edit', async (req, res) => {
