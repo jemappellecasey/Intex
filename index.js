@@ -1710,6 +1710,7 @@ app.get('/events/new', (req, res) => {
     eventtype: '',
     eventdescription: '',
     eventlocation: '',
+    eventrecurrencepattern: '',
     eventcapacity: '',
   });
 });
@@ -1733,6 +1734,7 @@ app.post('/events/new', async (req, res) => {
     eventdatetimestart,
     eventdatetimeend,
     eventcapacity,
+    eventrecurrencepattern,
     eventregistrationdeadline
   } = req.body;
 

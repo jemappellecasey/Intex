@@ -51,6 +51,17 @@
 
       <div>
         <label>
+          Occurrence
+          <select name="eventrecurrencepattern">
+            <option value="Weekly"  <%= eventrecurrencepattern === 'Weekly'  ? 'selected' : '' %>>Weekly</option>
+            <option value="Monthly" <%= eventrecurrencepattern === 'Monthly' ? 'selected' : '' %>>Monthly</option>
+            <option value="Annually"<%= eventrecurrencepattern === 'Annually'? 'selected' : '' %>>Annually</option>
+          </select>
+        </label>
+      </div>
+
+      <div>
+        <label>
           Start Date / Time
           <input type="datetime-local" name="eventdatetimestart" required>
         </label>
