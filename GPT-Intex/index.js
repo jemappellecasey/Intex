@@ -1,12 +1,4 @@
-#!/usr/bin/env node
 
-/**
- * ELLA RISES - Event & Participant Management System
- * Production-Ready Express Application
- *
- * Manages events, participants, surveys, donations, and milestones
- * with role-based access control and professional UI.
- */
 
 require('dotenv').config();
 
