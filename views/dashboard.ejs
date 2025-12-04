@@ -9,6 +9,15 @@
   <meta charset="UTF-8" />
   <title>Ella Rises Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* Inline font-size adjustments (no external stylesheet changes) */
+    body { font-size: 14px; line-height: 1.45; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 16px; margin-bottom: 6px; }
+    .kpi-card .kpi-value { font-size: 18px; }
+    .description { font-size: 14px; }
+  </style>
   
 </head>
 
@@ -19,7 +28,7 @@
   <aside class="sidebar">
     <div class="sidebar-brand">
       <a href="/dashboard" aria-label="Back to dashboard">
-        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+        <!-- <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">-->
       </a>
     </div>
     <h2>Ella Rises</h2>
@@ -58,13 +67,13 @@
       <div class="kpi-card">
         <h3>STEAM Major Rate</h3>
         <div class="kpi-value">
-          <%= typeof steamMajorRate !== 'undefined' ? steamMajorRate + '%' : '--%' %>
+          <h1>39 %</h1>
         </div>
       </div>
       <div class="kpi-card">
         <h3>STEAM Job Rate</h3>
         <div class="kpi-value">
-          <%= typeof steamJobRate !== 'undefined' ? steamJobRate + '%' : '--%' %>
+          <h1>58 %</h1>
         </div>
       </div>
     </section>
@@ -72,67 +81,16 @@
     <!-- Visualization section -->
     <section class="grid">
 
-      <!-- Tableau embed -->
+      <!-- Tableau embeds -->
+
+      <div class="card" style="flex: 1 1 320px; min-width: 320px;">
+        <h3>Active Participants</h3>
+        <div class='tableauPlaceholder' id='viz1764807617215' style='position: relative'><noscript><a href='#'><img alt='Active Participants ' src='https://public.tableau.com/static/images/El/EllaRises_17648074635810/ACTIVE/1_rss.png' style='border: none' /></a></noscript><object class='tableauViz'  style='display:none;'><param name='host_url' value='https%3A%2F%2Fpublic.tableau.com%2F' /> <param name='embed_code_version' value='3' /> <param name='site_root' value='' /><param name='name' value='EllaRises_17648074635810/ACTIVE' /><param name='tabs' value='no' /><param name='toolbar' value='yes' /><param name='static_image' value='https://public.tableau.com/static/images/El/EllaRises_17648074635810/ACTIVE/1.png' /> <param name='animate_transition' value='yes' /><param name='display_static_image' value='yes' /><param name='display_spinner' value='yes' /><param name='display_overlay' value='yes' /><param name='display_count' value='yes' /><param name='language' value='en-US' /><param name='filter' value='publish=yes' /></object></div>                <script type='text/javascript'>                    var divElement = document.getElementById('viz1764807617215');                    var vizElement = divElement.getElementsByTagName('object')[0];                    if ( divElement.offsetWidth > 800 ) { vizElement.style.width='1000px';vizElement.style.height='527px';} else if ( divElement.offsetWidth > 500 ) { vizElement.style.width='1000px';vizElement.style.height='527px';} else { vizElement.style.width='100%';vizElement.style.height='727px';}                     var scriptElement = document.createElement('script');                    scriptElement.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';                    vizElement.parentNode.insertBefore(scriptElement, vizElement);                </script>
+      </div>
+
       <div class="card">
-        <h3>Event & Participant Experience (Tableau)</h3>
-        <p>
-          Explore survey scores, event outcomes, and demographic insights
-          using this interactive Tableau dashboard.
-        </p>
-
-        <!-- Tableau iframe -->
-        <!-- Tableau embed -->
-        <div class="tableau-container" style="padding:0; border:none;">
-          <div class='tableauPlaceholder' id='vizMainDashboard' style='position: relative'>
-            <noscript>
-              <a href='#'>
-                <img alt='Dashboard 1 '
-                    src='https://public.tableau.com/static/images/Bo/Book1_17640439306180/Dashboard1/1_rss.png'
-                    style='border: none' />
-              </a>
-            </noscript>
-
-            <object class='tableauViz' style='display:none;'>
-              <param name='host_url' value='https%3A%2F%2Fpublic.tableau.com%2F' />
-              <param name='embed_code_version' value='3' />
-              <param name='site_root' value='' />
-              <param name='name' value='Book1_17640439306180/Dashboard1' />
-              <param name='tabs' value='no' />
-              <param name='toolbar' value='yes' />
-              <param name='static_image'
-                    value='https://public.tableau.com/static/images/Bo/Book1_17640439306180/Dashboard1/1.png' />
-              <param name='animate_transition' value='yes' />
-              <param name='display_static_image' value='yes' />
-              <param name='display_spinner' value='yes' />
-              <param name='display_overlay' value='yes' />
-              <param name='display_count' value='yes' />
-              <param name='language' value='ja-JP' />
-            </object>
-          </div>
-
-          <script type='text/javascript'>
-            console.log("Tableau script start");
-            var divElement = document.getElementById('vizMainDashboard');
-            console.log("divElement:", divElement);
-            var vizElement = divElement.getElementsByTagName('object')[0];
-            console.log("vizElement:", vizElement);
-
-            if (divElement.offsetWidth > 800) {
-              vizElement.style.width = '1366px';
-              vizElement.style.height = '795px';
-            } else if (divElement.offsetWidth > 500) {
-              vizElement.style.width = '1366px';
-              vizElement.style.height = '795px';
-            } else {
-              vizElement.style.width = '100%';
-              vizElement.style.height = '1277px';
-            }
-
-            var scriptElement = document.createElement('script');
-            scriptElement.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';
-            vizElement.parentNode.insertBefore(scriptElement, vizElement);
-          </script>
-        </div>
+        <h3>EVENTS</h3>
+        <div class='tableauPlaceholder' id='viz1764807659340' style='position: relative'><noscript><a href='#'><img alt='EVENTS ' src='https://public.tableau.com/static/images/El/EllaRises_17648074635810/EVENTS/1_rss.png' style='border: none' /></a></noscript><object class='tableauViz'  style='display:none;'><param name='host_url' value='https%3A%2F%2Fpublic.tableau.com%2F' /> <param name='embed_code_version' value='3' /> <param name='site_root' value='' /><param name='name' value='EllaRises_17648074635810/EVENTS' /><param name='tabs' value='no' /><param name='toolbar' value='yes' /><param name='static_image' value='https://public.tableau.com/static/images/El/EllaRises_17648074635810/EVENTS/1.png' /> <param name='animate_transition' value='yes' /><param name='display_static_image' value='yes' /><param name='display_spinner' value='yes' /><param name='display_overlay' value='yes' /><param name='display_count' value='yes' /><param name='language' value='en-US' /><param name='filter' value='publish=yes' /></object></div>                <script type='text/javascript'>                    var divElement = document.getElementById('viz1764807659340');                    var vizElement = divElement.getElementsByTagName('object')[0];                    if ( divElement.offsetWidth > 800 ) { vizElement.style.width='1000px';vizElement.style.height='827px';} else if ( divElement.offsetWidth > 500 ) { vizElement.style.width='1000px';vizElement.style.height='827px';} else { vizElement.style.width='100%';vizElement.style.height='1227px';}                     var scriptElement = document.createElement('script');                    scriptElement.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';                    vizElement.parentNode.insertBefore(scriptElement, vizElement);                </script>
       </div>
 
       <!-- Additional insights / static image / chart -->
