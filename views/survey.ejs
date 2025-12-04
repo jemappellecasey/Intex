@@ -64,20 +64,32 @@
 <!-- SEARCH / FILTER SECTION       -->
 <!-- ============================= -->
 <% if (isManager) { %>
+  <div class="page-actions">
+    <a href="/surveys/new">
+      <button type="button">Add New Survey</button>
+    </a>
+  </div>
+
   <section>
-    <h2>Search Surveys</h2>
+    <h2 class="centered-title">Search Surveys</h2>
 
     <!-- GET so that paging links can keep the same filters -->
-    <form method="get" action="/surveys">
-      <label>
-        Event Name:
-        <input type="text" name="eventName" value="<%= eventName || '' %>">
-      </label>
+    <form method="get" action="/surveys" class="filter-form">
+      <div class="filter-stack">
+        <div class="compact-field">
+          <label>
+            Event Name:
+            <input type="text" name="eventName" value="<%= eventName || '' %>">
+          </label>
+        </div>
 
-      <label>
-        Participant Name:
-        <input type="text" name="participantName" value="<%= participantName || '' %>">
-      </label>
+        <div class="compact-field">
+          <label>
+            Participant Name:
+            <input type="text" name="participantName" value="<%= participantName || '' %>">
+          </label>
+        </div>
+      </div>
 
       <div class="date-range">
         <div class="date-field">
@@ -90,25 +102,12 @@
         </div>
       </div>
 
-      <button type="submit">Search</button>
+      <div class="filter-actions">
+        <button type="submit">Search</button>
+      </div>
     </form>
   </section>
 
-  <hr>
-<% } %>
-
-<% if (isManager) { %>
-  <!-- ============================= -->
-  <!-- ADMIN: ADD NEW SURVEY        -->
-  <!-- ============================= -->
-  <section>
-    <h2>Manager Tools</h2>
-    <p>
-      <a href="/surveys/new">
-        <button type="button">Add New Survey</button>
-      </a>
-    </p>
-  </section>
   <hr>
 <% } %>
 
@@ -117,32 +116,7 @@
 <!-- ============================= -->
 <% if (isManager) { %>
 <section>
-  <h2>Survey List</h2>
-
-  <!-- Paging controls (top) -->
-  <div class="pagination pagination-centered">
-    <% if (currentPage > 1) { %>
-      <a class="btn secondary-btn" href="/surveys?page=<%= currentPage - 1 %>
-        &eventName=<%= encodeURIComponent(eventName || '') %>
-        &participantName=<%= encodeURIComponent(participantName || '') %>
-        &startDate=<%= startDate || '' %>
-        &endDate=<%= endDate || '' %>">
-        Prev
-      </a>
-    <% } %>
-
-    <span>Page <%= currentPage %> of <%= totalPages %></span>
-
-    <% if (currentPage < totalPages) { %>
-      <a class="btn secondary-btn" href="/surveys?page=<%= currentPage + 1 %>
-        &eventName=<%= encodeURIComponent(eventName || '') %>
-        &participantName=<%= encodeURIComponent(participantName || '') %>
-        &startDate=<%= startDate || '' %>
-        &endDate=<%= endDate || '' %>">
-        Next
-      </a>
-    <% } %>
-  </div>
+  <h2 class="centered-title">Survey List</h2>
 
   <% if (!surveys || surveys.length === 0) { %>
     <p>No surveys found.</p>
@@ -229,8 +203,29 @@
     </div>
   <% } %>
 
-  <!-- Paging controls (bottom) -->
-  <!-- Bottom pagination removed per request -->
+  <div class="pagination pagination-centered">
+    <% if (currentPage > 1) { %>
+      <a class="btn secondary-btn" href="/surveys?page=<%= currentPage - 1 %>
+        &eventName=<%= encodeURIComponent(eventName || '') %>
+        &participantName=<%= encodeURIComponent(participantName || '') %>
+        &startDate=<%= startDate || '' %>
+        &endDate=<%= endDate || '' %>">
+        Prev
+      </a>
+    <% } %>
+
+    <span>Page <%= currentPage %> of <%= totalPages %></span>
+
+    <% if (currentPage < totalPages) { %>
+      <a class="btn secondary-btn" href="/surveys?page=<%= currentPage + 1 %>
+        &eventName=<%= encodeURIComponent(eventName || '') %>
+        &participantName=<%= encodeURIComponent(participantName || '') %>
+        &startDate=<%= startDate || '' %>
+        &endDate=<%= endDate || '' %>">
+        Next
+      </a>
+    <% } %>
+  </div>
 </section>
 <% } else { %>
 <!-- ============================= -->
