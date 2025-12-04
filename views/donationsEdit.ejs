@@ -8,48 +8,57 @@
 <div class="layout">
   <%- include('partials/userbar') %>
   <%- include('partials/sidebar', { active: 'donations' }) %>
-  <main class="main">
+<main class="main">
 
 <h1>Edit Donation</h1>
-<p><a href="/donations">Back to Donations</a></p>
+<p><a href="/donations" class="btn secondary-btn">Back to Donations</a></p>
 
 <% if (error_message) { %>
   <div class="alert alert-error"><%= error_message %></div>
+<% } %>
+<% if (success_message) { %>
+  <div class="alert alert-success"><%= success_message %></div>
 <% } %>
 
 <% if (!donation) { %>
   <p>Donation not found.</p>
 <% } else { %>
-  <form method="post" action="/donations/<%= donation.donationid %>/edit">
+  <form method="post" action="/donations/<%= donation.donationid %>/edit" class="form-card form-shell">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-    <% if (isManager) { %>
-      <div>
-        <label>
-          Participant Email:*
+    <table class="form-table compact">
+      <% if (isManager) { %>
+      <tr>
+        <th>Participant Email*</th>
+        <td>
           <input type="email" name="email" value="<%= donation.email || '' %>" required>
-        </label>
-      </div>
-    <% } else { %>
-      <p>Editing donation for your account.</p>
-    <% } %>
+        </td>
+      </tr>
+      <% } else { %>
+      <tr>
+        <th>Participant</th>
+        <td>Editing donation for your account.</td>
+      </tr>
+      <% } %>
 
-    <div>
-      <label>
-        Donation Amount:*
-        <input type="number" step="0.01" name="donationamount" value="<%= donation.donationamount || '' %>" required>
-      </label>
-    </div>
+      <tr>
+        <th>Donation Amount*</th>
+        <td>
+          <input type="number" step="0.01" name="donationamount" value="<%= donation.donationamount || '' %>" required>
+        </td>
+      </tr>
 
-    <div>
-      <label>
-        Donation Date:*
-        <input type="date" name="donationdate" value="<%= donation.donationdate ? new Date(donation.donationdate).toISOString().slice(0,10) : '' %>" required>
-      </label>
-    </div>
+      <tr>
+        <th>Donation Date*</th>
+        <td>
+          <input type="date" name="donationdate" value="<%= donationDateValue || '' %>" required>
+        </td>
+      </tr>
+    </table>
 
-    <div>
-      <button type="submit">Save Changes</button>
+    <div class="form-actions centered">
+      <button type="submit" class="btn">Save Changes</button>
+      <a href="/donations" class="btn secondary-btn" style="margin-left:8px;">Cancel</a>
     </div>
   </form>
 <% } %>
