@@ -12,10 +12,24 @@
 
   <h1>Add New Participant</h1>
 
-  <!-- Display error message -->
-  <% if (typeof error_message !== "undefined" && error_message) { %>
+  <% if (validationErrors && validationErrors.length) { %>
+    <div class="alert alert-error">
+      <ul>
+        <% validationErrors.forEach(function(msg) { %>
+          <li><%= msg %></li>
+        <% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <% if (error_message) { %>
     <div class="alert alert-error"><%= error_message %></div>
   <% } %>
+
+  <% if (success_message) { %>
+    <div class="alert alert-success"><%= success_message %></div>
+  <% } %>
+
 
   <!-- Back to participant list -->
   <p>

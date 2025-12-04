@@ -9,9 +9,20 @@
     <h1>Support Ella Rises</h1>
     <p class="text-muted">Your donation helps ...</p>
 
+    <% if (validationErrors && validationErrors.length) { %>
+      <div class="alert alert-error">
+        <ul>
+          <% validationErrors.forEach(function(msg) { %>
+            <li><%= msg %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+
     <% if (error_message) { %>
       <div class="alert alert-error"><%= error_message %></div>
     <% } %>
+
     <% if (success_message && !backToDonations) { %>
       <div class="alert alert-success"><%= success_message %></div>
     <% } %>
