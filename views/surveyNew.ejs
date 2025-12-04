@@ -23,7 +23,7 @@
   <!-- Participant select -->
   <div>
     <label>
-      Participant:
+      Participant:*
       <select name="participantid" required>
         <% participants.forEach(function(p) { %>
           <option value="<%= p.participantid %>">
@@ -37,7 +37,7 @@
   <!-- Event select -->
   <div>
     <label>
-      Event:
+      Event:*
       <select name="eventid" required>
         <% events.forEach(function(e) { %>
           <option value="<%= e.eventid %>">
@@ -51,7 +51,7 @@
   <!-- EventDateTimeStart -->
   <div>
     <label>
-      Event Date/Time Start:
+      Event Date/Time Start:*
       <input
         type="datetime-local"
         name="eventdatetimestart"
