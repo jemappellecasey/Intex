@@ -3,11 +3,77 @@
 <head>
   <title>Welcome to Log in Page!</title>
   <%- include('partials/head') %>
+  <style>
+    header.top-banner {
+      background-color: #3A3F3A;
+      color: #FDF7F0;
+      padding: 1.1rem 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .top-banner__brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: #FDF7F0;
+      text-decoration: none;
+    }
+    .top-banner__brand-logo {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+    }
+    .top-banner__nav {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .top-banner__nav a {
+      font-size: 0.9rem;
+      color: #FDF7F0;
+      text-decoration: none;
+      opacity: 0.9;
+    }
+    .top-banner__nav a:hover {
+      opacity: 1;
+    }
+    .top-banner__login {
+      padding: 0.45rem 0.95rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: #FDF7F0;
+      background: transparent;
+    }
+    .top-banner__login:hover {
+      background: rgba(255,255,255,0.09);
+    }
+  </style>
 </head>
 <body>
 
+  <header class="top-banner">
+    <a href="/" class="top-banner__brand">
+      ELLA
+      <img class="top-banner__brand-logo" src="/images/heart.png" alt="Ella Rises heart logo">
+      RISES
+    </a>
+    <nav class="top-banner__nav">
+      <a href="/donate">Donate</a>
+      <a href="/login" class="top-banner__login">Staff / Participant Login</a>
+    </nav>
+  </header>
+
   <div class="login-layout">
-    <a href="/" class="btn secondary-btn back-link-outside">Back to Landing</a>
+
 
     <div class="page-card narrow">
       <div class="login-card">
