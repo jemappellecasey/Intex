@@ -1,4 +1,0 @@
-INSERT INTO users (userName, password, role) VALUES
-  ('admin', 'adminpass', 'admin'),
-  ('user', 'userpass', 'user'),
-  ('moderator', 'moderatorpass', 'moderator');
