@@ -338,13 +338,13 @@ h1, h2, h3 {
 .tableau-embed {
   width: 100% !important;
   position: relative;
-  aspect-ratio: 16 / 9;
-  min-height: 520px;
+  aspect-ratio: 16 / 12;
+  min-height: 320px;
 }
 
 .tableau-embed.tall {
   aspect-ratio: 4 / 5;
-  min-height: 620px;
+  min-height: 420px;
 }
 
 .tableau-embed object {
@@ -427,6 +427,75 @@ h1, h2, h3 {
   align-items: center;
   gap: 10px;
   margin-top: 12px;
+}
+
+.form-actions.centered {
+  justify-content: center;
+}
+
+.signup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.signup-title {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.login-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-header h3 {
+  margin: 0;
+}
+
+.back-link {
+  text-decoration: none;
+  color: var(--color-charcoal);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.centered-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.or-divider {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.login-layout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+}
+
+.back-link-outside {
+  text-decoration: none;
+  color: var(--color-charcoal);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .login-layout {
+    flex-direction: column;
+    align-items: center;
+  }
 }
 
 label {
