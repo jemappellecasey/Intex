@@ -200,131 +200,135 @@ async function ensureDonationSequenceInSync() {
   }
 }
 
-// GET /donate – show visitor donation form
-app.get('/donate', async (req, res) => {
-  let prefillEmail = '';
-  let prefillName = '';
-  const cameFromDonationsList = req.query.from === 'donations';
-
-  if (req.session && req.session.isLoggedIn) {
-    prefillEmail = req.session.username || '';
-    const participantId = await ensureParticipantId(req);
-    if (participantId) {
-      const p = await knex('participants')
-        .where({ participantid: participantId })
-        .first('participantfirstname', 'participantlastname', 'email');
-      if (p) {
-        const fullName = [p.participantfirstname, p.participantlastname]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
-        prefillName = fullName || prefillName;
-        if (p.email) prefillEmail = p.email;
-      }
-    }
-  }
-
-  // Allow explicit overrides (e.g., coming from donations list)
-  if (req.query.email) {
-    prefillEmail = req.query.email.trim();
-  }
-  if (req.query.name) {
-    prefillName = req.query.name.trim();
-  }
+// Public donate page – works for logged-in and anonymous users
+app.get('/donate', (req, res) => {
+  const isLoggedIn = !!(req.session && req.session.isLoggedIn);
+  const prefillName =
+    isLoggedIn && req.session.username ? req.session.username : '';
+  const prefillEmail =
+    isLoggedIn && req.session.userEmail ? req.session.userEmail : '';
 
   res.render('donate', {
     csrfToken: req.csrfToken(),
     error_message: '',
     success_message: '',
-    prefillEmail,
+    validationErrors: [],
+    isLoggedIn,
     prefillName,
-    isLoggedIn: !!(req.session && req.session.isLoggedIn),
-    backToDonations: cameFromDonationsList
+    prefillEmail,
+    name: '',
+    email: '',
+    donationamount: ''
   });
 });
 
-// POST /donate – process visitor donation
+// Handle public donation submit – logged-in or not
 app.post('/donate', async (req, res) => {
+  const { name, email, donationamount } = req.body;
+
   const isLoggedIn = !!(req.session && req.session.isLoggedIn);
-  const sessionEmail = isLoggedIn ? (req.session.username || '') : '';
+  const prefillName =
+    isLoggedIn && req.session.username ? req.session.username : '';
+  const prefillEmail =
+    isLoggedIn && req.session.userEmail ? req.session.userEmail : '';
 
-  const { name, email, donationamount, from } = req.body;
-  const cameFromDonationsList = (from === 'donations') || (req.query.from === 'donations');
+  const errors = [];
 
-  const renderBack = (msgError, msgSuccess) => {
-    return res.render('donate', {
-      csrfToken: req.csrfToken(),
-      error_message: msgError || '',
-      success_message: cameFromDonationsList ? '' : (msgSuccess || ''),
-      prefillEmail: email || sessionEmail,
-      prefillName: name || '',
-      isLoggedIn,
-      backToDonations: cameFromDonationsList
-    });
-  };
-  const effectiveEmail = (email && email.trim()) || sessionEmail;
-  if (!effectiveEmail || !donationamount) {
-    return renderBack('Email and amount are required.', '');
+  // Email validation
+  if (!email || !email.trim() || !email.includes('@')) {
+    errors.push('Please enter a valid email address.');
   }
+
+  // Amount validation
   const amountNumber = Number(donationamount);
   if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-    return renderBack('Donation amount must be greater than 0.', '');
+    errors.push('Donation amount must be greater than 0.');
+  } else if (amountNumber > 10000) {
+    errors.push(
+      'Online donations are limited to $10,000. For larger gifts, please contact Ella Rises directly.'
+    );
   }
+
+  if (errors.length > 0) {
+    return res.render('donate', {
+      csrfToken: req.csrfToken(),
+      error_message: '',
+      success_message: '',
+      validationErrors: errors,
+      isLoggedIn,
+      prefillName,
+      prefillEmail,
+      name,
+      email,
+      donationamount
+    });
+  }
+
   try {
-    const normalizedEmail = effectiveEmail.trim().toLowerCase();
-    const displayName = name && name.trim()
-      ? name.trim()
-      : (isLoggedIn ? 'Logged-in User' : 'Visitor');
-    // Split the provided name into first/last and guarantee non-empty values to satisfy DB constraints
-    const deriveNameParts = (raw) => {
-      const defaultFirst = isLoggedIn ? 'Member' : 'Guest';
-      const defaultLast = 'Donor';
-      if (!raw || !raw.trim()) {
-        return { first: defaultFirst, last: defaultLast };
-      }
-      const cleaned = raw.trim().replace(/\s+/g, ' ');
-      const [first, ...rest] = cleaned.split(' ');
-      const safeFirst = (first || defaultFirst).slice(0, 50);
-      const safeLast = (rest.join(' ') || defaultLast).slice(0, 50);
-      return {
-        first: safeFirst || defaultFirst,
-        last: safeLast || defaultLast
-      };
-    };
-    const { first: participantFirst, last: participantLast } = deriveNameParts(displayName);
-    // 1) Find or create participant (required for donations.participantid)
+    const normalizedEmail = email.trim().toLowerCase();
+    const displayName = name && name.trim() ? name.trim() : 'Visitor';
+
+    // Find or create participant record for this email
     let participant = await knex('participants')
       .whereILike('email', normalizedEmail)
       .first();
+
     if (!participant) {
       const [inserted] = await knex('participants')
         .insert({
           email: normalizedEmail,
-          participantfirstname: participantFirst,
-          participantlastname: participantLast,
-          participantrole: 'donor'  // or 'participant', your choice
+          participantfirstname: displayName,
+          participantlastname: '',
+          participantrole: 'donor'
         })
         .returning('*');
       participant = inserted;
     }
-    await ensureDonationSequenceInSync();
-    // 2) Insert donation (participantid NOT NULL, amount > 0)
+
     await knex('donations').insert({
       participantid: participant.participantid,
       donationamount: amountNumber
+      // donationdate uses DEFAULT CURRENT_TIMESTAMP
     });
-    // updatetotaldonations() trigger will keep participants.totaldonations in sync
-    // according to your DB function. [file:77]
 
-    if (cameFromDonationsList) {
-      return res.redirect('/donations');
-    }
-    return renderBack('', 'Thank you for your donation!');
+    return res.render('donate', {
+      csrfToken: req.csrfToken(),
+      error_message: '',
+      success_message: 'Thank you for your donation!',
+      validationErrors: [],
+      isLoggedIn,
+      prefillName,
+      prefillEmail,
+      name: '',
+      email: '',
+      donationamount: ''
+    });
   } catch (err) {
     console.error('Visitor donation error:', err);
-    return renderBack('Error processing donation. Please try again.', '');
+
+    let friendly =
+      'Error processing your donation. Please check your information and try again.';
+
+    if (err.code === '23514') {
+      friendly =
+        'Some values did not meet the required format. Please review your entries and try again.';
+    }
+
+    return res.render('donate', {
+      csrfToken: req.csrfToken(),
+      error_message: friendly,
+      success_message: '',
+      validationErrors: [],
+      isLoggedIn,
+      prefillName,
+      prefillEmail,
+      name,
+      email,
+      donationamount
+    });
   }
 });
+
   
   
   //Login check
@@ -876,6 +880,7 @@ app.get('/participants', async (req, res) => {
       name: '',
       email: '',
       phone: '',
+      validationErrors: [],
     });
   }
 
@@ -981,6 +986,7 @@ app.get('/participants', async (req, res) => {
       name: name || '',
       email: email || '',
       phone: phone || '',
+      validationErrors: [],
     });
   } catch (error) {
     console.error('Error loading participants:', error);
@@ -996,6 +1002,7 @@ app.get('/participants', async (req, res) => {
       name: name || '',
       email: email || '',
       phone: phone || '',
+      validationErrors: []
     });
   }
 });
@@ -1006,33 +1013,45 @@ app.get('/participants/add', (req, res) => {
     return res.render('login', { error_message: null });
   }
   if (req.session.role !== 'manager') {
-    return res.render('login', { error_message: 'You do not have permission to add participants.' });
+    return res.render('login', {
+      error_message: 'You do not have permission to add participants.'
+    });
   }
 
   res.render('participantAdd', {
     error_message: '',
+    success_message: '',
+    validationErrors: [],
     isManager: true,
     Username: req.session.username,
-    csrfToken: req.csrfToken()
+    csrfToken: req.csrfToken(),
+    // form values so we can repopulate on error
+    email: '',
+    participantfirstname: '',
+    participantlastname: '',
+    participantdob: '',
+    participantrole: '',
+    participantphone: '',
+    participantcity: '',
+    participantstate: '',
+    participantzip: '',
+    participantfieldofinterest: ''
   });
 });
 
+
 // Create a new participant (manager only)
 app.post('/participants/add', async (req, res) => {
-
-  // Check login status
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
 
-  // Check manager role
   if (req.session.role !== 'manager') {
     return res.render('login', {
       error_message: 'You do not have permission to add participants.'
     });
   }
 
-  // Extract form data
   const {
     email,
     participantfirstname,
@@ -1042,40 +1061,101 @@ app.post('/participants/add', async (req, res) => {
     participantphone,
     participantcity,
     participantstate,
-    participantzip,
+    participantzip: zipInput,
     participantfieldofinterest
   } = req.body;
 
+  const errors = [];
+
+  // Basic validation
+  if (!email || !email.trim() || !email.includes('@')) {
+    errors.push('Please enter a valid email address.');
+  }
+  if (!participantfirstname || !participantfirstname.trim()) {
+    errors.push('First name is required.');
+  }
+  if (!participantlastname || !participantlastname.trim()) {
+    errors.push('Last name is required.');
+  }
+
+  // ZIP validation: blank or exactly 5 digits
+  const zipRaw = (zipInput || '').trim();
+  let participantzip = null;
+  if (zipRaw !== '') {
+    if (/^\d{5}$/.test(zipRaw)) {
+      participantzip = zipRaw;
+    } else {
+      errors.push('ZIP code must be 5 digits or left blank.');
+    }
+  }
+
+  if (errors.length > 0) {
+    return res.render('participantAdd', {
+      error_message: '',
+      success_message: '',
+      validationErrors: errors,
+      isManager: true,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      email,
+      participantfirstname,
+      participantlastname,
+      participantdob,
+      participantrole,
+      participantphone,
+      participantcity,
+      participantstate,
+      participantzip: zipRaw,
+      participantfieldofinterest
+    });
+  }
+
   try {
-    // Insert into database
     await knex('participants').insert({
-    email,
-    participantfirstname,
-    participantlastname,
-    participantdob: participantdob || null,
-    participantrole: participantrole || null,
-    participantphone: participantphone || null,
-    participantcity: participantcity || null,
-    participantstate: participantstate || null,
-    participantzip: participantzip || null,
-    participantfieldofinterest: participantfieldofinterest || null
+      email: email.trim(),
+      participantfirstname: participantfirstname.trim(),
+      participantlastname: participantlastname.trim(),
+      participantdob: participantdob || null,
+      participantrole: participantrole || 'participant',
+      participantphone: participantphone || null,
+      participantcity: participantcity || null,
+      participantstate: participantstate || null,
+      participantzip,
+      participantfieldofinterest: participantfieldofinterest || null
     });
 
-    // Redirect after success
     return res.redirect('/participants');
-
   } catch (err) {
     console.error('Error inserting participant:', err);
 
-    // Re-render the form with an error message
+    let friendly = 'Error creating participant. Please check the values and try again.';
+    if (err.code === '23505') {
+      friendly = 'A participant with this email already exists.';
+    } else if (err.code === '23514') {
+      friendly = 'Some values did not meet the required format (for example, ZIP).';
+    }
+
     return res.render('participantAdd', {
-      error_message: 'Error creating participant.',
+      error_message: friendly,
+      success_message: '',
+      validationErrors: [],
       isManager: true,
       Username: req.session.username,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      email,
+      participantfirstname,
+      participantlastname,
+      participantdob,
+      participantrole,
+      participantphone,
+      participantcity,
+      participantstate,
+      participantzip: zipRaw,
+      participantfieldofinterest
     });
   }
 });
+
 
 // View-only participant details page
 app.get('/participants/:participantid', async (req, res) => {
@@ -1250,131 +1330,91 @@ app.get('/participants/:participantid', async (req, res) => {
   }
 });
 
-// Edit page: form + editable summary (manager only)
+// View + edit a single participant (manager or self)
 app.get('/participants/:participantid/edit', async (req, res) => {
   if (!req.session || !req.session.isLoggedIn) {
     return res.render('login', { error_message: null });
   }
 
+  const participantid = parseInt(req.params.participantid, 10);
   const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId;
-  const participantid = req.params.participantid;
 
-  // Allow managers or the participant themself; block others.
-  if (!isManager && String(participantid) !== String(sessionParticipantId || '')) {
-    return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
+  if (Number.isNaN(participantid)) {
+    req.flash('error', 'Invalid participant id.');
+    return res.redirect('/participants');
   }
 
+  if (!isManager && String(participantid) !== String(sessionParticipantId || '')) {
+    return res.render('login', {
+      error_message: 'You do not have permission to edit this participant.'
+    });
+  }
+
+  const successMessage = req.query.updated ? 'Participant information updated.' : '';
+
   try {
-    // 1) Participant basic info + origin info
-    const participant = await knex('participants as p')
-      .leftJoin('origintypes as o', 'p.origintypepairid', 'o.origintypepairid')
-      .where('p.participantid', participantid)
-      .select(
-        'p.*',
-        'o.participantorigin',
-        'o.participantorigintype'
-      )
+    // Core participant info
+    const participant = await knex('participants')
+      .where({ participantid })
       .first();
 
     if (!participant) {
-      console.error('Edit: participant not found for id =', participantid);
-      return res.render('participantEdit', {
-        participant: null,
-        events: [],
-        milestones: [],
-        surveys: [],
-        donations: [],
-        avgOverallScore: null,
-        surveyCount: 0,
-        firstRegistration: null,
-        lastRegistration: null,
-        csrfToken: req.csrfToken(),
-        isManager: req.session.role === 'manager',
-        Username: req.session.username,
-        error_message: 'Participant not found.'
-      });
+      req.flash('error', 'Participant not found.');
+      return res.redirect('/participants');
     }
 
-    const successMessage = req.query.updated ? 'Changes saved.' : '';
-
-    // 2) Events + registrations (include registrationid for editing)
+    // Related data (events, milestones, surveys, donations, etc.)
     const events = await knex('registrations as r')
       .join('eventdetails as ed', 'r.eventdetailsid', 'ed.eventdetailsid')
       .join('events as e', 'ed.eventid', 'e.eventid')
       .where('r.participantid', participantid)
       .select(
-        'r.registrationid',
-        'e.eventname as eventtitle',
-        'e.eventtype',
+        'ed.eventdetailsid',
+        'e.eventname',
         'ed.eventdatetimestart',
-        'r.registrationstatus',
-        'r.registrationcheckintime',
-        'r.registrationattendanceflag',
-        'r.registrationcreatedat'
+        'ed.eventlocation',
+        'r.registrationattendanceflag'
       )
-      .orderBy('ed.eventdatetimestart', 'asc');
+      .orderBy('ed.eventdatetimestart', 'desc');
 
-    // 3) Milestones (include milestoneid for editing)
     const milestones = await knex('milestones')
-    .where({ participantid })
-    .select(
-        'milestoneid',
-        'milestonetitle',
-        'milestonedate'
-    )
-    .orderBy('milestonedate', 'asc');
+      .where({ participantid })
+      .orderBy('milestonedate', 'desc');
 
-    // 4) Post-event surveys list (include surveyid for editing)
     const surveys = await knex('surveys as s')
       .join('events as e', 's.eventid', 'e.eventid')
       .where('s.participantid', participantid)
       .select(
         's.surveyid',
-        'e.eventname as eventtitle',
+        'e.eventname',
         's.eventdatetimestart',
         's.surveysatisfactionscore',
-        's.surveyusefulnessscore',
-        's.surveyinstructorscore',
-        's.surveyrecommendationscore',
         's.surveyoverallscore',
         's.surveysubmissiondate'
       )
-      .orderBy('s.surveysubmissiondate', 'asc');
+      .orderBy('s.surveysubmissiondate', 'desc');
 
-    // 5) Survey aggregate
-    const surveyAgg = await knex('surveys')
-      .where({ participantid })
-      .avg({ avgOverallScore: 'surveyoverallscore' })
-      .count({ surveyCount: '*' })
-      .first();
-
-    const avgOverallScore = surveyAgg && surveyAgg.avgOverallScore
-      ? Number(surveyAgg.avgOverallScore)
-      : null;
-    const surveyCount = surveyAgg ? Number(surveyAgg.surveyCount) : 0;
-
-    // 6) Earliest and latest registration timestamps
-    const regAgg = await knex('registrations')
-      .where({ participantid })
-      .min({ firstRegistration: 'registrationcreatedat' })
-      .max({ lastRegistration: 'registrationcreatedat' })
-      .first();
-
-    const firstRegistration = regAgg ? regAgg.firstRegistration : null;
-    const lastRegistration = regAgg ? regAgg.lastRegistration : null;
-
-    // 7) Donations list (include donationid for editing)
     const donations = await knex('donations')
       .where({ participantid })
-      .select(
-        'donationid',
-        'donationdate',
-        'donationamount'
-      )
-      .orderBy('donationdate', 'asc');
+      .orderBy('donationdate', 'desc');
 
-    console.log('Edit page loaded for participantid =', participantid);
+    const stats = await knex('surveys')
+      .where({ participantid })
+      .count('* as surveycount')
+      .avg('surveyoverallscore as avgoverall')
+      .first();
+
+    const registrations = await knex('registrations')
+      .where({ participantid })
+      .orderBy('eventdatetimestart', 'asc');
+
+    const firstRegistration =
+      registrations && registrations.length > 0 ? registrations[0] : null;
+    const lastRegistration =
+      registrations && registrations.length > 0
+        ? registrations[registrations.length - 1]
+        : null;
 
     return res.render('participantEdit', {
       participant,
@@ -1382,15 +1422,16 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       milestones,
       surveys,
       donations,
-      avgOverallScore,
-      surveyCount,
+      avgOverallScore: stats && stats.avgoverall,
+      surveyCount: stats && stats.surveycount ? Number(stats.surveycount) : 0,
       firstRegistration,
       lastRegistration,
       csrfToken: req.csrfToken(),
-      isManager: req.session.role === 'manager',
+      isManager,
       Username: req.session.username,
       error_message: '',
-      success_message: successMessage
+      success_message: successMessage,
+      validationErrors: []
     });
   } catch (err) {
     console.error('Error loading participant (edit route):', err);
@@ -1401,33 +1442,91 @@ app.get('/participants/:participantid/edit', async (req, res) => {
 
 
 
+
 // Update basic participant information (self or manager)
 app.post('/participants/:participantid/edit', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
   const participantid = parseInt(req.params.participantid, 10);
   const isManager = req.session.role === 'manager';
   const sessionParticipantId = req.session.participantId;
 
-  if (!req.session || !req.session.isLoggedIn) {
-    return res.render('login', { error_message: null });
-  }
   if (Number.isNaN(participantid)) {
     return res.render('login', { error_message: 'Invalid participant id.' });
   }
+
   if (!isManager && String(participantid) !== String(sessionParticipantId || '')) {
-    return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
+    return res.render('login', {
+      error_message: 'You do not have permission to edit this participant.'
+    });
   }
 
-  const zipRaw = (req.body.participantzip || '').trim();
+  const {
+    email,
+    participantfirstname,
+    participantlastname,
+    participantdob,
+    participantrole,
+    participantphone,
+    participantcity,
+    participantstate,
+    participantzip: zipInput,
+    participantfieldofinterest
+  } = req.body;
+
+  const errors = [];
+
+  // Basic validation
+  if (!email || !email.trim() || !email.includes('@')) {
+    errors.push('Please enter a valid email address.');
+  }
+  if (!participantfirstname || !participantfirstname.trim()) {
+    errors.push('First name is required.');
+  }
+  if (!participantlastname || !participantlastname.trim()) {
+    errors.push('Last name is required.');
+  }
+
+  // ZIP validation: blank or exactly 5 digits
+  const zipRaw = (zipInput || '').trim();
   let participantzip = null;
   if (zipRaw !== '') {
-    // optional: basic validation – only digits and length 5
     if (/^\d{5}$/.test(zipRaw)) {
       participantzip = zipRaw;
     } else {
-      // if invalid, you can either reject or leave it null
+      errors.push('ZIP code must be 5 digits or left blank.');
+    }
+  }
+
+  // If validation fails, reload basic participant and show messages
+  if (errors.length > 0) {
+    try {
+      const participant = await knex('participants')
+        .where({ participantid })
+        .first();
+
+      if (!participant) {
+        req.flash('error', 'Participant not found.');
+        return res.redirect('/participants');
+      }
+
       return res.render('participantEdit', {
-        participant: await knex('participants').where({ participantid }).first(),
-        events: [], // or reload full data if you prefer
+        participant: {
+          ...participant,
+          email,
+          participantfirstname,
+          participantlastname,
+          participantdob: participantdob || null,
+          participantrole,
+          participantphone,
+          participantcity,
+          participantstate,
+          participantzip,
+          participantfieldofinterest
+        },
+        events: [],
         milestones: [],
         surveys: [],
         donations: [],
@@ -1438,25 +1537,29 @@ app.post('/participants/:participantid/edit', async (req, res) => {
         csrfToken: req.csrfToken(),
         isManager,
         Username: req.session.username,
+        error_message: '',
         success_message: '',
-        error_message: 'ZIP code must be 5 digits or left blank.'
+        validationErrors: errors
       });
+    } catch (innerErr) {
+      console.error('Error reloading participant after validation errors:', innerErr);
+      req.flash('error', 'Error updating participant.');
+      return res.redirect('/participants');
     }
   }
 
   const updated = {
-    email: req.body.email,
-    participantfirstname: req.body.participantfirstname,
-    participantlastname: req.body.participantlastname,
-    participantdob: req.body.participantdob || null,
-    participantrole: req.body.participantrole,
-    participantphone: req.body.participantphone,
-    participantcity: req.body.participantcity,
-    participantstate: req.body.participantstate,
-    participantzip,                     // use normalized value here
-    participantfieldofinterest: req.body.participantfieldofinterest
+    email: email.trim(),
+    participantfirstname: participantfirstname.trim(),
+    participantlastname: participantlastname.trim(),
+    participantdob: participantdob || null,
+    participantrole,
+    participantphone,
+    participantcity,
+    participantstate,
+    participantzip,
+    participantfieldofinterest
   };
-
 
   try {
     const rows = await knex('participants')
@@ -1464,40 +1567,26 @@ app.post('/participants/:participantid/edit', async (req, res) => {
       .update(updated);
 
     if (rows === 0) {
-      // nothing was updated; participant id is likely invalid or deleted
       req.flash('error', 'Participant not found.');
       return res.redirect('/participants');
     }
 
-
+    // On success, redirect back to GET edit route
     return res.redirect(`/participants/${participantid}/edit?updated=1`);
   } catch (err) {
-      console.error("Error updating participant:", err);
+    console.error('Error updating participant:', err);
 
-      // Try to reload participant and its related info so the view has data
-      try {
-        const participant = await knex('participants')
-          .where({ participantid })
-          .first();
+    let friendly = 'Error updating participant. Please check your values.';
 
-        if (!participant) {
-          req.flash('error', 'Error updating participant.');
-          return res.redirect('/participants');
-        }
-
-        // If you want the full detail view (events, milestones, etc.),
-        // you can either duplicate the SELECTs from the GET /participants/:id/edit
-        // route, or simply redirect back to that route:
-        req.flash('error', 'Update error.');
-        return res.redirect(`/participants/${participantid}/edit`);
-      } catch (innerErr) {
-        console.error('Error reloading participant after update failure:', innerErr);
-        req.flash('error', 'Update error.');
-        return res.redirect('/participants');
-      }
+    if (err.code === '23514' && err.constraint === 'participants_participantzip_check') {
+      friendly = 'ZIP code did not meet the required format. Please use 5 digits or leave blank.';
     }
 
+    req.flash('error', friendly);
+    return res.redirect(`/participants/${participantid}/edit`);
+  }
 });
+
 
 
 // Update a single survey row (post-event survey scores) for this participant
