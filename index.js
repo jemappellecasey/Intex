@@ -2017,6 +2017,7 @@ app.get('/events/:eventdetailsid/register', async (req, res) => {
       participants,
       selfParticipantId,
       existingRegistration,
+      alreadyRegistered: !!existingRegistration,
       isManager,
       Username: req.session.username,
       csrfToken: req.csrfToken(),
