@@ -1770,14 +1770,6 @@ function buildPastQuery() {
       (function () {
         const q = knex('eventdetails as ed')
           .join('events as e', 'ed.eventid', 'e.eventid');
-        if (!isManager && participantId && !Number.isNaN(participantId)) {
-          q.whereExists(
-            knex.select(1)
-              .from('registrations as rr')
-              .whereRaw('rr.eventdetailsid = ed.eventdetailsid')
-              .andWhere('rr.participantid', participantId)
-          );
-        }
         applyEventFilters(q);
         q.where('ed.eventdatetimestart', '>=', now);
         return q.countDistinct('ed.eventdetailsid as total');
@@ -1831,7 +1823,8 @@ function buildPastQuery() {
 
       pastEvents,
       pastCurrentPage: pastPage,
-      pastTotalPages
+      pastTotalPages,
+      csrfToken: req.csrfToken()
     });
   } catch (err) {
     console.error('Error loading events:', err);
@@ -1848,6 +1841,145 @@ function buildPastQuery() {
       upcomingCurrentPage: 1,
       upcomingTotalPages: 1,
 
+      pastEvents: [],
+      pastCurrentPage: 1,
+      pastTotalPages: 1,
+      csrfToken: req.csrfToken()
+    });
+  }
+});
+
+// Shared helper: fetch single eventdetail + counts
+async function loadEventWithCounts(eventdetailsid) {
+  return knex('eventdetails as ed')
+    .join('events as e', 'ed.eventid', 'e.eventid')
+    .leftJoin('registrations as r', 'r.eventdetailsid', 'ed.eventdetailsid')
+    .where('ed.eventdetailsid', eventdetailsid)
+    .groupBy(
+      'ed.eventdetailsid',
+      'e.eventid',
+      'e.eventname',
+      'e.eventdescription',
+      'ed.eventdatetimestart',
+      'ed.eventdatetimeend',
+      'ed.eventlocation',
+      'ed.eventcapacity',
+      'ed.eventregistrationdeadline'
+    )
+    .select(
+      'ed.eventdetailsid',
+      'e.eventid',
+      'e.eventname',
+      'e.eventdescription',
+      'ed.eventdatetimestart',
+      'ed.eventdatetimeend',
+      'ed.eventlocation',
+      'ed.eventcapacity',
+      'ed.eventregistrationdeadline',
+      knex.raw('COUNT(r.registrationid)::int AS registeredcount')
+    )
+    .first();
+}
+
+// Registration form for an upcoming event
+app.get('/events/:eventdetailsid/register', async (req, res) => {
+  if (!req.session || !req.session.isLoggedIn) {
+    return res.render('login', { error_message: null });
+  }
+
+  const isManager = req.session.role === 'manager';
+  const eventdetailsid = parseInt(req.params.eventdetailsid, 10);
+  const selfParticipantId = await ensureParticipantId(req);
+
+  if (!isManager && (!selfParticipantId || Number.isNaN(selfParticipantId))) {
+    return res.render('events', {
+      error_message: 'No participant record is linked to this user.',
+      isManager,
+      Username: req.session.username,
+      name: '',
+      startDate: '',
+      endDate: '',
+      upcomingEvents: [],
+      upcomingCurrentPage: 1,
+      upcomingTotalPages: 1,
+      pastEvents: [],
+      pastCurrentPage: 1,
+      pastTotalPages: 1
+    });
+  }
+
+  try {
+    const event = await loadEventWithCounts(eventdetailsid);
+    if (!event) {
+      return res.status(404).render('events', {
+        error_message: 'Event not found.',
+        isManager,
+        Username: req.session.username,
+        name: '',
+        startDate: '',
+        endDate: '',
+        upcomingEvents: [],
+        upcomingCurrentPage: 1,
+        upcomingTotalPages: 1,
+        pastEvents: [],
+        pastCurrentPage: 1,
+        pastTotalPages: 1
+      });
+    }
+
+    const participants = isManager
+      ? await knex('participants')
+          .select('participantid', 'participantfirstname', 'participantlastname')
+          .orderBy('participantlastname')
+          .orderBy('participantfirstname')
+      : [];
+
+    const existingRegistration = selfParticipantId
+      ? await knex('registrations')
+          .where({
+            participantid: selfParticipantId,
+            eventdetailsid
+          })
+          .first()
+      : null;
+
+    const now = new Date();
+    const eventStart = new Date(event.eventdatetimestart);
+    const deadline = event.eventregistrationdeadline
+      ? new Date(event.eventregistrationdeadline)
+      : null;
+    const isClosed =
+      eventStart <= now || (deadline && now > deadline);
+    const isFull =
+      event.eventcapacity !== null &&
+      event.eventcapacity !== undefined &&
+      Number(event.registeredcount) >= Number(event.eventcapacity);
+
+    return res.render('eventRegister', {
+      event,
+      participants,
+      selfParticipantId,
+      existingRegistration,
+      isManager,
+      Username: req.session.username,
+      csrfToken: req.csrfToken(),
+      isFull,
+      isClosed,
+      error_message: '',
+      success_message: ''
+    });
+  } catch (err) {
+    console.error('Error loading registration form:', err);
+    return res.render('events', {
+      error_message: 'Error loading registration form.',
+      isManager,
+      Username: req.session.username,
+      name: '',
+      startDate: '',
+      endDate: '',
+      upcomingEvents: [],
+      upcomingCurrentPage: 1,
+      upcomingTotalPages: 1,
       pastEvents: [],
       pastCurrentPage: 1,
       pastTotalPages: 1
