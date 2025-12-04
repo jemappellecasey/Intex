@@ -42,34 +42,48 @@
 <!-- ============================= -->
 <% if (isManager) { %>
   <section>
-    <h2>Search Milestones</h2>
-    <form method="get" action="/milestones">
-      <label>
-        Participant Name:
-        <input type="text" name="participantName" value="<%= participantName || '' %>">
-      </label>
+    <h2 class="centered-title">Search Milestones</h2>
+    <form method="get" action="/milestones" class="milestones-filter">
+      <div class="compact-field">
+        <label>
+          Participant Name:
+          <input type="text" name="participantName" value="<%= participantName || '' %>">
+        </label>
+      </div>
 
-      <label>
-        Email:
-        <input type="text" name="email" value="<%= email || '' %>">
-      </label>
+      <div class="compact-field">
+        <label>
+          Email:
+          <input type="text" name="email" value="<%= email || '' %>">
+        </label>
+      </div>
 
-      <label>
-        Milestone Title:
-        <input type="text" name="milestoneTitle" value="<%= milestoneTitle || '' %>">
-      </label>
+      <div class="compact-field">
+        <label>
+          Milestone Title:
+          <input type="text" name="milestoneTitle" value="<%= milestoneTitle || '' %>">
+        </label>
+      </div>
 
-      <label>
-        Start Date:
-        <input type="date" name="startDate" value="<%= startDate || '' %>">
-      </label>
+      <div class="date-range">
+        <div class="date-field">
+          <label>
+            Start Date:
+            <input type="date" name="startDate" value="<%= startDate || '' %>">
+          </label>
+        </div>
 
-      <label>
-        End Date:
-        <input type="date" name="endDate" value="<%= endDate || '' %>">
-      </label>
+        <div class="date-field">
+          <label>
+            End Date:
+            <input type="date" name="endDate" value="<%= endDate || '' %>">
+          </label>
+        </div>
+      </div>
 
-      <button type="submit">Search</button>
+      <div class="filter-actions">
+        <button type="submit">Search</button>
+      </div>
     </form>
   </section>
 
@@ -80,29 +94,12 @@
 <!-- LIST + PAGINATION             -->
 <!-- ============================= -->
 <section>
-  <h2>Milestones List</h2>
+  <h2 class="centered-title">Milestones List</h2>
   <% if (isManager || selfParticipantId) { %>
-    <p>
+    <div class="add-milestone-actions">
       <a href="/milestones/new"><button type="button">Add Milestone</button></a>
-    </p>
+    </div>
   <% } %>
-
-  <!-- Pagination control -->
-  <div>
-    <% if (currentPage > 1) { %>
-      <a href="/milestones?page=<%= currentPage - 1 %>&participantName=<%= encodeURIComponent(participantName || '') %>&email=<%= encodeURIComponent(email || '') %>&milestoneTitle=<%= encodeURIComponent(milestoneTitle || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">
-        Prev
-      </a>
-    <% } %>
-
-    <span>Page <%= currentPage %> of <%= totalPages %></span>
-
-    <% if (currentPage < totalPages) { %>
-      <a href="/milestones?page=<%= currentPage + 1 %>&participantName=<%= encodeURIComponent(participantName || '') %>&email=<%= encodeURIComponent(email || '') %>&milestoneTitle=<%= encodeURIComponent(milestoneTitle || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">
-        Next
-      </a>
-    <% } %>
-  </div>
 
   <% if (!milestones || milestones.length === 0) { %>
     <p>No milestones found.</p>
@@ -176,6 +173,23 @@
       </tbody>
     </table>
   <% } %>
+
+  <!-- Pagination control (bottom) -->
+  <div class="pagination pagination-centered">
+    <% if (currentPage > 1) { %>
+      <a href="/milestones?page=<%= currentPage - 1 %>&participantName=<%= encodeURIComponent(participantName || '') %>&email=<%= encodeURIComponent(email || '') %>&milestoneTitle=<%= encodeURIComponent(milestoneTitle || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">
+        <span class="btn secondary-btn">Prev</span>
+      </a>
+    <% } %>
+
+    <span>Page <%= currentPage %> of <%= totalPages %></span>
+
+    <% if (currentPage < totalPages) { %>
+      <a href="/milestones?page=<%= currentPage + 1 %>&participantName=<%= encodeURIComponent(participantName || '') %>&email=<%= encodeURIComponent(email || '') %>&milestoneTitle=<%= encodeURIComponent(milestoneTitle || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">
+        <span class="btn secondary-btn">Next</span>
+      </a>
+    <% } %>
+  </div>
 </section>
 
 <hr>

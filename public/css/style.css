@@ -575,6 +575,37 @@ tbody tr:hover {
   color: #8a3b52;
 }
 
+.milestones-filter .compact-field {
+  max-width: 460px;
+  min-width: 260px;
+  width: 100%;
+}
+
+.milestones-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 18px;
+  max-width: 960px;
+  margin: 0 auto 18px;
+}
+
+.milestones-filter .filter-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+
+.centered-title {
+  text-align: center;
+}
+
+.add-milestone-actions {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
 .table-responsive {
   width: 100%;
   overflow-x: auto;
