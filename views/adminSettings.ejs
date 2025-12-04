@@ -7,22 +7,19 @@
   <title>Admin Settings</title>
 </head>
 <body>
+  <div class="page-card">
+    <h1>Admin Settings</h1>
+    <p><a href="/dashboard">Back to Dashboard</a></p>
 
-<h1>Admin Settings</h1>
-<p><a href="/dashboard">Back to Dashboard</a></p>
+    <% if (error_message) { %>
+      <div class="alert alert-error"><%= error_message %></div>
+    <% } %>
 
-<% if (error_message) { %>
-  <div class="alert alert-error"><%= error_message %></div>
-<% } %>
+    <section>
+      <h2>User Roles</h2>
 
-<section>
-  <h2>User Roles</h2>
-<section>
-  <h2>User Roles</h2>
-
-  <!-- Simple search/filter form -->
-  <form method="get" action="/admin/settings" style="margin-bottom: 1rem;">
-    <label>
+      <form method="get" action="/admin/settings" style="margin-bottom:1rem;">
+        <label>
       Email:
       <input type="text" name="email" value="<%= email || '' %>">
     </label>
@@ -36,48 +33,47 @@
       </select>
     </label>
     <button type="submit">Search</button>
-  </form>
+      </form>
 
-  <table>
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-
-    <tbody>
-    <% users.forEach(function(u) { %>
-      <tr>
-        <td><%= u.userid %></td>
-        <td><%= u.email %></td>
-        <td>
-          <form method="post" action="/admin/users/<%= u.userid %>/role" style="display:inline;">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <select name="role">
-              <option value="manager" <%= u.role === 'manager' ? 'selected' : '' %>>manager</option>
-              <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>user</option>
-              <option value="secretary" <%= u.role === 'secretary' ? 'selected' : '' %>>secretary</option>
-            </select>
-            <button type="submit">Save</button>
-          </form>
-        </td>
-        <td>
-          <form method="post"
+      <table>
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(function(u) { %>
+            <tr>
+              <td><%= u.userid %></td>
+              <td><%= u.email %></td>
+              <td>
+                <form method="post" action="/admin/users/<%= u.userid %>/role" style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <select name="role">
+                    <option value="manager" <%= u.role === 'manager' ? 'selected' : '' %>>manager</option>
+                    <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>user</option>
+                    <option value="secretary" <%= u.role === 'secretary' ? 'selected' : '' %>>secretary</option>
+                  </select>
+                  <button type="submit">Save</button>
+                </form>
+              </td>
+              <td>
+                <form method="post"
                 action="/admin/users/<%= u.userid %>/delete"
                 onsubmit="return confirm('Delete this user?');"
                 style="display:inline;">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <button type="submit">Delete</button>
-          </form>
-        </td>
-      </tr>
-    <% }); %>
-    </tbody>
-  </table>
-</section>
-
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </section>
+  </div>
 </body>
 </html>

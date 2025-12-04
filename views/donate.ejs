@@ -6,9 +6,9 @@
   <title>Donate to Ella Rises</title>
 </head>
 <body>
-  <main class="page-card narrow">
+  <div class="page-card narrow">
     <h1>Support Ella Rises</h1>
-    <p>Your donation helps young women pursue STEAM education and celebrate their heritage.</p>
+    <p class="text-muted">Your donation helps ...</p>
 
     <% if (error_message) { %>
       <div class="alert alert-error"><%= error_message %></div>
@@ -17,7 +17,7 @@
       <div class="alert alert-success"><%= success_message %></div>
     <% } %>
 
-    <form method="post" action="/donate">
+    <form method="post" action="/donate" class="form-card">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
       <div>
@@ -44,9 +44,9 @@
       <button type="submit">Donate</button>
     </form>
 
-    <p style="margin-top:1rem;">
+    <p class="mt-2">
       <a href="/">Back to Landing</a>
     </p>
-  </main>
+  </div>
 </body>
 </html>
