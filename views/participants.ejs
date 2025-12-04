@@ -48,46 +48,48 @@
   <% } %>
 
   <!-- Filter form: event + basic participant info -->
-  <form method="get" action="/participants">
-    <label>
-      Milestone Title:
-      <input
-        type="text"
-        name="milestoneTitle"
-        value="<%= typeof milestoneTitle !== 'undefined' ? milestoneTitle : '' %>">
-    </label>
+  <% if (isManager) { %>
+    <form method="get" action="/participants">
+      <label>
+        Milestone Title:
+        <input
+          type="text"
+          name="milestoneTitle"
+          value="<%= typeof milestoneTitle !== 'undefined' ? milestoneTitle : '' %>">
+      </label>
 
-    <!-- optional: keep these if you already added them -->
-    <label>
-      Name:
-      <input
-        type="text"
-        name="name"
-        value="<%= typeof name !== 'undefined' ? name : '' %>">
-    </label>
+      <!-- optional: keep these if you already added them -->
+      <label>
+        Name:
+        <input
+          type="text"
+          name="name"
+          value="<%= typeof name !== 'undefined' ? name : '' %>">
+      </label>
 
-    <label>
-      Email:
-      <input
-        type="text"
-        name="email"
-        value="<%= typeof email !== 'undefined' ? email : '' %>">
-    </label>
+      <label>
+        Email:
+        <input
+          type="text"
+          name="email"
+          value="<%= typeof email !== 'undefined' ? email : '' %>">
+      </label>
 
-    <label>
-      Phone:
-      <input
-        type="text"
-        name="phone"
-        value="<%= typeof phone !== 'undefined' ? phone : '' %>">
-    </label>
+      <label>
+        Phone:
+        <input
+          type="text"
+          name="phone"
+          value="<%= typeof phone !== 'undefined' ? phone : '' %>">
+      </label>
 
-    <button type="submit">Filter</button>
-  </form>
+      <button type="submit">Filter</button>
+    </form>
 
 
 
-  <hr>
+    <hr>
+  <% } %>
 
   <!-- Participants list -->
   <table>
