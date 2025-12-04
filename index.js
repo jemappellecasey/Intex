@@ -336,7 +336,7 @@ app.post('/donate', async (req, res) => {
   
   //Login check
   app.use((req, res, next)=> {
-        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass', '/signup', '/landing', '/donate'];
+        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass', '/signup', '/landing', '/donate', '/teapot'];
         if (openPaths.includes(req.path)) {
           return next();
         }
@@ -577,6 +577,14 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+
+//Begining of code for 418 teapot 
+app.get('/teapot', (req, res) => {
+  res
+    .status(418)                         // set HTTP 418
+    .send("I'm a teapot: cannot brew coffee."); 
+});
+//end of teapot code
 
 
 // GET /checkEmail
