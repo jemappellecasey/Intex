@@ -27,9 +27,10 @@
     <div class="alert alert-error"><%= error_message %></div>
   <% } %>
 
-  <% if (typeof success_message !== 'undefined' && success_message) { %>
+  <% if (success_message) { %>
     <div class="alert alert-success"><%= success_message %></div>
   <% } %>
+
 
   <!-- Editable participant information (only for manager users) -->
   <section>
