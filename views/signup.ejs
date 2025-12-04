@@ -7,38 +7,40 @@
   <title>Sign up</title>
 </head>
 <body>
-  <% if (error && error.length) { %>
-    <div class="alert alert-error">
-      <% error.forEach(function(msg) { %>
-        <p><%= msg %></p>
-      <% }); %>
-    </div>
-  <% } %>
+  <div class="page-card narrow">
+    <% if (error && error.length) { %>
+      <div class="alert alert-error">
+        <% error.forEach(function(msg) { %>
+          <p><%= msg %></p>
+        <% }); %>
+      </div>
+    <% } %>
 
-  <% if (info && info.length) { %>
-    <div class="alert alert-info">
-      <% info.forEach(function(msg) { %>
-        <p><%= msg %></p>
-      <% }); %>
-    </div>
-  <% } %>
+    <% if (info && info.length) { %>
+      <div class="alert alert-info">
+        <% info.forEach(function(msg) { %>
+          <p><%= msg %></p>
+        <% }); %>
+      </div>
+    <% } %>
 
-  <% if (success && success.length) { %>
-    <div class="alert alert-success">
-      <% success.forEach(function(msg) { %>
-        <p><%= msg %></p>
-      <% }); %>
-    </div>
-  <% } %>
+    <% if (success && success.length) { %>
+      <div class="alert alert-success">
+        <% success.forEach(function(msg) { %>
+          <p><%= msg %></p>
+        <% }); %>
+      </div>
+    <% } %>
 
-  <a href="/">Back to Landing</a>
-  <br>
-  <a href="/login">Back to Login</a>
-  <h1>Sign up</h1>
+    <p>
+      <a href="/">Back to Landing</a> •
+      <a href="/login">Back to Login</a>
+    </p>
 
+    <h1>Sign up</h1>
 
-  <form method="POST" action="/signup">
-    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <form method="POST" action="/signup" class="form-card">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
     <div>
       <label for="first">First name</label><br>
@@ -82,6 +84,7 @@
     </div>
 
     <button type="submit">Create account</button>
-  </form>
+    </form>
+  </div>
 </body>
 </html>

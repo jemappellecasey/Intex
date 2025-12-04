@@ -7,16 +7,27 @@
   <title>Check your email</title>
 </head>
 <body>
-  <% if (info && info.length) { %>
-    <div class="alert alert-info"><%= msg %></div>
-  <% } else { %>
-    <p>Please check your email for the verification link.</p>
-  <% } %>
+  <div class="page-card narrow">
+    <% if (info && info.length) { %>
+      <div class="alert alert-info">
+        <% info.forEach(function(msg) { %>
+          <p><%= msg %></p>
+        <% }); %>
+      </div>
+    <% } else { %>
+      <p>Please check your email for the verification link.</p>
+    <% } %>
 
-  <% if (error && error.length) { %>
-    <div class="alert alert-error"><%= msg %></div>
-  <% } %>
+    <% if (error && error.length) { %>
+      <div class="alert alert-error">
+        <% error.forEach(function(msg) { %>
+          <p><%= msg %></p>
+        <% }); %>
+      </div>
+    <% } %>
 
-  <p>If you did not receive an email, verify that you used the correct address and try signing up again.</p>
+    <p>If you did not receive an email, verify that you used the correct address and try signing up again.</p>
+  </div>
 </body>
+
 </html>

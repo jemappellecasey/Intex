@@ -8,61 +8,56 @@
     <title>Welcome to Log in Page!</title>
 </head>
 <body>
-    <a href="/">Back to Landing</a>
-    <div class="page-card narrow">
-        <div class="login-card">
-            <h3>Login</h3>
-            <p>Please enter your credentials to continue.</p>
-            <% if (error_message && error_message !== '') { %>
-                <div id="error_message" name="error_message" class="alert"><%= error_message %></div>
-            <% } %>
+  <a href="/">Back to Landing</a>
+
+  <div class="page-card narrow">
+    <div class="login-card">
+      <h3>Login</h3>
+      <p>Please enter your credentials to continue.</p>
+      <% if (error_message && error_message !== '') { %>
+        <div class="alert alert-error"><%= error_message %></div>
+      <% } %>
+    </div>
+
+    <form action="/login" method="POST" class="form-card">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div>
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-control" required>
         </div>
+        <div>
+            <label for="password" class="form-label">Password</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+        <div>
+            <button type="submit" class="btn">Login</button>
+        </div>
+    </form>
 
-        <!-- Normal username/password login -->
-        <form action="/login" method="POST" class="form-card">
+    <button type="button" class="btn mt-2" onclick="window.location.href='/signup'">
+      Sign up
+    </button>
+
+    <div class="form-card mt-3">
+        <p>Temporary role bypass (dev only):</p>
+        <form action="/dev-login-bypass" method="POST" style="display:inline;">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-
-            <div>
-                <label for="email" class="form-label">Email</label>
-                <input type="email" id="email" name="email" class="form-control" required>
-            </div>
-            <div>
-                <label for="password" class="form-label">Password</label>
-                <input type="password" id="password" name="password" class="form-control" required>
-            </div>
-            <div>
-                <button type="submit" class="btn">Login</button>
-            </div>
+            <input type="hidden" name="role" value="user">
+            <button type="submit" class="btn">Login as User</button>
         </form>
 
-        <br>
+        <form action="/dev-login-bypass" method="POST" style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="role" value="manager">
+            <button type="submit" class="btn">Login as Manager</button>
+        </form>
 
-        <button type="button" class="btn" onclick="window.location.href='/signup'">
-            Sign up
-        </button>
-
-        <!-- Temporary bypass buttons -->
-        <div class="form-card" style="margin-top: 1rem;">
-            <p>Temporary role bypass (dev only):</p>
-
-            <form action="/dev-login-bypass" method="POST" style="display:inline;">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <input type="hidden" name="role" value="user">
-                <button type="submit" class="btn">Login as User</button>
-            </form>
-
-            <form action="/dev-login-bypass" method="POST" style="display:inline; margin-left: 0.5rem;">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <input type="hidden" name="role" value="manager">
-                <button type="submit" class="btn">Login as Manager</button>
-            </form>
-
-            <form action="/dev-login-bypass" method="POST" style="display:inline; margin-left: 0.5rem;">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <input type="hidden" name="role" value="secretary">
-                <button type="submit" class="btn">Login as Secretary</button>
-            </form>
-        </div>
+        <form action="/dev-login-bypass" method="POST" style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="role" value="secretary">
+            <button type="submit" class="btn">Login as Secretary</button>
+        </form>
     </div>
+  </div>
 </body>
 </html>
