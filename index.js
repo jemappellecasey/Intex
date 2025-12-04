@@ -1394,22 +1394,8 @@ app.get('/participants/:participantid/edit', async (req, res) => {
     });
   } catch (err) {
     console.error('Error loading participant (edit route):', err);
-    return res.render('participantEdit', {
-      participant: null,
-      events: [],
-      milestones: [],
-      surveys: [],
-      donations: [],
-      avgOverallScore: null,
-      surveyCount: 0,
-      firstRegistration: null,
-      lastRegistration: null,
-      csrfToken: req.csrfToken(),
-      isManager: req.session.role === 'manager',
-      Username: req.session.username,
-      success_message: '',
-      error_message: 'Error loading participant for editing.'
-    });
+    req.flash('error', 'Error loading participant for editing.');
+    return res.redirect('/participants');
   }
 });
 
@@ -1431,28 +1417,17 @@ app.post('/participants/:participantid/edit', async (req, res) => {
     return res.render('login', { error_message: 'You do not have permission to edit this participant.' });
   }
 
-  const updated = {
-    email: req.body.email,
-    participantfirstname: req.body.participantfirstname,
-    participantlastname: req.body.participantlastname,
-    participantdob: req.body.participantdob || null,
-    participantrole: req.body.participantrole,
-    participantphone: req.body.participantphone,
-    participantcity: req.body.participantcity,
-    participantstate: req.body.participantstate,
-    participantzip: req.body.participantzip,
-    participantfieldofinterest: req.body.participantfieldofinterest
-  };
-
-  try {
-    const rows = await knex('participants')
-      .where({ participantid })
-      .update(updated);
-
-    if (rows === 0) {
+  const zipRaw = (req.body.participantzip || '').trim();
+  let participantzip = null;
+  if (zipRaw !== '') {
+    // optional: basic validation – only digits and length 5
+    if (/^\d{5}$/.test(zipRaw)) {
+      participantzip = zipRaw;
+    } else {
+      // if invalid, you can either reject or leave it null
       return res.render('participantEdit', {
-        participant: null,
-        events: [],
+        participant: await knex('participants').where({ participantid }).first(),
+        events: [], // or reload full data if you prefer
         milestones: [],
         surveys: [],
         donations: [],
@@ -1464,30 +1439,64 @@ app.post('/participants/:participantid/edit', async (req, res) => {
         isManager,
         Username: req.session.username,
         success_message: '',
-        error_message: 'Participant not found.'
+        error_message: 'ZIP code must be 5 digits or left blank.'
       });
     }
+  }
+
+  const updated = {
+    email: req.body.email,
+    participantfirstname: req.body.participantfirstname,
+    participantlastname: req.body.participantlastname,
+    participantdob: req.body.participantdob || null,
+    participantrole: req.body.participantrole,
+    participantphone: req.body.participantphone,
+    participantcity: req.body.participantcity,
+    participantstate: req.body.participantstate,
+    participantzip,                     // use normalized value here
+    participantfieldofinterest: req.body.participantfieldofinterest
+  };
+
+
+  try {
+    const rows = await knex('participants')
+      .where({ participantid })
+      .update(updated);
+
+    if (rows === 0) {
+      // nothing was updated; participant id is likely invalid or deleted
+      req.flash('error', 'Participant not found.');
+      return res.redirect('/participants');
+    }
+
 
     return res.redirect(`/participants/${participantid}/edit?updated=1`);
   } catch (err) {
-    console.error("Error updating participant:", err);
-    return res.render('participantEdit', {
-      participant: null,
-      events: [],
-      milestones: [],
-      surveys: [],
-      donations: [],
-      avgOverallScore: null,
-      surveyCount: 0,
-      firstRegistration: null,
-      lastRegistration: null,
-      csrfToken: req.csrfToken(),
-      isManager,
-      Username: req.session.username,
-      success_message: '',
-      error_message: 'Update error.'
-    });
-  }
+      console.error("Error updating participant:", err);
+
+      // Try to reload participant and its related info so the view has data
+      try {
+        const participant = await knex('participants')
+          .where({ participantid })
+          .first();
+
+        if (!participant) {
+          req.flash('error', 'Error updating participant.');
+          return res.redirect('/participants');
+        }
+
+        // If you want the full detail view (events, milestones, etc.),
+        // you can either duplicate the SELECTs from the GET /participants/:id/edit
+        // route, or simply redirect back to that route:
+        req.flash('error', 'Update error.');
+        return res.redirect(`/participants/${participantid}/edit`);
+      } catch (innerErr) {
+        console.error('Error reloading participant after update failure:', innerErr);
+        req.flash('error', 'Update error.');
+        return res.redirect('/participants');
+      }
+    }
+
 });
 
 
