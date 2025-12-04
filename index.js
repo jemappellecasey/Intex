@@ -1601,7 +1601,8 @@ app.post('/participants/:participantid/surveys/:surveyid', async (req, res) => {
     surveyusefulnessscore: req.body.surveyusefulnessscore || null,
     surveyinstructorscore: req.body.surveyinstructorscore || null,
     surveyrecommendationscore: req.body.surveyrecommendationscore || null,
-    surveyoverallscore: req.body.surveyoverallscore || null
+    surveyoverallscore: req.body.surveyoverallscore || null,
+    surveysubmissiondate: new Date()
   };
 
   try {
@@ -2792,7 +2793,7 @@ app.post('/surveys/new', async (req, res) => {
       surveyinstructorscore: surveyinstructorscore || null,
       surveyrecommendationscore: surveyrecommendationscore || null,
       surveyoverallscore: overall || null,
-      surveysubmissiondate: surveysubmissiondate || knex.fn.now()
+      surveysubmissiondate: new Date()
     });
 
     return res.redirect('/surveys');
@@ -2919,7 +2920,7 @@ app.post('/surveys/:surveyid/edit', async (req, res) => {
         surveyinstructorscore: surveyinstructorscore || null,
         surveyrecommendationscore: surveyrecommendationscore || null,
         surveyoverallscore: overall || null,
-        surveysubmissiondate: surveysubmissiondate || null
+        surveysubmissiondate: new Date()
       });
 
     req.flash('success', 'Survey updated successfully.');

@@ -134,14 +134,11 @@
           <tr>
             <th>Overall (1–5)</th>
             <td>
-              <select name="surveyoverallscore" required>
-                <% for (let i = 1; i <= 5; i++) { %>
-                  <option value="<%= i %>"
-                    <%= Number(survey.surveyoverallscore) === i ? 'selected' : '' %>>
-                    <%= i %>
-                  </option>
-                <% } %>
-              </select>
+              <% if (survey.surveyoverallscore != null) { %>
+                <%= survey.surveyoverallscore %>
+              <% } else { %>
+                N/A
+              <% } %>
             </td>
           </tr>
         </table>
