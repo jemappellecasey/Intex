@@ -10,63 +10,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title>Participants</title>
+  <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/dashboard" aria-label="Back to dashboard">
+        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+      </a>
+    </div>
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants" class="active">Participants</a>
+      <a href="/events">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+  <main class="main-content">
 
   <h1>Participants</h1>
-  <p><a href="/dashboard">Back to Dashboard</a></p>
 
   <!-- Error / flash message (optional) -->
   <% if (typeof error_message !== "undefined" && error_message) { %>
-    <p style="color:red;"><%= error_message %></p>
+    <div class="alert alert-error"><%= error_message %></div>
   <% } %>
 
   <!-- Filter form: event + basic participant info -->
-  <form method="get" action="/participants">
-    <label>
-      Milestone Title:
-      <input
-        type="text"
-        name="milestoneTitle"
-        value="<%= typeof milestoneTitle !== 'undefined' ? milestoneTitle : '' %>">
-    </label>
+  <% if (isManager) { %>
+    <form method="get" action="/participants">
+      <label>
+        Milestone Title:
+        <input
+          type="text"
+          name="milestoneTitle"
+          value="<%= typeof milestoneTitle !== 'undefined' ? milestoneTitle : '' %>">
+      </label>
 
-    <!-- optional: keep these if you already added them -->
-    <label>
-      Name:
-      <input
-        type="text"
-        name="name"
-        value="<%= typeof name !== 'undefined' ? name : '' %>">
-    </label>
+      <!-- optional: keep these if you already added them -->
+      <label>
+        Name:
+        <input
+          type="text"
+          name="name"
+          value="<%= typeof name !== 'undefined' ? name : '' %>">
+      </label>
 
-    <label>
-      Email:
-      <input
-        type="text"
-        name="email"
-        value="<%= typeof email !== 'undefined' ? email : '' %>">
-    </label>
+      <label>
+        Email:
+        <input
+          type="text"
+          name="email"
+          value="<%= typeof email !== 'undefined' ? email : '' %>">
+      </label>
 
-    <label>
-      Phone:
-      <input
-        type="text"
-        name="phone"
-        value="<%= typeof phone !== 'undefined' ? phone : '' %>">
-    </label>
+      <label>
+        Phone:
+        <input
+          type="text"
+          name="phone"
+          value="<%= typeof phone !== 'undefined' ? phone : '' %>">
+      </label>
 
-    <button type="submit">Filter</button>
-  </form>
+      <button type="submit">Filter</button>
+    </form>
 
 
 
-  <hr>
+    <hr>
+  <% } %>
 
   <!-- Participants list -->
-  <table border="1" cellpadding="4" cellspacing="0">
+  <table class="<%= isManager ? 'participants-table' : 'participants-table push-down' %>">
     <thead>
       <tr>
         <th>First Name</th>
@@ -95,9 +119,9 @@
             <td><%= p.participantphone %></td>
             <td><%= p.participantfieldofinterest %></td>
             <td>
-              <% if (isAdmin || (selfParticipantId && Number(selfParticipantId) === Number(p.participantid))) { %>
+              <% if (isManager || (selfParticipantId && Number(selfParticipantId) === Number(p.participantid))) { %>
                 <a href="/participants/<%= p.participantid %>/edit">Edit</a>
-                <% if (isAdmin) { %>
+                <% if (isManager) { %>
                   |
                   <form action="/deleteparticipants/<%= p.participantid %>" method="POST"
                         style="display:inline;">
@@ -153,12 +177,14 @@
   <% } %>
 </div>
 
-  <!-- Admin-only: Add new participant -->
-  <% if (isAdmin) { %>
+  <!-- Manager-only: Add new participant -->
+  <% if (isManager) { %>
     <p>
       <a href="/participants/add">Add New Participant</a>
     </p>
   <% } %>
 
+</main>
+</div>
 </body>
 </html>

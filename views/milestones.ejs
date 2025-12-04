@@ -2,62 +2,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title>Milestones</title>
+  <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/dashboard" aria-label="Back to dashboard">
+        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+      </a>
+    </div>
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones" class="active">Milestones</a>
+      <a href="/donations">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+<main class="main-content">
 
 <h1>Milestones</h1>
-<p><a href="/dashboard">Back to Dashboard</a></p>
 
 <!-- Error message -->
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <!-- ============================= -->
 <!-- SEARCH / FILTER SECTION       -->
 <!-- ============================= -->
-<section>
-  <h2>Search Milestones</h2>
-  <form method="get" action="/milestones">
-    <label>
-      Participant Name:
-      <input type="text" name="participantName" value="<%= participantName || '' %>">
-    </label>
+<% if (isManager) { %>
+  <section>
+    <h2>Search Milestones</h2>
+    <form method="get" action="/milestones">
+      <label>
+        Participant Name:
+        <input type="text" name="participantName" value="<%= participantName || '' %>">
+      </label>
 
-    <label>
-      Email:
-      <input type="text" name="email" value="<%= email || '' %>">
-    </label>
+      <label>
+        Email:
+        <input type="text" name="email" value="<%= email || '' %>">
+      </label>
 
-    <label>
-      Milestone Title:
-      <input type="text" name="milestoneTitle" value="<%= milestoneTitle || '' %>">
-    </label>
+      <label>
+        Milestone Title:
+        <input type="text" name="milestoneTitle" value="<%= milestoneTitle || '' %>">
+      </label>
 
-    <label>
-      Start Date:
-      <input type="date" name="startDate" value="<%= startDate || '' %>">
-    </label>
+      <label>
+        Start Date:
+        <input type="date" name="startDate" value="<%= startDate || '' %>">
+      </label>
 
-    <label>
-      End Date:
-      <input type="date" name="endDate" value="<%= endDate || '' %>">
-    </label>
+      <label>
+        End Date:
+        <input type="date" name="endDate" value="<%= endDate || '' %>">
+      </label>
 
-    <button type="submit">Search</button>
-  </form>
-</section>
+      <button type="submit">Search</button>
+    </form>
+  </section>
 
-<hr>
+  <hr>
+<% } %>
 
 <!-- ============================= -->
 <!-- LIST + PAGINATION             -->
 <!-- ============================= -->
 <section>
   <h2>Milestones List</h2>
-  <% if (isAdmin || selfParticipantId) { %>
+  <% if (isManager || selfParticipantId) { %>
     <p>
       <a href="/milestones/new"><button type="button">Add Milestone</button></a>
     </p>
@@ -83,14 +107,14 @@
   <% if (!milestones || milestones.length === 0) { %>
     <p>No milestones found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table class="milestones-table center-table">
       <thead>
       <tr>
         <th>Participant</th>
         <th>Email</th>
         <th>Milestone Title</th>
         <th>Milestone Date</th>
-        <% if (isAdmin || selfParticipantId) { %>
+        <% if (isManager || selfParticipantId) { %>
           <th>Actions</th>
         <% } %>
       </tr>
@@ -121,13 +145,13 @@
             <% } %>
           </td>
 
-          <% if (isAdmin || (selfParticipantId && Number(selfParticipantId) === Number(m.participantid))) { %>
+          <% if (isManager || (selfParticipantId && Number(selfParticipantId) === Number(m.participantid))) { %>
             <td>
               <a href="/milestones/<%= m.milestoneid %>/edit">
                 <button type="button">Edit</button>
               </a>
 
-              <% if (isAdmin) { %>
+              <% if (isManager) { %>
                 <form method="post"
                       action="/milestones/<%= m.milestoneid %>/delete"
                       style="display:inline;">
@@ -156,5 +180,7 @@
 
 <hr>
 
+</main>
+</div>
 </body>
 </html>

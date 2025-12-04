@@ -12,13 +12,13 @@ const knex = require("knex")({
 const bcrypt = require('bcrypt');
 
 const DEFAULT_PASSWORD = 'devpass'; // choose your dev default
-const SALT_ROUNDS = 10;
+const sr = process.env.SALT_ROUNDS;
 
 (async () => {
   try {
-    const hash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
+    const hash = await bcrypt.hash(DEFAULT_PASSWORD, sr);
 
-    await knex('users').update({ password: hash }); // updates every row
+    await knex('users').update({ passwordhashed: hash }); // updates every row
 
     console.log('All user passwords reset to default (hashed).');
     process.exit(0);

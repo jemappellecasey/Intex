@@ -1,0 +1,8 @@
+<% if (isLoggedIn) { %>
+  <div class="user-bar">
+    <span class="user-chip">
+      Logged in as <strong><%= Username %></strong>
+    </span>
+    <a href="/logout" class="btn secondary-btn">Logout</a>
+  </div>
+<% } %>

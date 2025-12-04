@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Add New Participant</title>
+  <%- include('partials/head') %>
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'participants' }) %>
+  <main class="main">
+
+  <h1>Add New Participant</h1>
+
+  <!-- Display error message -->
+  <% if (typeof error_message !== "undefined" && error_message) { %>
+    <div class="alert alert-error"><%= error_message %></div>
+  <% } %>
+
+  <!-- Back to participant list -->
+  <p>
+    <a href="/participants">Back to Participants List</a>
+  </p>
+
+  <!-- Form for creating a new participant -->
+  <form method="post" action="/participants/add">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <table>
+      <tr>
+        <th>Email</th>
+        <td><input type="email" name="email" required></td>
+      </tr>
+      <tr>
+        <th>First Name</th>
+        <td><input type="text" name="participantfirstname" required></td>
+      </tr>
+      <tr>
+        <th>Last Name</th>
+        <td><input type="text" name="participantlastname" required></td>
+      </tr>
+      <tr>
+        <th>Date of Birth</th>
+        <td><input type="date" name="participantdob"></td>
+      </tr>
+      <tr>
+        <th>Role</th>
+        <td><input type="text" name="participantrole"></td>
+      </tr>
+      <tr>
+        <th>Phone Number</th>
+        <td><input type="text" name="participantphone"></td>
+      </tr>
+      <tr>
+        <th>City</th>
+        <td><input type="text" name="participantcity"></td>
+      </tr>
+      <tr>
+        <th>State</th>
+        <td><input type="text" name="participantstate"></td>
+      </tr>
+      <tr>
+        <th>Zip</th>
+        <td><input type="text" name="participantzip"></td>
+      </tr>
+      <tr>
+        <th>Field of Interest</th>
+        <td><input type="text" name="participantfieldofinterest"></td>
+      </tr>
+    </table>
+
+    <p style="margin-top: 12px;">
+      <button type="submit">Create Participant</button>
+    </p>
+  </form>
+
+  </main>
+</div>
+
+</body>
+</html>

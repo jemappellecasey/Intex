@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Admin Settings</title>
+  <%- include('partials/head') %>
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <%- include('partials/sidebar', { active: 'admin' }) %>
+  <main class="main">
+  <div class="page-card">
+    <h1>Admin Settings</h1>
+
+    <% if (error_message) { %>
+      <div class="alert alert-error"><%= error_message %></div>
+    <% } %>
+
+    <section>
+      <h2>User Roles</h2>
+
+      <form method="get" action="/admin/settings" style="margin-bottom:1rem;">
+        <label>
+      Email:
+      <input type="text" name="email" value="<%= email || '' %>">
+    </label>
+    <label>
+      Role:
+      <select name="role">
+        <option value="">All</option>
+        <option value="manager" <%= role === 'manager' ? 'selected' : '' %>>manager</option>
+        <option value="user" <%= role === 'user' ? 'selected' : '' %>>user</option>
+        <option value="secretary" <%= role === 'secretary' ? 'selected' : '' %>>secretary</option>
+      </select>
+    </label>
+    <button type="submit">Search</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(function(u) { %>
+            <tr>
+              <td><%= u.userid %></td>
+              <td><%= u.email %></td>
+              <td>
+                <form method="post" action="/admin/users/<%= u.userid %>/role" style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <select name="role">
+                    <option value="manager" <%= u.role === 'manager' ? 'selected' : '' %>>manager</option>
+                    <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>user</option>
+                    <option value="secretary" <%= u.role === 'secretary' ? 'selected' : '' %>>secretary</option>
+                  </select>
+                  <button type="submit">Save</button>
+                </form>
+              </td>
+              <td>
+                <form method="post"
+                action="/admin/users/<%= u.userid %>/delete"
+                onsubmit="return confirm('Delete this user?');"
+                style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </section>
+  </div>
+  </main>
+</div>
+</body>
+</html>

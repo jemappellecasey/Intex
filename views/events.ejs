@@ -1,45 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title>Events</title>
+  <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/dashboard" aria-label="Back to dashboard">
+        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+      </a>
+    </div>
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events" class="active">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+<main class="main-content">
 
 <h1>Events</h1>
-<p><a href="/dashboard">Back to Dashboard</a></p>
 
 <!-- Error message -->
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
 <!-- ============================= -->
 <!-- SEARCH / FILTER SECTION       -->
 <!-- ============================= -->
-<section>
-  <h2>Search Events</h2>
-  <form method="get" action="/events">
-    <label>
-      Event Name:
-      <input type="text" name="name" value="<%= name || '' %>">
-    </label>
+<% if (isManager) { %>
+  <section>
+    <h2>Search Events</h2>
+    <form method="get" action="/events">
+      <label>
+        Event Name:
+        <input type="text" name="name" value="<%= name || '' %>">
+      </label>
 
-    <label>
-      Start Date:
-      <input type="date" name="startDate" value="<%= startDate || '' %>">
-    </label>
+      <div class="date-range">
+        <div class="date-field">
+          <label>Start Date</label>
+          <input type="date" name="startDate" value="<%= startDate || '' %>">
+        </div>
+        <div class="date-field">
+          <label>End Date</label>
+          <input type="date" name="endDate" value="<%= endDate || '' %>">
+        </div>
+      </div>
 
-    <label>
-      End Date:
-      <input type="date" name="endDate" value="<%= endDate || '' %>">
-    </label>
+      <button type="submit">Search</button>
+    </form>
+  </section>
 
-    <button type="submit">Search</button>
-  </form>
-</section>
+  <hr>
+  <section style="margin-top: 12px;">
+    <h2>Manager Tools</h2>
 
-<hr>
+    <p>
+      <a href="/events/new">
+        <button type="button">Add New Event</button>
+      </a>
+    </p>
+  </section>
+<% } %>
 
 <!-- ============================= -->
 <!-- UPCOMING EVENTS (25 per page) -->
@@ -47,18 +81,18 @@
 <section>
   <h2>Upcoming Events</h2>
 
-  <div>
+  <div class="pagination pagination-centered">
     <% if (upcomingCurrentPage > 1) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage - 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Prev Upcoming
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage - 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Prev
       </a>
     <% } %>
 
     <span>Page <%= upcomingCurrentPage %> of <%= upcomingTotalPages %></span>
 
     <% if (upcomingCurrentPage < upcomingTotalPages) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage + 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Next Upcoming
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage + 1 %>&pastPage=<%= pastCurrentPage %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Next
       </a>
     <% } %>
   </div>
@@ -66,7 +100,7 @@
   <% if (!upcomingEvents || upcomingEvents.length === 0) { %>
     <p>No upcoming events found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
       <tr>
         <th>Name</th>
@@ -78,7 +112,7 @@
         <th>Registered</th>
         <th>Deadline</th>
         <th>Action</th>
-        <% if (isAdmin) { %>
+        <% if (isManager) { %>
           <th>Edit</th>
           <th>Delete</th>
         <% } %>
@@ -105,7 +139,13 @@
           </td>
 
           <td><%= ev.eventcapacity %></td>
-          <td><%= ev.registeredcount %></td>
+          <td>
+            <% if (!isManager && ev.selfregistrationstatus) { %>
+              Registered
+            <% } else { %>
+              <%= ev.registeredcount %>
+            <% } %>
+          </td>
 
           <td>
             <% if (ev.eventregistrationdeadline) { %>
@@ -118,17 +158,26 @@
                               && ev.eventcapacity !== undefined
                               && Number(ev.registeredcount) >= Number(ev.eventcapacity); %>
 
-            <% if (isFull) { %>
+            <% if (ev.isregisteredforcurrentuser) { %>
+              <div class="mt-1">
+                <span class="text-muted">You are registered</span>
+                <form method="post" action="/events/<%= ev.eventdetailsid %>/unregister" style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="btn" style="margin-left:6px;">Unregister</button>
+                </form>
+              </div>
+            <% } else if (isFull) { %>
               <strong style="color:red;">This event is fully booked</strong>
+            
             <% } else { %>
-              <!-- 🔹 Register button: go to registration form page -->
               <form method="get" action="/events/<%= ev.eventdetailsid %>/register">
-                <button type="submit">Register Participant</button>
+                <button type="submit">Register</button>
               </form>
             <% } %>
           </td>
 
-          <% if (isAdmin) { %>
+
+          <% if (isManager) { %>
             <!-- Edit button (manager only) -->
             <td>
               <a href="/events/<%= ev.eventdetailsid %>/edit">
@@ -160,18 +209,18 @@
 <section>
   <h2>Past Events</h2>
 
-  <div>
+  <div class="pagination pagination-centered">
     <% if (pastCurrentPage > 1) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage - 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Prev Past
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage - 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Prev
       </a>
     <% } %>
 
     <span>Page <%= pastCurrentPage %> of <%= pastTotalPages %></span>
 
     <% if (pastCurrentPage < pastTotalPages) { %>
-      <a href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage + 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
-        Next Past
+      <a class="btn secondary-btn" href="/events?upcomingPage=<%= upcomingCurrentPage %>&pastPage=<%= pastCurrentPage + 1 %>&name=<%= name %>&startDate=<%= startDate %>&endDate=<%= endDate %>">
+        Next
       </a>
     <% } %>
   </div>
@@ -179,7 +228,7 @@
   <% if (!pastEvents || pastEvents.length === 0) { %>
     <p>No past events found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table>
       <thead>
       <tr>
         <th>Name</th>
@@ -189,7 +238,7 @@
         <th>Capacity</th>
         <th>Registered</th>
         <th>Attended</th>
-        <% if (isAdmin) { %>
+        <% if (isManager) { %>
           <th>Edit</th>
           <th>Delete</th>
         <% } %>
@@ -214,10 +263,16 @@
           </td>
 
           <td><%= ev.eventcapacity %></td>
-          <td><%= ev.registeredcount %></td>
+          <td>
+            <% if (!isManager && ev.selfregistrationstatus) { %>
+              Registered
+            <% } else { %>
+              <%= ev.registeredcount %>
+            <% } %>
+          </td>
           <td><%= ev.attendedcount %></td>
 
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <td>
               <a href="/events/<%= ev.eventdetailsid %>/edit">
                 <button type="button">Edit</button>
@@ -240,20 +295,7 @@
 
 <hr>
 
-<!-- ============================= -->
-<!-- MANAGER-ONLY TOOLS           -->
-<!-- ============================= -->
-<% if (isAdmin) { %>
-<section>
-  <h2>Manager Tools</h2>
-
-  <p>
-    <a href="/events/new">
-      <button>Add New Event</button>
-    </a>
-  </p>
-</section>
-<% } %>
-
+</main>
+</div>
 </body>
 </html>

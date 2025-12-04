@@ -1,25 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
   <title>Donations</title>
+  <%- include('partials/head') %>
 </head>
 <body>
+<div class="layout">
+  <%- include('partials/userbar') %>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/dashboard" aria-label="Back to dashboard">
+        <img src="/images/logo.png" alt="Ella Rises logo" class="brand-logo">
+      </a>
+    </div>
+    <h2>Menu</h2>
+    <nav>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/participants">Participants</a>
+      <a href="/events">Events</a>
+      <a href="/surveys">Surveys</a>
+      <a href="/milestones">Milestones</a>
+      <a href="/donations" class="active">Donations</a>
+      <% if (isManager) { %>
+        <hr>
+        <a href="/admin/settings">Admin Settings</a>
+      <% } %>
+    </nav>
+  </aside>
+<main class="main-content">
 
 <h1>Donations</h1>
-<p><a href="/dashboard">Back to Dashboard</a></p>
 
 <% if (error_message) { %>
-  <p style="color:red;"><%= error_message %></p>
+  <div class="alert alert-error"><%= error_message %></div>
 <% } %>
 
-<% if (!isAdmin) { %>
+<% if (!isManager) { %>
   <p>Thank you for your donations!</p>
 <% } %>
 
 <p><strong>Total Amount:</strong> $<%= (totalAmount || 0).toFixed(2) %></p>
 
-<% if (isAdmin) { %>
+<% if (isManager) { %>
   <section>
     <h2>Search Donations</h2>
     <form method="get" action="/donations">
@@ -46,57 +68,68 @@
 <% } %>
 
 <p>
-  <a href="/donations/new"><button type="button">Add Donation</button></a>
+  <a href="/donate"><button type="button">Add Donation</button></a>
 </p>
 
 <section>
   <h2>Donation List</h2>
 
-  <div>
+  <div class="pagination pagination-centered">
     <% if (currentPage > 1) { %>
-      <a href="/donations?page=<%= currentPage - 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Prev</a>
+      <a class="btn secondary-btn" href="/donations?page=<%= currentPage - 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Prev</a>
     <% } %>
     <span>Page <%= currentPage %> of <%= totalPages %></span>
     <% if (currentPage < totalPages) { %>
-      <a href="/donations?page=<%= currentPage + 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Next</a>
+      <a class="btn secondary-btn" href="/donations?page=<%= currentPage + 1 %>&name=<%= encodeURIComponent(name || '') %>&email=<%= encodeURIComponent(email || '') %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Next</a>
     <% } %>
   </div>
 
   <% if (!donations || donations.length === 0) { %>
     <p>No donations found.</p>
   <% } else { %>
-    <table border="1" cellspacing="0" cellpadding="4">
+    <table class="center-table donations-table">
       <thead>
         <tr>
-          <% if (isAdmin) { %>
+          <% if (isManager) { %>
             <th>Donor</th>
             <th>Email</th>
           <% } %>
           <th>Donation Date</th>
           <th>Amount</th>
-          <th>Actions</th>
+          <% if (isManager) { %>
+            <th>Actions</th>
+          <% } %>
         </tr>
       </thead>
       <tbody>
       <% donations.forEach(function(d) { %>
         <tr>
-          <% if (isAdmin) { %>
-            <td><%= d.participantfirstname %> <%= d.participantlastname %></td>
+          <% if (isManager) { %>
+            <td>
+              <% if (d.participantid) { %>
+                <a href="/participants/<%= d.participantid %>">
+                  <%= d.participantfirstname %> <%= d.participantlastname %>
+                </a>
+              <% } else { %>
+                <%= d.participantfirstname %> <%= d.participantlastname %>
+              <% } %>
+            </td>
             <td><%= d.email || 'N/A' %></td>
           <% } %>
           <td><%= d.donationdate ? new Date(d.donationdate).toISOString().slice(0,10) : 'N/A' %></td>
           <td>$<%= d.donationamount ? Number(d.donationamount).toFixed(2) : '0.00' %></td>
-          <td>
-            <% if (isAdmin || (selfParticipantId && Number(selfParticipantId) === Number(d.participantid))) { %>
+          <% if (isManager) { %>
+            <td>
+              <a href="/donate?from=donations&email=<%= encodeURIComponent(d.email || '') %>&name=<%= encodeURIComponent((d.participantfirstname || '') + ' ' + (d.participantlastname || '')) %>">
+                <button type="button">Add</button>
+              </a>
               <a href="/donations/<%= d.donationid %>/edit"><button type="button">Edit</button></a>
-              <% if (isAdmin) { %>
-                <form method="post" action="/donations/<%= d.donationid %>/delete" style="display:inline;">
-                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                  <button type="submit" onclick="return confirm('Delete this donation?');">Delete</button>
-                </form>
-              <% } %>
-            <% } %>
-          </td>
+              <form method="post" action="/donations/<%= d.donationid %>/delete" style="display:inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" onclick="return confirm('Delete this donation?');">Delete</button>
+              </form>
+            </td>
+          <% } %>
         </tr>
       <% }); %>
       </tbody>
@@ -104,5 +137,7 @@
   <% } %>
 </section>
 
+  </main>
+</div>
 </body>
 </html>

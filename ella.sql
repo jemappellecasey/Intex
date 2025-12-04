@@ -293,6 +293,7 @@ CREATE TABLE public.participants (
     createdat timestamp without time zone DEFAULT now(),
     updatedat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT participants_email_check CHECK ((email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'::text)),
+    CONSTRAINT participants_pkey PRIMARY KEY (participantid),
     CONSTRAINT participants_participantcity_check CHECK ((length(participantcity) <= 100)),
     CONSTRAINT participants_participantdob_check CHECK ((participantdob < CURRENT_DATE)),
     CONSTRAINT participants_participantfieldofinterest_check CHECK ((length(participantfieldofinterest) <= 255)),
@@ -481,33 +482,44 @@ ALTER SEQUENCE public.surveys_surveyid_seq OWNED BY public.surveys.surveyid;
 
 
 
+-- TOC entry 233 (class 1259 OID 19534)
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
 CREATE TABLE public.users (
-    userid                  SERIAL PRIMARY KEY,
-    email                   VARCHAR(255) NOT NULL UNIQUE,
-    role                    VARCHAR(50) DEFAULT 'user',
-    isverified              BOOLEAN NOT NULL DEFAULT FALSE,
-    magic_token             VARCHAR(255),
-    magic_token_expires_at  TIMESTAMPTZ,
-    createdat               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updatedat               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    userid          SERIAL PRIMARY KEY,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    passwordhashed  VARCHAR(255) NOT NULL,
+    role            VARCHAR(50) DEFAULT 'user',
+    participantid   integer,
+    createdat       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updatedat       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE OR REPLACE FUNCTION public.set_updatedat_timestamp()
-RETURNS TRIGGER AS $$
+ALTER TABLE public.users
+  ADD CONSTRAINT users_participantid_fkey
+  FOREIGN KEY (participantid)
+  REFERENCES public.participants(participantid)
+  ON DELETE SET NULL;
+
+ALTER TABLE public.users OWNER TO postgres;
+
+CREATE OR REPLACE FUNCTION public.setupdatedattimestamp()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
     NEW.updatedat = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_set_users_updatedat
 BEFORE UPDATE ON public.users
 FOR EACH ROW
-EXECUTE FUNCTION public.set_updatedat_timestamp();
+EXECUTE FUNCTION public.setupdatedattimestamp();
 
 
-
-ALTER TABLE public.users OWNER TO postgres;
 
 --
 -- TOC entry 232 (class 1259 OID 19533)
@@ -8767,16 +8779,14 @@ COPY public.surveys (surveyid, participantid, eventid, eventdatetimestart, surve
 COPY public.users (
     userid,
     email,
+    passwordhashed,
     role,
-    isverified,
-    magic_token,
-    magic_token_expires_at,
     createdat,
     updatedat
-) FROM stdin WITH (FORMAT csv, NULL '\N', HEADER false);
-1,2025Intex312EllaRisesExampleUser@proton.me,user,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
-2,2025Intex312EllaRisesExampleManager@proton.me,manager,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
-3,2025Intex312EllaRisesExampleSecretary@proton.me,secretary,t,\N,\N,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+) FROM stdin WITH (FORMAT csv, HEADER false);
+1,2025intex312ellarisesexampleuser@proton.me,$2b$10$nwwDRowZGC8KqYVZBIfdk.6wYOa0zi5yk41qalPB9uQVkEbQuQFqG,user,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+2,2025intex312ellarisesexamplemanager@proton.me,$2b$10$nwwDRowZGC8KqYVZBIfdk.6wYOa0zi5yk41qalPB9uQVkEbQuQFqG,manager,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
+3,2025intex312ellarisesexamplesecretary@proton.me,$2b$10$nwwDRowZGC8KqYVZBIfdk.6wYOa0zi5yk41qalPB9uQVkEbQuQFqG,secretary,2025-12-02 11:41:00.243144,2025-12-02 11:41:00.243144
 \.
 
 --
@@ -8869,6 +8879,8 @@ SELECT pg_catalog.setval('public.surveys_surveyid_seq', 1, false);
 SELECT pg_catalog.setval('public.users_userid_seq', 3, true);
 
 
+
+
 --
 -- TOC entry 3559 (class 2606 OID 19468)
 -- Name: donations donations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
@@ -8922,14 +8934,6 @@ ALTER TABLE ONLY public.origintypes
 ALTER TABLE ONLY public.participants
     ADD CONSTRAINT participants_email_key UNIQUE (email);
 
-
---
--- TOC entry 3549 (class 2606 OID 19400)
--- Name: participants participants_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.participants
-    ADD CONSTRAINT participants_pkey PRIMARY KEY (participantid);
 
 
 --
@@ -9118,4 +9122,79 @@ ALTER TABLE ONLY public.surveys
 --
 -- PostgreSQL database dump complete
 --
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM   pg_class c
+    JOIN   pg_namespace n ON n.oid = c.relnamespace
+    WHERE  c.relkind = 'S'
+    AND    n.nspname = 'public'
+    AND    c.relname = 'participants_participantid_seq'
+  ) THEN
+    PERFORM setval(
+      'public.participants_participantid_seq',
+      (SELECT COALESCE(MAX(participantid), 0) FROM public.participants) + 1,
+      false
+    );
+  END IF;
+END;
+$$;
+
+-- Fix events_eventid_seq so it is higher than the current max eventid
+SELECT setval(
+  pg_get_serial_sequence('public.events', 'eventid'),
+  COALESCE((SELECT MAX(eventid) FROM public.events), 0) + 1,
+  false
+);
+
+-- Fix eventdetails_eventdetailsid_seq so it is higher than the current max eventdetailsid
+SELECT setval(
+  pg_get_serial_sequence('public.eventdetails', 'eventdetailsid'),
+  COALESCE((SELECT MAX(eventdetailsid) FROM public.eventdetails), 0) + 1,
+  false
+);
+
+-- Participants
+SELECT setval(
+  pg_get_serial_sequence('public.participants', 'participantid'),
+  COALESCE((SELECT MAX(participantid) FROM public.participants), 0) + 1,
+  false
+);
+
+-- Milestones
+SELECT setval(
+  pg_get_serial_sequence('public.milestones', 'milestoneid'),
+  COALESCE((SELECT MAX(milestoneid) FROM public.milestones), 0) + 1,
+  false
+);
+
+-- Donations
+SELECT setval(
+  pg_get_serial_sequence('public.donations', 'donationid'),
+  COALESCE((SELECT MAX(donationid) FROM public.donations), 0) + 1,
+  false
+);
+
+-- Users (if users table uses a sequence on userid)
+SELECT setval(
+  pg_get_serial_sequence('public.users', 'userid'),
+  COALESCE((SELECT MAX(userid) FROM public.users), 0) + 1,
+  false
+);
+
+-- Surveys (if applicable)
+SELECT setval(
+  pg_get_serial_sequence('public.surveys', 'surveyid'),
+  COALESCE((SELECT MAX(surveyid) FROM public.surveys), 0) + 1,
+  false
+);
+
+-- Registrations (if applicable)
+SELECT setval(
+  pg_get_serial_sequence('public.registrations', 'registrationid'),
+  COALESCE((SELECT MAX(registrationid) FROM public.registrations), 0) + 1,
+  false
+);
 
