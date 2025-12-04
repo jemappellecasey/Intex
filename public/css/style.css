@@ -618,10 +618,12 @@ table {
 .form-table {
   width: 100%;
   max-width: 820px;
+  margin: 0 auto;
 }
 
 .form-table.compact {
   max-width: 680px;
+  margin: 0 auto;
 }
 
 thead {

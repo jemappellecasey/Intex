@@ -629,6 +629,10 @@ app.get('/admin/settings', requireManager, async (req, res) => {
   try {
     // ADD THIS LINE
     const { email, role } = req.query;
+    const successFlash = req.flash('success');
+    const success_message =
+      (successFlash && successFlash.length ? successFlash[0] : '') ||
+      (req.query.saved ? 'Changes saved successfully.' : '');
 
     const query = knex('users')
       .select('userid', 'email', 'role')
@@ -650,7 +654,8 @@ app.get('/admin/settings', requireManager, async (req, res) => {
       Username: req.session.useremail,
       csrfToken: req.csrfToken(),
       email: email || '',
-      role: role || ''
+      role: role || '',
+      success_message
     });
   } catch (err) {
     console.error('Error loading admin settings:', err);
@@ -691,7 +696,8 @@ app.post('/admin/users/:userid/role', requireManager, async (req, res) => {
     await knex('users')
       .where({ userid })
       .update({ role });
-    return res.redirect('/admin/settings');
+    req.flash('success', 'Changes saved successfully.');
+    return res.redirect('/admin/settings?saved=1');
   } catch (err) {
     console.error('Error updating user role:', err);
     const users = await knex('users')
@@ -2836,6 +2842,7 @@ app.get('/surveys/:surveyid/edit', async (req, res) => {
   }
 
   const { surveyid } = req.params;
+  const success_message = req.query.saved ? 'Saved successfully.' : '';
 
   try {
     const survey = await knex('surveys as s')
@@ -2869,7 +2876,8 @@ app.get('/surveys/:surveyid/edit', async (req, res) => {
       error_message: '',
       isManager: req.session.role === 'manager',
       Username: req.session.useremail,
-      csrfToken: req.csrfToken()  
+      csrfToken: req.csrfToken(),
+      success_message
     });
   } catch (err) {
     console.error('Error loading survey for edit:', err);
@@ -2934,8 +2942,7 @@ app.post('/surveys/:surveyid/edit', async (req, res) => {
         surveysubmissiondate: new Date()
       });
 
-    req.flash('success', 'Survey updated successfully.');
-    return res.redirect('/surveys?saved=1');
+    return res.redirect(`/surveys/${surveyid}/edit?saved=1`);
   } catch (err) {
     console.error('Error updating survey:', err);
     return res.send('Error updating survey.');
@@ -3236,6 +3243,10 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
     : null;
 
   const { milestoneid } = req.params;
+  const successFlash = req.flash('success');
+  const success_message =
+    (successFlash && successFlash.length ? successFlash[0] : '') ||
+    (req.query.saved ? 'Milestone updated successfully.' : '');
 
   try {
     const milestone = await knex('milestones as m')
@@ -3288,7 +3299,8 @@ app.get('/milestones/:milestoneid/edit', async (req, res) => {
       error_message: '',
       isManager,
       Username: req.session.useremail,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      success_message
     });
   } catch (err) {
     console.error('Error loading milestone for edit:', err);
@@ -3339,7 +3351,8 @@ app.post('/milestones/:milestoneid/edit', async (req, res) => {
         milestonedate: milestonedate || null
       });
 
-    return res.redirect('/milestones');
+    req.flash('success', 'Milestone updated successfully.');
+    return res.redirect(`/milestones/${milestoneid}/edit?saved=1`);
   } catch (err) {
     console.error('Error updating milestone:', err);
     // 再度編集画面を出したい場合は、もう一度 SELECT しても良いけど、
@@ -3562,6 +3575,10 @@ app.get('/donations/:donationid/edit', async (req, res) => {
   const sessionParticipantId = await ensureParticipantId(req);
 
   const { donationid } = req.params;
+  const successFlash = req.flash('success');
+  const success_message =
+    (successFlash && successFlash.length ? successFlash[0] : '') ||
+    (req.query.saved ? 'Donation updated successfully.' : '');
 
   try {
     const donation = await knex('donations as d')
@@ -3585,9 +3602,15 @@ app.get('/donations/:donationid/edit', async (req, res) => {
         isManager,
         Username: req.session.useremail,
         selfParticipantId: sessionParticipantId,
-        csrfToken: req.csrfToken()
+        csrfToken: req.csrfToken(),
+        success_message,
+        donationDateValue: ''
       });
     }
+
+    const donationDateValue = donation.donationdate
+      ? new Date(donation.donationdate).toISOString().slice(0, 10)
+      : '';
 
     return res.render('donationsEdit', {
       donation,
@@ -3595,7 +3618,9 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       isManager,
       Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      success_message,
+      donationDateValue
     });
   } catch (err) {
     console.error('Error loading donation for edit:', err);
@@ -3605,7 +3630,9 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       isManager,
       Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      success_message,
+      donationDateValue
     });
   }
 });
@@ -3655,13 +3682,19 @@ app.post('/donations/:donationid/edit', async (req, res) => {
             'p.email'
           )
           .first();
+        const donationDateValue =
+          donation && donation.donationdate
+            ? new Date(donation.donationdate).toISOString().slice(0, 10)
+            : '';
         return res.render('donationsEdit', {
           donation,
           error_message: 'No participant found with that email.',
           isManager,
           Username: req.session.useremail,
           selfParticipantId: sessionParticipantId,
-          csrfToken: req.csrfToken()
+          csrfToken: req.csrfToken(),
+          success_message,
+          donationDateValue
         });
       }
       participantIdToUse = participant.participantid;
@@ -3675,7 +3708,8 @@ app.post('/donations/:donationid/edit', async (req, res) => {
         donationdate: donationdate || null
       });
 
-    return res.redirect('/donations');
+    req.flash('success', 'Donation updated successfully.');
+    return res.redirect(`/donations/${donationid}/edit?saved=1`);
   } catch (err) {
     console.error('Error updating donation:', err);
     const donation = await knex('donations as d')
@@ -3691,6 +3725,10 @@ app.post('/donations/:donationid/edit', async (req, res) => {
         'p.email'
       )
       .first();
+    const donationDateValue =
+      donation && donation.donationdate
+        ? new Date(donation.donationdate).toISOString().slice(0, 10)
+        : '';
 
     return res.render('donationsEdit', {
       donation,
@@ -3698,7 +3736,9 @@ app.post('/donations/:donationid/edit', async (req, res) => {
       isManager,
       Username: req.session.useremail,
       selfParticipantId: sessionParticipantId,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      success_message,
+      donationDateValue
     });
   }
 });

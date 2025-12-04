@@ -16,10 +16,13 @@
   <% if (error_message) { %>
     <div class="alert alert-error"><%= error_message %></div>
   <% } %>
+  <% if (success_message) { %>
+    <div class="alert alert-success"><%= success_message %></div>
+  <% } %>
 
   <!-- Navigation -->
   <p>
-    <a href="/surveys">Back to Survey List</a>
+    <a href="/surveys" class="btn secondary-btn">Back to Survey List</a>
   </p>
 
   <% if (!survey) { %>

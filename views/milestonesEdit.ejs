@@ -13,9 +13,12 @@
 
 <h1>Edit Milestone</h1>
 
-<% if (error_message) { %>
-  <div class="alert alert-error"><%= error_message %></div>
-<% } %>
+  <% if (error_message) { %>
+    <div class="alert alert-error"><%= error_message %></div>
+  <% } %>
+  <% if (success_message) { %>
+    <div class="alert alert-success"><%= success_message %></div>
+  <% } %>
 
 <p>
   <a href="/milestones" class="btn secondary-btn">Back to Milestones List</a>
@@ -24,39 +27,42 @@
 <% if (!milestone) { %>
   <p>Milestone not found.</p>
 <% } else { %>
-  <form method="post" action="/milestones/<%= milestone.milestoneid %>/edit">
+  <form method="post" action="/milestones/<%= milestone.milestoneid %>/edit" class="form-card form-shell">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-    <div>
-      <strong>Participant:</strong>
-      <%= milestone.participantfirstname %> <%= milestone.participantlastname %>
-      (<%= milestone.email %>)
-    </div>
+    <table class="form-table compact">
+      <tr>
+        <th>Participant</th>
+        <td>
+          <%= milestone.participantfirstname %> <%= milestone.participantlastname %>
+          (<%= milestone.email %>)
+        </td>
+      </tr>
+      <tr>
+        <th>Milestone Title*</th>
+        <td>
+          <input type="text"
+                 name="milestonetitle"
+                 value="<%= milestone.milestonetitle || '' %>"
+                 required>
+        </td>
+      </tr>
+      <tr>
+        <th>Milestone Date*</th>
+        <td>
+          <input type="date"
+                 name="milestonedate"
+                 value="<%= milestone.milestonedate
+                          ? new Date(milestone.milestonedate).toISOString().slice(0, 10)
+                          : '' %>"
+                 required>
+        </td>
+      </tr>
+    </table>
 
-    <div>
-      <label>
-        Milestone Title:*
-        <input type="text"
-               name="milestonetitle"
-               value="<%= milestone.milestonetitle || '' %>"
-               required>
-      </label>
-    </div>
-
-    <div>
-      <label>
-        Milestone Date:*
-        <input type="date"
-               name="milestonedate"
-               value="<%= milestone.milestonedate
-                        ? new Date(milestone.milestonedate).toISOString().slice(0, 10)
-                        : '' %>"
-               required>
-      </label>
-    </div>
-
-    <div>
-      <button type="submit">Save Changes</button>
+    <div class="form-actions centered">
+      <button type="submit" class="btn">Save Changes</button>
+      <a href="/milestones" class="btn secondary-btn" style="margin-left:8px;">Cancel</a>
     </div>
   </form>
 <% } %>

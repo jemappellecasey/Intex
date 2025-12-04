@@ -12,6 +12,10 @@
   <div class="page-card">
     <h1>Admin Settings</h1>
 
+    <% if (success_message) { %>
+      <div class="alert alert-success"><%= success_message %></div>
+    <% } %>
+
     <% if (error_message) { %>
       <div class="alert alert-error"><%= error_message %></div>
     <% } %>
