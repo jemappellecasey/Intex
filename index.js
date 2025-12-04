@@ -1747,6 +1747,7 @@ app.post('/events/new', async (req, res) => {
       eventtype,
       eventdescription,
       eventlocation,
+      eventrecurrencepattern,
       eventcapacity
     });
   };
@@ -1758,14 +1759,22 @@ app.post('/events/new', async (req, res) => {
   try {
     // 1) Insert or reuse event (name/type/description/recurrence/default capacity)
     const [newEvent] = await knex('events')
-      .insert({
-        eventname: eventname.trim(),
-        eventtype: eventtype.trim(),
-        eventdescription: eventdescription && eventdescription.trim() !== '' ? eventdescription.trim() : null,
-        eventrecurrencepattern: null,
-        eventdefaultcapacity: eventcapacity && eventcapacity !== '' ? Number(eventcapacity) : null
-      })
-      .returning('*');
+    .insert({
+      eventname: eventname.trim(),
+      eventtype: eventtype.trim(),
+      eventdescription:
+        eventdescription && eventdescription.trim() !== ''
+          ? eventdescription.trim()
+          : null,
+      eventrecurrencepattern:
+        eventrecurrencepattern && eventrecurrencepattern.trim() !== ''
+          ? eventrecurrencepattern.trim()
+          : null,
+      eventdefaultcapacity:
+        eventcapacity && eventcapacity !== '' ? Number(eventcapacity) : null
+    })
+    .returning('*');
+
 
     // 2) Insert eventdetails row
     await knex('eventdetails').insert({
