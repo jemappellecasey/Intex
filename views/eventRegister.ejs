@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="/css/style.css">
+  <meta charset="UTF-8">
+  <title>Register for Event</title>
+</head>
+<body>
+<div class="page-card narrow">
+  <h1>Register for <%= event.eventname %></h1>
+
+  <p>
+    <strong>Date/Time:</strong>
+    <% if (event.eventdatetimestart) { %>
+      <%= new Date(event.eventdatetimestart).toLocaleString() %>
+    <% } else { %> N/A <% } %>
+  </p>
+  <p>
+    <strong>Location:</strong> <%= event.eventlocation || 'N/A' %>
+  </p>
+
+  <% if (error_message) { %>
+    <div class="alert alert-error"><%= error_message %></div>
+  <% } %>
+
+  <% if (alreadyRegistered) { %>
+    <div class="alert alert-info">
+      You are already registered for this event.
+    </div>
+    <p><a href="/events" class="btn">Back to Events</a></p>
+  <% } else { %>
+    <form method="post" action="/events/<%= event.eventdetailsid %>/register" class="form-card">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <p>Confirm your registration for this event.</p>
+      <button type="submit">Confirm Registration</button>
+      <a href="/events" class="btn" style="margin-left:8px;">Cancel</a>
+    </form>
+  <% } %>
+</div>
+</body>
+</html>

@@ -145,14 +145,22 @@
                               && Number(ev.registeredcount) >= Number(ev.eventcapacity); %>
 
             <% if (isFull) { %>
-              <strong class="alert alert-error">This event is fully booked</strong>
+              <strong style="color:red;">This event is fully booked</strong>
+            <% } else if (ev.isregisteredforcurrentuser) { %>
+              <div class="mt-1">
+                <span class="text-muted">You are registered</span>
+                <form method="post" action="/events/<%= ev.eventdetailsid %>/unregister" style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="btn" style="margin-left:6px;">Unregister</button>
+                </form>
+              </div>
             <% } else { %>
-              <!-- 🔹 Register button: go to registration form page -->
               <form method="get" action="/events/<%= ev.eventdetailsid %>/register">
-                <button type="submit">Register Participant</button>
+                <button type="submit">Register</button>
               </form>
             <% } %>
           </td>
+
 
           <% if (isManager) { %>
             <!-- Edit button (manager only) -->
