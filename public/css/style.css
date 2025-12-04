@@ -255,6 +255,25 @@ h1, h2, h3 {
   gap: 18px;
 }
 
+/* Tableau embeds */
+.tableau-embed {
+  width: 100% !important;
+  position: relative;
+  aspect-ratio: 16 / 9;
+  min-height: 520px;
+}
+
+.tableau-embed.tall {
+  aspect-ratio: 4 / 5;
+  min-height: 620px;
+}
+
+.tableau-embed object {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
 @media (max-width: 900px) {
   .layout {
     flex-direction: column;
