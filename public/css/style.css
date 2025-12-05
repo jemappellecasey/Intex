@@ -343,8 +343,8 @@ h1, h2, h3 {
 }
 
 .tableau-embed.tall {
-  aspect-ratio: 4 / 4.5; /* still tall, but less vertical space */
-  min-height: 320px;
+  aspect-ratio: 20 / 12; /* closer to the first viz height */
+  min-height: 260px;
 }
 
 .tableau-embed object {
