@@ -1,9 +1,0 @@
-# Prevent repository metadata and local-only files from being deployed
-.git
-.gitignore
-.DS_Store
-
-# Environment and local dependencies
-.env
-node_modules
-*.log
