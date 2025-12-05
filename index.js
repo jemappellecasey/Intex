@@ -43,7 +43,7 @@ const knex = require("knex")({
     connection: {
         host : process.env.RDS_HOSTNAME || "localhost",
         user : process.env.RDS_USERNAME || "postgres",
-        password : process.env.RDS_PASSWORD || "manager",
+        password : process.env.RDS_PASSWORD || "admin",
         database : process.env.RDS_DB_NAME || "312intex",
         port : process.env.RDS_PORT || 5432,
         ssl: process.env.DB_SSL ? {rejectUnauthorized: false} : false
@@ -119,6 +119,17 @@ app.use(
         "connect-src": [
           "'self'",
           "https://public.tableau.com"
+        ],
+
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://public.tableau.com",
+          "https://fonts.googleapis.com"
+        ],
+        "font-src": [
+          "'self'",
+          "https://fonts.gstatic.com"
         ],
       },
     },
