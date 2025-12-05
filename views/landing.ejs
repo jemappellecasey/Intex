@@ -43,7 +43,7 @@
       align-items: center;
       gap: 0.5rem;
       font-family: 'DM Serif Display', serif;
-      font-size: 2rem;
+      font-size: clamp(1.4rem, 1.4vw + 1rem, 2.4rem);
       letter-spacing: 0.18em;
       text-transform: uppercase;
       white-space: nowrap;
@@ -135,14 +135,15 @@
 }
 
 
-/* Main hero title — bigger + brighter */
+/* Main hero title — scale more across breakpoints */
 .hero-lead {
-  max-width: 780px;
-  font-size: clamp(1.2rem, 1.6vw + 0.8rem, 1.8rem) !important;
-  line-height: 1.3;
-  margin: 0 0 2.8rem;
+  max-width: 920px;
+  font-size: clamp(1.2rem, 3vw + 0.7rem, 2.6rem) !important;
+  line-height: 1.28;
+  margin: clamp(1rem, 2vw, 2.2rem) 0 clamp(1.2rem, 2.6vw, 2.8rem);
   font-weight: 700;
   color: #FFFFFF;
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
 }
 
 
@@ -150,15 +151,16 @@
 /* Keep the three items in a horizontal row */
 .hero-why-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2.5rem;
-  max-width: 1000px;
-  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.2rem, 2vw, 2.8rem);
+  max-width: 1100px;
+  width: min(100%, 1100px);
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
 }
 .hero-why-item {
   border: 2px solid rgba(255, 255, 255, 0.9);
   border-radius: 1rem;
-  padding: 1.2rem 1rem;
+  padding: clamp(1rem, 1.5vw, 1.5rem);
   backdrop-filter: blur(2px);
   background: rgba(0, 0, 0, 0.08);
   color: #FFFFFF !important;
@@ -166,10 +168,40 @@
 .hero-why-item h3 {
   color: #FFFFFF !important;
   margin: 0 0 0.4rem;
+  font-size: clamp(1rem, 1.2vw + 0.7rem, 1.6rem);
 }
 .hero-why-item p {
   color: #FFFFFF !important;
   margin: 0;
+  font-size: clamp(0.9rem, 1vw + 0.7rem, 1.2rem);
+}
+
+@media (max-width: 900px) {
+  .hero-image {
+    height: 65vh;
+    min-height: 520px;
+  }
+  .hero-why-row {
+    grid-template-columns: 1fr;
+    max-width: 640px;
+    gap: 1rem;
+  }
+  .hero-lead {
+    font-size: clamp(1.2rem, 5vw + 0.8rem, 2.2rem) !important;
+    margin-bottom: clamp(1.2rem, 3vw, 2rem);
+  }
+}
+
+@media (max-height: 900px) {
+  .hero-image {
+    height: 70vh;
+    min-height: 520px;
+  }
+  .hero-lead {
+    font-size: clamp(1.05rem, 2.6vw + 0.7rem, 2.2rem) !important;
+    line-height: 1.24;
+    margin: clamp(0.8rem, 2vw, 1.8rem) 0 clamp(1rem, 2.4vw, 2.2rem);
+  }
 }
 
     /* Sections base */
@@ -186,29 +218,29 @@
       padding-right: 0;
     }
 
-    #programs h2,
-    #events h2,
-    #donate h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 2rem;
-      margin-bottom: 0.75rem;
-    }
-    /* Ensure donor headings stay light on dark background */
-    #donate h2,
-    #donate h3 {
-      color: #FDF7F0;
-    }
-    /* Hero-style emphasis for donor title */
-    #donate h2 {
-      font-size: 2.6rem;
-      letter-spacing: 0.03em;
-      line-height: 1.1;
-      white-space: nowrap;
-      margin-bottom: 0.6rem;
-    }
-    #donate h3 {
-      font-size: 1.05rem;
-    }
+#programs h2,
+#events h2,
+#donate h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(1.6rem, 1.4vw + 1.2rem, 2.6rem);
+  margin-bottom: 0.75rem;
+}
+/* Ensure donor headings stay light on dark background */
+#donate h2,
+#donate h3 {
+  color: #FDF7F0;
+}
+/* Hero-style emphasis for donor title */
+#donate h2 {
+  font-size: clamp(2rem, 2vw + 1.5rem, 3.2rem);
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  white-space: nowrap;
+  margin-bottom: 0.6rem;
+}
+#donate h3 {
+  font-size: clamp(0.95rem, 0.6vw + 0.85rem, 1.2rem);
+}
 
     .text-muted {
       color: #555;
