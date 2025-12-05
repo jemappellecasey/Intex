@@ -302,8 +302,8 @@
               </td>
 
               <td>
-                <% if (survey.surveyoverallscore != null) { %>
-                  <%= survey.surveyoverallscore %>
+                <% if (s.surveyoverallscore != null) { %>
+                  <%= s.surveyoverallscore %>
                 <% } else { %>
                   N/A
                 <% } %>
@@ -327,8 +327,8 @@
             <td><%= s.surveyinstructorscore || '' %></td>
             <td><%= s.surveyrecommendationscore || '' %></td>
             <td>
-              <% if (survey.surveyoverallscore != null) { %>
-                <%= survey.surveyoverallscore %>
+              <% if (s.surveyoverallscore != null) { %>
+                <%= s.surveyoverallscore %>
               <% } else { %>
                 N/A
               <% } %>
