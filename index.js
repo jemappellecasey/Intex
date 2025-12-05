@@ -544,12 +544,34 @@ app.post("/signup", async (req, res) => {
       .where({ email: normalizedEmail })
       .first();
 
-    let participantId;
+    let participantRecord;
 
     if (existingParticipant) {
-      participantId = existingParticipant.participantid;
+      // If this is a placeholder like "Visitor", update with real info
+      const needsUpdate =
+        !existingParticipant.participantfirstname ||
+        !existingParticipant.participantlastname ||
+        existingParticipant.participantfirstname.toLowerCase() === "visitor" ||
+        existingParticipant.participantlastname.toLowerCase() === "visitor";
+
+      if (needsUpdate) {
+        [participantRecord] = await knex("participants")
+          .where({ participantid: existingParticipant.participantid })
+          .update({
+            participantfirstname: first.trim(),
+            participantlastname: last.trim(),
+            participantrole: existingParticipant.participantrole || "participant",
+            participantphone: phone && phone.trim() !== "" ? phone.trim() : null,
+            participantcity: city && city.trim() !== "" ? city.trim() : null,
+            participantstate: state && state.trim() !== "" ? state.trim() : null,
+            participantzip: zip && zip.trim() !== "" ? zip.trim() : null,
+          })
+          .returning("*");
+      } else {
+        participantRecord = existingParticipant;
+      }
     } else {
-      const [newParticipant] = await knex("participants")
+      [participantRecord] = await knex("participants")
         .insert({
           email: normalizedEmail,
           participantfirstname: first.trim(),
@@ -561,8 +583,6 @@ app.post("/signup", async (req, res) => {
           participantzip: zip && zip.trim() !== "" ? zip.trim() : null,
         })
         .returning("*");
-
-      participantId = newParticipant.participantid;
     }
 
     // 4) Insert user linked to that participant
@@ -571,18 +591,18 @@ app.post("/signup", async (req, res) => {
         email: normalizedEmail,
         passwordhashed: hash,
         role: "user",
-        participantid: participantId,
+        participantid: participantRecord.participantid,
       })
       .returning("*");
 
-    console.info("[SIGNUP] user created", user.userid, "participant", participantId);
+    console.info("[SIGNUP] user created", user.userid, "participant", participantRecord.participantid);
 
     // 5) Log them in
     req.session.isLoggedIn = true;
     req.session.userId = user.userid;
     req.session.useremail = user.email;
     req.session.role = user.role;
-    req.session.participantId = participantId;
+    req.session.participantId = participantRecord.participantid;
 
     return res.redirect("/dashboard");
   } catch (err) {
