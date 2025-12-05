@@ -669,6 +669,48 @@ tbody tr:hover {
   margin-top: 64px;
 }
 
+.quick-view {
+  margin-top: 6px;
+}
+
+.quick-view summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-raspberry);
+}
+
+.quick-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(249, 245, 234, 0.6);
+  border: 1px solid rgba(58, 63, 59, 0.08);
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+.quick-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quick-label {
+  font-size: 0.85rem;
+  color: rgba(58, 63, 59, 0.7);
+}
+
+.quick-value {
+  font-weight: 600;
+  color: var(--color-charcoal);
+  word-break: break-word;
+}
+
+.quick-actions {
+  margin-top: 8px;
+}
+
 .center-table th,
 .center-table td {
   text-align: center;

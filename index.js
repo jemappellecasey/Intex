@@ -1392,11 +1392,16 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       .join('events as e', 'ed.eventid', 'e.eventid')
       .where('r.participantid', participantid)
       .select(
+        'r.registrationid',
+        'r.registrationstatus',
+        'r.registrationcheckintime',
+        'r.registrationcreatedat',
+        'r.registrationattendanceflag',
         'ed.eventdetailsid',
-        'e.eventname',
         'ed.eventdatetimestart',
         'ed.eventlocation',
-        'r.registrationattendanceflag'
+        'e.eventname as eventtitle',
+        'e.eventtype'
       )
       .orderBy('ed.eventdatetimestart', 'desc');
 
@@ -1409,9 +1414,12 @@ app.get('/participants/:participantid/edit', async (req, res) => {
       .where('s.participantid', participantid)
       .select(
         's.surveyid',
-        'e.eventname',
+        'e.eventname as eventtitle',
         's.eventdatetimestart',
         's.surveysatisfactionscore',
+        's.surveyusefulnessscore',
+        's.surveyinstructorscore',
+        's.surveyrecommendationscore',
         's.surveyoverallscore',
         's.surveysubmissiondate'
       )
