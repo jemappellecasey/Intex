@@ -361,7 +361,7 @@ app.get('/teapot', (req, res) => {
   
   //Login check
   app.use((req, res, next)=> {
-        const openPaths = ['/', '/login', '/logout', '/dev-login-bypass', '/signup', '/landing', '/donate', '/teapot'];
+        const openPaths = ['/', '/login', '/logout', /*'/dev-login-bypass', */'/signup', '/landing', '/donate', '/teapot'];
         if (openPaths.includes(req.path)) {
           return next();
         }
@@ -820,7 +820,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
+/*This is the app.post for the login dev tools, comment/uncomment at will if dev tools are needed*/
 app.post("/dev-login-bypass", async (req, res) => {
   const { role } = req.body;
 
