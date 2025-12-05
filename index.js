@@ -21,18 +21,6 @@ const helmet = require("helmet");
 const csrf = require("@dr.pogodin/csurf");   // CSRF
 const flash = require("connect-flash");      // flash message
 const bcrypt = require("bcrypt");            // password hash
-const nodemailer = require("nodemailer");    // if the mail needed
-
-const crypto = require("crypto");
-const { SESv2Client, SendEmailCommand } = require("@aws-sdk/client-sesv2");
-
-const sesClient = new SESv2Client({
-  region: process.env.AWS_REGION || "us-east-1",
-});
-
-const transporter = nodemailer.createTransport({
-  SES: { sesClient, SendEmailCommand },
-});
 
 
 const port = process.env.PORT || 3000;
@@ -537,8 +525,6 @@ app.post("/signup", async (req, res) => {
 
   try {
     const normalizedEmail = email.trim().toLowerCase();
-    const firstName = first.trim();
-    const lastName = last.trim();
 
     // 1) Check for existing user account
     const existing = await knex("users")
@@ -566,13 +552,13 @@ app.post("/signup", async (req, res) => {
       const [newParticipant] = await knex("participants")
         .insert({
           email: normalizedEmail,
-          participantfirstname: firstName,
-          participantlastname: lastName,
+          participantfirstname: first.trim(),
+          participantlastname: last.trim(),
           participantrole: "participant",
           participantphone: phone && phone.trim() !== "" ? phone.trim() : null,
           participantcity: city && city.trim() !== "" ? city.trim() : null,
           participantstate: state && state.trim() !== "" ? state.trim() : null,
-          participantzip: zip && zip.trim() !== "" ? zip.trim() : null
+          participantzip: zip && zip.trim() !== "" ? zip.trim() : null,
         })
         .returning("*");
 
@@ -585,9 +571,11 @@ app.post("/signup", async (req, res) => {
         email: normalizedEmail,
         passwordhashed: hash,
         role: "user",
-        participantid: participantId
+        participantid: participantId,
       })
       .returning("*");
+
+    console.info("[SIGNUP] user created", user.userid, "participant", participantId);
 
     // 5) Log them in
     req.session.isLoggedIn = true;
@@ -602,7 +590,6 @@ app.post("/signup", async (req, res) => {
     return renderError("Signup error. Please try again.");
   }
 });
-
 
 // GET /checkEmail
 app.get("/checkEmail", (req, res) => {
@@ -774,7 +761,10 @@ app.get(['/', '/landing'], (req, res) => {
 
 app.get('/login', (req, res) => {
    
-    res.render('login', { error_message: res.locals.error_message || null });
+    res.render('login', {
+      error_message: res.locals.error_message || null,
+      csrfToken: req.csrfToken()
+    });
 });
 
 
@@ -797,13 +787,13 @@ app.post("/login", async (req, res) => {
     console.log(email.trim().toLowerCase())
 
     if (!user) {
-      return res.render("login", { error_message: "Invalid login." });
+      return res.render("login", { error_message: "Invalid login.", csrfToken: req.csrfToken() });
     }
 
     const match = await bcrypt.compare(password, user.passwordhashed);
 
     if (!match) {
-      return res.render("login", { error_message: "Invalid login." });
+      return res.render("login", { error_message: "Invalid login.", csrfToken: req.csrfToken() });
     }
 
     req.session.isLoggedIn = true;
@@ -817,6 +807,7 @@ app.post("/login", async (req, res) => {
     console.error("login error", err);
     return res.render("login", {
       error_message: "Login error. Please try again.",
+      csrfToken: req.csrfToken()
     });
   }
 });
