@@ -1,3 +1,5 @@
+<%# 3-12 | Hirohito Mizuno, Casey Black, Hector Casablanca, Karie Ward %>
+<%# We made this admin settings page to manage staff emails and reset passwords. %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,8 +11,8 @@
   <%- include('partials/userbar') %>
   <%- include('partials/sidebar', { active: 'admin' }) %>
   <main class="main">
+    <h1 style="text-align:left;">Admin Settings</h1>
   <div class="page-card">
-    <h1>Admin Settings</h1>
 
     <% if (success_message) { %>
       <div class="alert alert-success"><%= success_message %></div>

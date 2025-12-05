@@ -1,3 +1,5 @@
+// 3-12 | Hirohito Mizuno, Casey Black, Hector Casablanca, Karie Ward
+// We made this server file to run the Ella Rises Express app with security, sessions, CSRF, email, and all the routes for data.
 // npm install express ejs knex pg express-session multer bcrypt helmet '@dr.pogodin/csurf' connect-flash nodemailer
 /*
 Participants
@@ -333,6 +335,17 @@ app.post('/donate', async (req, res) => {
 });
 
 
+
+//Begining of code for 418 teapot 
+// Keep this before the login guard so it's always reachable without a session.
+app.get('/teapot', (req, res) => {
+  res
+    .status(418)                         // set HTTP 418
+    .send("I'm a teapot: cannot brew coffee."); 
+});
+//end of teapot code
+
+
   
   
   //Login check
@@ -579,15 +592,6 @@ app.post("/signup", async (req, res) => {
 });
 
 
-//Begining of code for 418 teapot 
-app.get('/teapot', (req, res) => {
-  res
-    .status(418)                         // set HTTP 418
-    .send("I'm a teapot: cannot brew coffee."); 
-});
-//end of teapot code
-
-
 // GET /checkEmail
 app.get("/checkEmail", (req, res) => {
   res.render("checkEmail");
@@ -636,8 +640,8 @@ app.get("/verify-email/:token", async (req, res) => {
 // Admin-only settings: manage user roles
 app.get('/admin/settings', requireManager, async (req, res) => {
   try {
-    // ADD THIS LINE
     const { email, role } = req.query;
+    // Success message displayed on the page after role updates
     const successFlash = req.flash('success');
     const success_message =
       (successFlash && successFlash.length ? successFlash[0] : '') ||
@@ -3627,6 +3631,7 @@ app.get('/donations/:donationid/edit', async (req, res) => {
       });
     }
 
+    // Pre-format the date so the edit form shows the existing donationdate
     const donationDateValue = donation.donationdate
       ? new Date(donation.donationdate).toISOString().slice(0, 10)
       : '';
