@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 # .platform/hooks/postdeploy/00_get_certificate.sh
-sudo certbot -n -d intex-env.eba-ipmmpnyf.us-east-1.elasticbeanstalk.com --nginx --agree-tos --email blakebrightworth@gmail.com
+sudo certbot -n -d intex312final.is404.net --nginx --agree-tos --email blakebrightworth@gmail.com
