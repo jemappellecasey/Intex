@@ -250,6 +250,9 @@ h1, h2, h3 {
   border-radius: var(--radius-card);
   padding: 18px 20px;
   box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .card h3 {
@@ -266,6 +269,18 @@ h1, h2, h3 {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   margin-top: 10px;
+}
+
+.tableau-card {
+  min-height: 640px; /* taller white container */
+}
+
+.tableau-card.tall {
+  min-height: 720px; /* extra height for the lower viz */
+}
+
+.tableau-card .tableau-embed {
+  flex: 1 1 auto;
 }
 
 .summary-card {
@@ -343,8 +358,8 @@ h1, h2, h3 {
 }
 
 .tableau-embed.tall {
-  aspect-ratio: 20 / 12; /* closer to the first viz height */
-  min-height: 260px;
+  aspect-ratio: auto;
+  height: clamp(360px, 70vh, 680px); /* taller default height */
 }
 
 .tableau-embed object {
