@@ -49,6 +49,7 @@ const knex = require("knex")({
         ssl: process.env.DB_SSL ? {rejectUnauthorized: false} : false
     }
 });
+
 const app = express();
 
 const multer = require('multer');
