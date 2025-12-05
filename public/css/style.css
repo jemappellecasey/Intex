@@ -338,13 +338,13 @@ h1, h2, h3 {
 .tableau-embed {
   width: 100% !important;
   position: relative;
-  aspect-ratio: 16 / 12;
-  min-height: 320px;
+  aspect-ratio: 20 / 10; /* shorter default embed */
+  min-height: 260px;
 }
 
 .tableau-embed.tall {
-  aspect-ratio: 4 / 5;
-  min-height: 420px;
+  aspect-ratio: 4 / 4.5; /* still tall, but less vertical space */
+  min-height: 320px;
 }
 
 .tableau-embed object {
