@@ -272,11 +272,11 @@ h1, h2, h3 {
 }
 
 .tableau-card {
-  min-height: 640px; /* taller white container */
+  min-height: 700px; /* taller white container */
 }
 
 .tableau-card.tall {
-  min-height: 720px; /* extra height for the lower viz */
+  min-height: 750px; /* extra height for the lower viz */
 }
 
 .tableau-card .tableau-embed {
